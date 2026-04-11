@@ -1,0 +1,14 @@
+{
+  "name": "mafia-business-v2",
+  "version": "2.0.0",
+  "description": "Mafia Business - Online Board Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  }
+}

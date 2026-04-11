@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ngrok http:*)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); print\\(data['tunnels'][0]['public_url']\\)\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

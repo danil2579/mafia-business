@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAFIA BUSINESS</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ===== LOBBY SCREEN ===== -->
+  <div id="lobby-screen" class="screen active">
+    <!-- Animated particle layer -->
+    <div class="lobby-particles" aria-hidden="true">
+      <span class="particle p1"></span><span class="particle p2"></span>
+      <span class="particle p3"></span><span class="particle p4"></span>
+      <span class="particle p5"></span><span class="particle p6"></span>
+      <span class="particle p7"></span><span class="particle p8"></span>
+      <span class="particle p9"></span><span class="particle p10"></span>
+      <span class="particle p11"></span><span class="particle p12"></span>
+    </div>
+    <!-- Ambient light streaks -->
+    <div class="lobby-light-streaks" aria-hidden="true">
+      <div class="light-streak ls1"></div>
+      <div class="light-streak ls2"></div>
+      <div class="light-streak ls3"></div>
+    </div>
+
+    <div class="lobby-container">
+      <!-- Decorative corner ornaments -->
+      <div class="lobby-frame" aria-hidden="true">
+        <svg class="frame-corner frame-tl" viewBox="0 0 60 60"><path d="M2 58 V12 Q2 2 12 2 H58" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="2" cy="58" r="2" fill="currentColor"/></svg>
+        <svg class="frame-corner frame-tr" viewBox="0 0 60 60"><path d="M58 58 V12 Q58 2 48 2 H2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="58" cy="58" r="2" fill="currentColor"/></svg>
+        <svg class="frame-corner frame-bl" viewBox="0 0 60 60"><path d="M2 2 V48 Q2 58 12 58 H58" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="2" cy="2" r="2" fill="currentColor"/></svg>
+        <svg class="frame-corner frame-br" viewBox="0 0 60 60"><path d="M58 2 V48 Q58 58 48 58 H2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="58" cy="2" r="2" fill="currentColor"/></svg>
+      </div>
+
+      <!-- Beta badge -->
+      <div class="lobby-beta-badge">BETA</div>
+
+      <!-- Logo section -->
+      <div class="logo">
+        <div class="logo-emblem" aria-hidden="true">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="36" stroke="rgba(201,168,76,0.3)" stroke-width="0.5"/>
+            <circle cx="40" cy="40" r="28" stroke="rgba(201,168,76,0.15)" stroke-width="0.5"/>
+            <path d="M40 10 L46 26 L63 26 L49 36 L54 52 L40 42 L26 52 L31 36 L17 26 L34 26 Z" fill="rgba(201,168,76,0.06)" stroke="rgba(201,168,76,0.2)" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <h1>MAFIA<br><span>BUSINESS</span></h1>
+        <p class="lobby-subtitle">ONLINE MULTIPLAYER BOARD GAME</p>
+        <p class="tagline">Нічного особистого. Тільки бiзнес.</p>
+      </div>
+
+      <!-- Decorative separator -->
+      <div class="lobby-separator" aria-hidden="true">
+        <span class="sep-line"></span>
+        <span class="sep-diamond"></span>
+        <span class="sep-line"></span>
+      </div>
+
+      <!-- Feature badges -->
+      <div class="lobby-features">
+        <div class="feature-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>2-8 ГРАВЦIВ</span>
+        </div>
+        <div class="feature-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>СТРАТЕГIЯ</span>
+        </div>
+        <div class="feature-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>ОНЛАЙН</span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="lobby-form">
+        <div class="input-group">
+          <label class="input-label" for="player-name">IМ'Я ГРАВЦЯ</label>
+          <input type="text" id="player-name" placeholder="Введiть ваше iм'я" maxlength="16" />
+        </div>
+        <div class="lobby-buttons">
+          <button id="btn-create" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Створити кiмнату
+          </button>
+          <div class="lobby-divider-row">
+            <span class="divider-line"></span>
+            <span class="divider-text">АБО</span>
+            <span class="divider-line"></span>
+          </div>
+          <div class="join-row">
+            <input type="text" id="room-code" placeholder="Код кiмнати" maxlength="5" />
+            <button id="btn-join" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              Увiйти
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="lobby-error" class="error-msg"></div>
+
+      <!-- Rules button -->
+      <div class="lobby-rules-btn-wrap">
+        <button id="btn-rules-lobby" class="btn btn-secondary btn-rules-lobby">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h5"/></svg>
+          ПРАВИЛА
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="lobby-footer">
+        <span class="footer-sep"></span>
+        <p class="footer-text">MAFIA BUSINESS &mdash; v0.9 BETA &mdash; 2024-2026</p>
+        <p class="footer-text footer-dim">Online strategy board game for 2-8 players</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WAITING ROOM ===== -->
+  <div id="waiting-screen" class="screen">
+    <div class="waiting-container">
+      <h2>Кімната: <span id="room-id-display"></span></h2>
+      <p class="hint">Поділіться кодом з друзями</p>
+      <div id="players-list" class="players-list"></div>
+      <div id="game-settings" class="game-settings" style="display:none">
+        <h3>Налаштування гри</h3>
+        <div class="setting-row">
+          <label for="setting-min-round">Карти атаки доступні з кола:</label>
+          <div class="setting-control">
+            <button class="btn-setting-minus" data-target="setting-min-round">−</button>
+            <span id="setting-min-round" class="setting-value">3</span>
+            <button class="btn-setting-plus" data-target="setting-min-round">+</button>
+          </div>
+        </div>
+      </div>
+      <button id="btn-add-bot" class="btn btn-secondary" style="display:none">Додати бота</button>
+      <button id="btn-start" class="btn btn-primary" style="display:none">Почати гру</button>
+      <p id="waiting-msg" class="hint">Очікуємо гравців...</p>
+    </div>
+  </div>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <div id="game-screen" class="screen">
+    <!-- Top bar -->
+    <div class="game-topbar">
+      <div class="game-title">MAFIA BUSINESS</div>
+      <div id="turn-info" class="turn-info"></div>
+      <div class="topbar-right">
+        <div id="my-money" class="money-display">$0</div>
+        <button id="btn-rules" class="btn-topbar" title="Правила">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h5"/></svg>
+        </button>
+        <button id="btn-toggle-panel" class="btn-topbar btn-mobile-panel" title="Карти та хроніка">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </button>
+        <button id="btn-surrender" class="btn-topbar btn-surrender-topbar" title="Здатися (подвійний клік)" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        </button>
+        <button id="btn-fullscreen" class="btn-topbar" title="Повноекранний режим">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Roll Order Overlay -->
+    <div id="roll-order-overlay" class="roll-order-overlay" style="display:none;">
+      <div class="ro-particles" id="ro-particles"></div>
+      <div class="ro-ambient"></div>
+      <div class="ro-emblem">
+        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="90" stroke="rgba(201,168,76,0.15)" stroke-width="1"/>
+          <circle cx="100" cy="100" r="70" stroke="rgba(201,168,76,0.08)" stroke-width="0.5"/>
+          <circle cx="100" cy="100" r="50" stroke="rgba(201,168,76,0.05)" stroke-width="0.5"/>
+          <path d="M100 20 L115 55 L155 55 L122 78 L133 115 L100 92 L67 115 L78 78 L45 55 L85 55 Z" fill="rgba(201,168,76,0.06)" stroke="rgba(201,168,76,0.12)" stroke-width="0.5"/>
+        </svg>
+      </div>
+      <div class="ro-content">
+        <div class="ro-title">MAFIA</div>
+        <div class="ro-subtitle">BUSINESS</div>
+        <div class="ro-sep">
+          <span class="ro-sep-line"></span>
+          <span class="ro-sep-icon">⚔</span>
+          <span class="ro-sep-line"></span>
+        </div>
+        <div id="ro-panel" class="ro-panel"></div>
+      </div>
+    </div>
+
+    <!-- Main game area -->
+    <div class="game-layout">
+      <!-- Left: Player panels -->
+      <div class="side-panel left-panel">
+        <div id="player-panels"></div>
+      </div>
+
+      <!-- Center: Board -->
+      <div class="board-area">
+        <div class="board-frame">
+          <!-- Center emblem watermark -->
+          <div class="board-watermark">
+            <div class="watermark-emblem">
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="56" stroke="rgba(201,168,76,0.08)" stroke-width="1"/>
+                <circle cx="60" cy="60" r="44" stroke="rgba(201,168,76,0.05)" stroke-width="0.5"/>
+                <path d="M60 15 L68 35 L90 35 L72 48 L78 68 L60 55 L42 68 L48 48 L30 35 L52 35 Z" fill="rgba(201,168,76,0.04)" stroke="rgba(201,168,76,0.06)" stroke-width="0.5"/>
+              </svg>
+            </div>
+            <div class="watermark-title">MAFIA</div>
+            <div class="watermark-subtitle">BUSINESS</div>
+          </div>
+          <!-- Ambient glow layer -->
+          <div class="board-ambient"></div>
+
+          <div id="game-board" class="game-board">
+            <!-- Board cells will be rendered by JS -->
+          </div>
+          <!-- Center of board: info + actions -->
+          <div class="board-center">
+            <div id="center-info" class="center-info"></div>
+            <div id="center-panel" class="center-panel"></div>
+            <div id="event-display" class="event-display"></div>
+            <div id="board-controls" class="board-controls">
+              <button id="btn-roll" class="btn btn-roll" disabled>Кинути кубики</button>
+              <div id="dice-display" class="dice-display"></div>
+              <div id="action-buttons" class="action-buttons"></div>
+            </div>
+          </div>
+          <!-- Card reveal animation -->
+          <div id="card-reveal" class="card-reveal"></div>
+        </div>
+      </div>
+
+      <!-- Right: Actions & Cards -->
+      <div class="side-panel right-panel">
+        <div id="action-panel" class="action-panel"></div>
+        <div id="mafia-cards-panel" class="cards-panel">
+          <h3>Карти MAFIA</h3>
+          <div id="mafia-cards-list" class="cards-list"></div>
+        </div>
+        <div id="my-businesses-panel" class="cards-panel">
+          <h3>Мої бізнеси</h3>
+          <div id="my-businesses-list" class="cards-list"></div>
+        </div>
+        <div id="game-log" class="game-log">
+          <h3>Хроніка</h3>
+          <div id="log-entries"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL OVERLAY ===== -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div id="modal-content" class="modal-content"></div>
+  </div>
+
+  <!-- ===== ATTACK ALERT ===== -->
+  <div id="attack-overlay" class="attack-overlay">
+    <div class="attack-alert">
+      <div class="attack-header">
+        <span class="attack-icon">&#9760;</span>
+        <h2 id="attack-title">ЗАМАХ!</h2>
+      </div>
+      <p id="attack-desc"></p>
+      <div id="attack-timer" class="attack-timer"></div>
+      <div id="attack-reactions" class="attack-reactions"></div>
+    </div>
+  </div>
+
+  <!-- ===== CASINO OVERLAY ===== -->
+  <div id="casino-overlay" class="casino-overlay">
+    <div class="casino-container">
+      <h2>CASINO NIGHT</h2>
+      <div style="position:relative;display:inline-block">
+        <div class="roulette-marker">▼</div>
+        <div class="roulette-wheel" id="roulette-wheel">
+          <div class="wheel-inner" id="wheel-inner"></div>
+        </div>
+      </div>
+      <div class="casino-bets" id="casino-bets"></div>
+      <div class="casino-controls">
+        <input type="range" id="bet-amount" min="500" max="3000" step="100" value="500">
+        <span id="bet-display">500$</span>
+        <button id="btn-spin" class="btn btn-casino">КРУТИТИ!</button>
+      </div>
+      <div id="casino-result" class="casino-result"></div>
+      <button id="btn-casino-close" class="btn btn-secondary" style="display:none">Закрити</button>
+    </div>
+  </div>
+
+  <!-- ===== VICTORY OVERLAY ===== -->
+  <div id="victory-overlay" class="victory-overlay">
+    <div class="victory-particles" id="victory-particles"></div>
+    <div class="victory-content">
+      <div class="victory-crown">
+        <svg viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="crownGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0d060"/>
+              <stop offset="50%" stop-color="#c9a84c"/>
+              <stop offset="100%" stop-color="#8a6d1b"/>
+            </linearGradient>
+          </defs>
+          <polygon points="5,65 15,25 30,45 50,10 70,45 85,25 95,65" fill="url(#crownGrad)" stroke="#f0d060" stroke-width="2"/>
+          <rect x="5" y="60" width="90" height="12" rx="3" fill="url(#crownGrad)" stroke="#f0d060" stroke-width="1.5"/>
+          <circle cx="15" cy="25" r="5" fill="#f0d060"/>
+          <circle cx="50" cy="10" r="6" fill="#f0d060"/>
+          <circle cx="85" cy="25" r="5" fill="#f0d060"/>
+          <circle cx="30" cy="45" r="4" fill="#e8c95a"/>
+          <circle cx="70" cy="45" r="4" fill="#e8c95a"/>
+        </svg>
+      </div>
+      <div class="victory-title">ПЕРЕМОЖЕЦЬ</div>
+      <div id="victory-name" class="victory-name"></div>
+      <div id="victory-stats" class="victory-stats"></div>
+      <button class="btn btn-primary" onclick="location.reload()">Нова гра</button>
+    </div>
+  </div>
+
+  <!-- ===== RULES OVERLAY ===== -->
+  <div id="rules-overlay" class="rules-overlay">
+    <div class="rules-container">
+      <button id="btn-rules-close" class="rules-close">&times;</button>
+      <div class="rules-header">
+        <div class="rules-emblem">&#9733;</div>
+        <h2 class="rules-title">ПРАВИЛА ГРИ</h2>
+        <h3 class="rules-subtitle">MAFIA BUSINESS</h3>
+        <div class="rules-sep"><span class="rules-sep-line"></span><span class="rules-sep-diamond">&#9830;</span><span class="rules-sep-line"></span></div>
+      </div>
+
+      <!-- Quick nav -->
+      <div class="rules-nav">
+        <a href="#r-goal" class="rules-nav-link">Мета</a>
+        <a href="#r-board" class="rules-nav-link">Поле</a>
+        <a href="#r-turn" class="rules-nav-link">Хід</a>
+        <a href="#r-biz" class="rules-nav-link">Бізнеси</a>
+        <a href="#r-mafia" class="rules-nav-link">Карти MAFIA</a>
+        <a href="#r-events" class="rules-nav-link">Події</a>
+        <a href="#r-helpers" class="rules-nav-link">Помічники</a>
+        <a href="#r-respect" class="rules-nav-link">Повага</a>
+        <a href="#r-bombs" class="rules-nav-link">Бомби</a>
+        <a href="#r-bar" class="rules-nav-link">BAR</a>
+        <a href="#r-police" class="rules-nav-link">Поліція</a>
+        <a href="#r-auction" class="rules-nav-link">Аукціони</a>
+        <a href="#r-combat" class="rules-nav-link">Бій</a>
+      </div>
+
+      <div class="rules-body">
+
+        <!-- 1. МЕТА ГРИ -->
+        <div class="rule-section" id="r-goal">
+          <h4 class="rule-collapse-header" data-target="rc-goal">
+            <span class="rule-icon">&#127942;</span> 1. Мета гри
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-goal">
+            <p>Стати найбагатшим та найвпливовішим мафіозним босом міста. Скуповуйте бізнеси, встановлюйте вплив у районах, наймайте помічників, використовуйте карти MAFIA та усувайте конкурентів.</p>
+            <div class="rule-highlight">
+              <strong>Перемога:</strong> гравець з найбільшим загальним статком (гроші + вартість бізнесів) або останній, хто залишився в грі.
+            </div>
+            <p>Кожен гравець починає з <strong>20 000$</strong> та рівнем поваги <em>Шпана</em>. Стартова позиція — клітина START.</p>
+          </div>
+        </div>
+
+        <!-- 2. ІГРОВЕ ПОЛЕ -->
+        <div class="rule-section" id="r-board">
+          <h4 class="rule-collapse-header" data-target="rc-board">
+            <span class="rule-icon">&#127922;</span> 2. Ігрове поле
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-board">
+            <p>Поле складається з <strong>36 секторів</strong>, розташованих по периметру прямокутника. Рух відбувається за годинниковою стрілкою.</p>
+            <div class="rule-grid rule-grid-specials">
+              <div class="rule-special-cell rule-cell-start">
+                <span class="rsc-icon">&#9733;</span>
+                <strong>START</strong>
+                <span>Початок. Бонус при проходженні + 1 карта MAFIA.</span>
+              </div>
+              <div class="rule-special-cell rule-cell-bar">
+                <span class="rsc-icon">&#127864;</span>
+                <strong>BAR</strong>
+                <span>Найм помічників, казино, відпочинок.</span>
+              </div>
+              <div class="rule-special-cell rule-cell-police">
+                <span class="rsc-icon">&#128110;</span>
+                <strong>ПОЛІЦІЯ</strong>
+                <span>Сплатіть хабар або вирушайте у в'язницю.</span>
+              </div>
+              <div class="rule-special-cell rule-cell-prison">
+                <span class="rsc-icon">&#9939;</span>
+                <strong>В'ЯЗНИЦЯ</strong>
+                <span>Пропускаєте 2 ходи або відкупаєтесь.</span>
+              </div>
+              <div class="rule-special-cell rule-cell-mafia">
+                <span class="rsc-icon">&#9760;</span>
+                <strong>MAFIA</strong>
+                <span>Берете 1 карту MAFIA (4 клітини на полі).</span>
+              </div>
+              <div class="rule-special-cell rule-cell-event">
+                <span class="rsc-icon">&#9889;</span>
+                <strong>ПОДІЯ</strong>
+                <span>Випадкова подія: бонуси, штрафи, переміщення.</span>
+              </div>
+            </div>
+            <p>Решта 24 секторів — <strong>бізнеси</strong>, згруповані у 8 районів по 3 бізнеси.</p>
+          </div>
+        </div>
+
+        <!-- 3. ХІД ГРИ -->
+        <div class="rule-section" id="r-turn">
+          <h4 class="rule-collapse-header" data-target="rc-turn">
+            <span class="rule-icon">&#127918;</span> 3. Хід гри
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-turn">
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">1</span><span>Киньте <strong>2 кубики</strong> та перемістіться на суму значень вперед.</span></div>
+              <div class="rule-step"><span class="step-num">2</span><span>При <strong>проходженні через START</strong> — отримайте бонус грошей (залежно від рівня поваги) та 1 карту MAFIA.</span></div>
+              <div class="rule-step"><span class="step-num">3</span><span>Виконайте дію сектора, на якому зупинились: купіть бізнес, сплатіть ренту, візьміть карту тощо.</span></div>
+              <div class="rule-step"><span class="step-num">4</span><span>На СВОЄМУ бізнесі — можете збільшити вплив у районі.</span></div>
+              <div class="rule-step"><span class="step-num">5</span><span>Використовуйте карти MAFIA (атаки, захист, економіка) у свій хід.</span></div>
+              <div class="rule-step"><span class="step-num">6</span><span>Завершіть хід.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. БІЗНЕСИ -->
+        <div class="rule-section" id="r-biz">
+          <h4 class="rule-collapse-header" data-target="rc-biz">
+            <span class="rule-icon">&#127970;</span> 4. Бізнеси та райони
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-biz">
+            <p>На полі <strong>8 районів</strong>, кожен з <strong>3 бізнесами</strong>. Зупинившись на вільному бізнесі, ви можете його <strong>купити</strong> або <strong>виставити на аукціон</strong>.</p>
+            <div class="rule-highlight">
+              <strong>Рента:</strong> залежить від кількості ваших бізнесів у районі. 1 бізнес = базова рента, 2 = подвійна, 3 = потрійна.
+            </div>
+            <p><strong>Вплив</strong> — додаткове посилення району. Зупинившись на СВОЄМУ бізнесі, можете купити фішку впливу. Вартість впливу залежить від району.</p>
+
+            <div class="rule-districts-table">
+              <div class="rule-district-row rule-district-header">
+                <span>Район</span><span>Бізнеси</span><span>Ціна</span><span>Рента (1/2/3)</span><span>Вплив</span>
+              </div>
+
+              <div class="rule-district-row" style="border-left: 3px solid #4a6741;">
+                <span class="rd-name">&#127795; Трущоби</span>
+                <span class="rd-biz">Смітник, Секонд хенди, Забігайлівки</span>
+                <span class="rd-price">900-1000$</span>
+                <span class="rd-rent">400-500 / 900-1000 / 1300-1500</span>
+                <span class="rd-inf">300$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #8b4513;">
+                <span class="rd-name">&#127960; Гетто</span>
+                <span class="rd-biz">Ринок, Пральні, Транспорт</span>
+                <span class="rd-price">1100-1300$</span>
+                <span class="rd-rent">550-650 / 1100-1300 / 1650-1950</span>
+                <span class="rd-inf">500$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #4682b4;">
+                <span class="rd-name">&#127968; Спальний район</span>
+                <span class="rd-biz">Кафе, Телефонна ст., Магазини</span>
+                <span class="rd-price">1400-1600$</span>
+                <span class="rd-rent">700-800 / 1400-1600 / 2100-2400</span>
+                <span class="rd-inf">700$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #2c3e50;">
+                <span class="rd-name">&#9881; Промзона</span>
+                <span class="rd-biz">Склади, Бутлегери, Фальшивомонетники</span>
+                <span class="rd-price">1700-1900$</span>
+                <span class="rd-rent">850-950 / 1700-1900 / 2550-2850</span>
+                <span class="rd-inf">900$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #5dade2;">
+                <span class="rd-name">&#127751; Елітний район</span>
+                <span class="rd-biz">Торгові центри, Автозаправки, Радіостанція</span>
+                <span class="rd-price">2000-2100$</span>
+                <span class="rd-rent">1000-1100 / 2000-2100 / 3000-3200</span>
+                <span class="rd-inf">1100$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #e67e22;">
+                <span class="rd-name">&#127961; Туристичний центр</span>
+                <span class="rd-biz">Сувенірні лавки, Ресторани, Пам'ятники</span>
+                <span class="rd-price">2200-2400$</span>
+                <span class="rd-rent">1100-1200 / 2200-2400 / 3300-3600</span>
+                <span class="rd-inf">1300$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #c0392b;">
+                <span class="rd-name">&#128308; Район Черв. Ліхтарів</span>
+                <span class="rd-biz">Клуби, Масажні салони, Казино</span>
+                <span class="rd-price">2500-2700$</span>
+                <span class="rd-rent">1250-1350 / 2500-2700 / 3800-4050</span>
+                <span class="rd-inf">1500$</span>
+              </div>
+              <div class="rule-district-row" style="border-left: 3px solid #8e44ad;">
+                <span class="rd-name">&#127974; Діловий квартал</span>
+                <span class="rd-biz">Банки, Біржа, Суд</span>
+                <span class="rd-price">2800-3000$</span>
+                <span class="rd-rent">1400-1500 / 2800-3000 / 4200-4500</span>
+                <span class="rd-inf">1700$</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. КАРТИ MAFIA -->
+        <div class="rule-section" id="r-mafia">
+          <h4 class="rule-collapse-header" data-target="rc-mafia">
+            <span class="rule-icon">&#9760;</span> 5. Карти MAFIA
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-mafia">
+            <p>Всього <strong>28 карт</strong> в колоді. Отримуєте при проходженні START та на клітинах MAFIA. Типи карт:</p>
+
+            <div class="rule-card-types">
+              <span class="rule-card-type rct-attack">&#9876; Атака</span>
+              <span class="rule-card-type rct-defense">&#128737; Захист</span>
+              <span class="rule-card-type rct-economic">&#128176; Економіка</span>
+              <span class="rule-card-type rct-utility">&#9881; Утиліта</span>
+              <span class="rule-card-type rct-trap">&#128163; Пастка</span>
+            </div>
+
+            <!-- Attack cards -->
+            <h5 class="rule-card-category rct-attack-border">&#9876; Карти атаки</h5>
+            <div class="rule-cards-grid">
+              <div class="rule-card rc-attack">
+                <div class="rc-top"><span class="rc-name">Снайпер</span><span class="rc-cost">2000$</span></div>
+                <div class="rc-desc">Вбиває на відстані до 5 клітин. Можна ухилитись (бронежилет), відкупитись або викликати поліцію.</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+              <div class="rule-card rc-attack">
+                <div class="rc-top"><span class="rc-name">Кілер</span><span class="rc-cost">3000$</span></div>
+                <div class="rc-desc">Вбиває тихо та на будь-якій відстані. Можна ухилитись, відкупитись або викликати поліцію.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+              <div class="rule-card rc-attack">
+                <div class="rc-top"><span class="rc-name">Засідка</span><span class="rc-cost">1000$</span></div>
+                <div class="rc-desc">Вбиває ціль у тому ж районі або на тій самій клітинці. Можна ухилитись, відкупитись, поліція.</div>
+                <div class="rc-qty">x3 в колоді</div>
+              </div>
+              <div class="rule-card rc-attack">
+                <div class="rc-top"><span class="rc-name">Бійня</span><span class="rc-cost">1000$</span></div>
+                <div class="rc-desc">Вбиває 2 помічників цілі в тому ж районі. Не можна ухилитись! Можна відкупитись або поліція.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+              <div class="rule-card rc-attack">
+                <div class="rc-top"><span class="rc-name">Отрута</span><span class="rc-cost">1000$</span></div>
+                <div class="rc-desc">Вбиває з ймовірністю 50%. Кубик: 1-3 = смерть, 4-6 = промах. Неможливо захиститись!</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+              <div class="rule-card rc-attack">
+                <div class="rc-top"><span class="rc-name">Підкуп співкамерників</span><span class="rc-cost">1000$</span></div>
+                <div class="rc-desc">Вбиває гравця, поки він у в'язниці. Неможливо захиститись!</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+            </div>
+
+            <!-- Defense cards -->
+            <h5 class="rule-card-category rct-defense-border">&#128737; Карти захисту</h5>
+            <div class="rule-cards-grid">
+              <div class="rule-card rc-defense">
+                <div class="rc-top"><span class="rc-name">Бронежилет</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Реакція: захищає від снайпера, кілера та засідки. Використовується у відповідь на атаку.</div>
+                <div class="rc-qty">x3 в колоді</div>
+              </div>
+              <div class="rule-card rc-defense">
+                <div class="rc-top"><span class="rc-name">Поліція</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Реакція: відбиває будь-яку кримінальну дію. Нападник вирушає у в'язницю!</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+              <div class="rule-card rc-defense">
+                <div class="rc-top"><span class="rc-name">Народжений у сорочці</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Реакція: при підриві бомби ніхто не гине. Захист від вибуху.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+            </div>
+
+            <!-- Economic cards -->
+            <h5 class="rule-card-category rct-economic-border">&#128176; Економічні карти</h5>
+            <div class="rule-cards-grid">
+              <div class="rule-card rc-economic">
+                <div class="rc-top"><span class="rc-name">Пограбування</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Замість плати за бізнес, власник платить вам ту саму суму. Можна викликати поліцію.</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+              <div class="rule-card rc-economic">
+                <div class="rc-top"><span class="rc-name">Рейдерське захоплення</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Відбирає бізнес у суперника. Спочатку потрібно сплатити ренту! Можна викликати поліцію.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+              <div class="rule-card rc-economic">
+                <div class="rc-top"><span class="rc-name">Погром</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Бізнес повертається у вільний продаж. Спочатку потрібно сплатити ренту! Можна викликати поліцію.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+            </div>
+
+            <!-- Utility cards -->
+            <h5 class="rule-card-category rct-utility-border">&#9881; Карти утиліти</h5>
+            <div class="rule-cards-grid">
+              <div class="rule-card rc-utility">
+                <div class="rc-top"><span class="rc-name">Адвокат</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Миттєво виходите з в'язниці.</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+              <div class="rule-card rc-utility">
+                <div class="rc-top"><span class="rc-name">Явка з повинною</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Вирушайте у в'язницю на 1 хід. Корисно для уникнення небезпеки.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+              <div class="rule-card rc-utility">
+                <div class="rc-top"><span class="rc-name">Розпустити чутки</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Знижує повагу будь-якого гравця на 1 рівень.</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+              <div class="rule-card rc-utility">
+                <div class="rc-top"><span class="rc-name">Компромат</span><span class="rc-cost">0$</span></div>
+                <div class="rc-desc">Відправляє будь-якого гравця у в'язницю на 2 ходи.</div>
+                <div class="rc-qty">x1 в колоді</div>
+              </div>
+            </div>
+
+            <!-- Trap cards -->
+            <h5 class="rule-card-category rct-trap-border">&#128163; Карти пасток</h5>
+            <div class="rule-cards-grid">
+              <div class="rule-card rc-trap">
+                <div class="rc-top"><span class="rc-name">Бомба</span><span class="rc-cost">1000$</span></div>
+                <div class="rc-desc">Встановлюється на будь-якому секторі. Наступний гравець, що зупиниться — підірветься! Захист: карта "Народжений у сорочці".</div>
+                <div class="rc-qty">x2 в колоді</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. КАРТИ ПОДІЯ -->
+        <div class="rule-section" id="r-events">
+          <h4 class="rule-collapse-header" data-target="rc-events">
+            <span class="rule-icon">&#9889;</span> 6. Карти ПОДІЯ
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-events">
+            <p>Зупиняючись на клітині ПОДІЯ, тягнете випадкову карту. Є 3 категорії:</p>
+
+            <h5 class="rule-event-cat rule-ev-move">&#128694; Переміщення</h5>
+            <div class="rule-events-list">
+              <div class="rule-event-item rev-move"><strong>Пропустити стаканчик</strong> — Вирушайте у BAR.</div>
+              <div class="rule-event-item rev-move"><strong>Газ на повну</strong> — Перейдіть на сектор START.</div>
+              <div class="rule-event-item rev-move"><strong>Без гальм</strong> — Киньте 1 кубик і перейдіть уперед.</div>
+              <div class="rule-event-item rev-move"><strong>Не той поворот</strong> — Перейдіть на найближчий кутовий сектор.</div>
+              <div class="rule-event-item rev-move"><strong>Пробка</strong> — Киньте кубик і поверніться назад.</div>
+            </div>
+
+            <h5 class="rule-event-cat rule-ev-expense">&#128181; Витрати</h5>
+            <div class="rule-events-list">
+              <div class="rule-event-item rev-expense"><strong>Містер Уік</strong> — Заплатіть 3000$ за авто та цуценя.</div>
+              <div class="rule-event-item rev-expense"><strong>Нещасний випадок</strong> — Помічник загинув.</div>
+              <div class="rule-event-item rev-expense"><strong>Кріт</strong> — Заплатіть 1000$ і заберіть помічника.</div>
+              <div class="rule-event-item rev-expense"><strong>Федерали</strong> — Заплатіть 1000$ або в'язниця на 2 ходи.</div>
+              <div class="rule-event-item rev-expense"><strong>Пожежа</strong> — Сплатіть 3000$ для усунення наслідків.</div>
+              <div class="rule-event-item rev-expense"><strong>Медицина</strong> — Сплатіть 2000$ за лікування.</div>
+              <div class="rule-event-item rev-expense"><strong>Тимчасові труднощі</strong> — Скиньте 2 карти MAFIA.</div>
+              <div class="rule-event-item rev-expense"><strong>Непередбачені витрати</strong> — Штраф 500$.</div>
+              <div class="rule-event-item rev-expense"><strong>Тіло у багажнику</strong> — Заплатіть 2000$ щоб знищити докази.</div>
+              <div class="rule-event-item rev-expense"><strong>Скандал</strong> — Заплатіть 1000$ для репутації.</div>
+              <div class="rule-event-item rev-expense"><strong>Весілля дочки</strong> — Сплатіть 3000$ та всі їдуть у BAR.</div>
+              <div class="rule-event-item rev-expense"><strong>Страйк</strong> — Заплатіть 1000$ робітникам.</div>
+            </div>
+
+            <h5 class="rule-event-cat rule-ev-bonus">&#127873; Бонуси</h5>
+            <div class="rule-events-list">
+              <div class="rule-event-item rev-bonus"><strong>Колектор</strong> — Отримайте 2000$.</div>
+              <div class="rule-event-item rev-bonus"><strong>Відхід від справ</strong> — Отримайте 2000$ і заберіть помічника.</div>
+              <div class="rule-event-item rev-bonus"><strong>Федеральне замовлення</strong> — Скиньте карту замаху, отримайте 3000$.</div>
+              <div class="rule-event-item rev-bonus"><strong>Темні зв'язки</strong> — Візьміть 2 карти MAFIA.</div>
+              <div class="rule-event-item rev-bonus"><strong>День народження</strong> — Кожен гравець дарує 300$.</div>
+              <div class="rule-event-item rev-bonus"><strong>Заручник</strong> — Отримайте 4000$.</div>
+              <div class="rule-event-item rev-bonus"><strong>Вплив</strong> — Додайте 1 фішку впливу безкоштовно.</div>
+              <div class="rule-event-item rev-bonus"><strong>Джек-пот</strong> — Виграш 5000$!</div>
+              <div class="rule-event-item rev-bonus"><strong>Пограбування банку</strong> — Отримайте 5000$.</div>
+              <div class="rule-event-item rev-bonus"><strong>Спадщина</strong> — Отримайте 4000$.</div>
+              <div class="rule-event-item rev-bonus"><strong>Таємний друг</strong> — Аванс від уряду 1000$.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. ПОМІЧНИКИ -->
+        <div class="rule-section" id="r-helpers">
+          <h4 class="rule-collapse-header" data-target="rc-helpers">
+            <span class="rule-icon">&#128100;</span> 7. Помічники
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-helpers">
+            <p>Наймаються у <strong>BAR</strong> за <strong>1000$</strong>. Максимальна кількість залежить від рівня поваги (0/1/2/2/2). Кожен помічник має унікальну здібність. Якщо помічника вбивають — ви втрачаєте його.</p>
+
+            <div class="rule-helpers-grid">
+              <div class="rule-helper-card">
+                <div class="rh-name">Стенлі Поллак</div>
+                <div class="rh-ability">Може купувати вплив у будь-якому районі, навіть у тому, де ви зараз.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">"Уайті" Росс</div>
+                <div class="rh-ability">Замахи на 500$ дешевше.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">"Скажений Пес"</div>
+                <div class="rh-ability">Засідка без карти MAFIA в одному районі. При невдачі гине.</div>
+                <span class="rh-tag rh-active">Активний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Ленні "Щука"</div>
+                <div class="rh-ability">Отримує 200$ на будь-якому секторі, що не належить мафії.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Лео "Акробат"</div>
+                <div class="rh-ability">Вийти з в'язниці на 1 хід раніше.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Віллі "Безжалісний"</div>
+                <div class="rh-ability">За успішного замаху грабує жертву на 1000$.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Тоні "Лис"</div>
+                <div class="rh-ability">При успішному замаху +1 вплив у будь-якому районі.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Капо Коррадо</div>
+                <div class="rh-ability">Після ходу можна зміститися на 1 крок уперед.</div>
+                <span class="rh-tag rh-active">Активний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Міккі "Відступник"</div>
+                <div class="rh-ability">Не платити хабарі на секторі Police.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Малюк Флеммі</div>
+                <div class="rh-ability">При замаху удар у відповідь. Кубик: 1-3 промах, 4-6 вбиває нападника.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Томмі Морелло</div>
+                <div class="rh-ability">Підвищення рівня поваги на 500$ дешевше.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Ніккі "Король"</div>
+                <div class="rh-ability">На секторі MAFIA бере 2 карти замість 1.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Живучий Джо</div>
+                <div class="rh-ability">Виживає в одному замаху. Перезарядка при проходженні START.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">"Сталевий" Ронні</div>
+                <div class="rh-ability">Від ваших замахів не можна відкупитись.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Донні Анджело</div>
+                <div class="rh-ability">Збільшення впливу на 200$ дешевше.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+              <div class="rule-helper-card">
+                <div class="rh-name">Марко "Гравець"</div>
+                <div class="rh-ability">При проходженні через BAR отримує 500$.</div>
+                <span class="rh-tag rh-passive">Пасивний</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8. РІВНІ ПОВАГИ -->
+        <div class="rule-section" id="r-respect">
+          <h4 class="rule-collapse-header" data-target="rc-respect">
+            <span class="rule-icon">&#11088;</span> 8. Рівні поваги
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-respect">
+            <p>Повага визначає вашу владу в місті. Підвищуйте рівень за гроші. Вищий рівень дає більше переваг:</p>
+            <div class="rule-respect-table">
+              <div class="rule-respect-row rule-respect-header">
+                <span>Рівень</span><span>Назва</span><span>Вартість</span><span>Бонус START</span><span>Хабар поліції</span><span>Помічники</span><span>Особливе</span>
+              </div>
+              <div class="rule-respect-row">
+                <span class="rr-lvl">1</span><span class="rr-name">Шпана</span><span>---</span><span>500$</span><span>100$</span><span>0</span><span>---</span>
+              </div>
+              <div class="rule-respect-row">
+                <span class="rr-lvl">2</span><span class="rr-name">Капо</span><span>1000$</span><span>1000$</span><span>200$</span><span>1</span><span>---</span>
+              </div>
+              <div class="rule-respect-row">
+                <span class="rr-lvl">3</span><span class="rr-name">Консільєрі</span><span>2000$</span><span>2000$</span><span>300$</span><span>2</span><span>---</span>
+              </div>
+              <div class="rule-respect-row">
+                <span class="rr-lvl">4</span><span class="rr-name">Мол. Бос</span><span>3000$</span><span>3000$</span><span>400$</span><span>2</span><span>Знижка на атаку 900$</span>
+              </div>
+              <div class="rule-respect-row">
+                <span class="rr-lvl">5</span><span class="rr-name">Шляхетний Дон</span><span>4000$</span><span>4000$</span><span>500$</span><span>2</span><span>Може відкупитись від замахів</span>
+              </div>
+            </div>
+            <div class="rule-highlight">
+              <strong>Відкуп (Шляхетний Дон):</strong> коштує вартість атаки + 1000$ додатково. Доступний тільки на 5-му рівні.
+            </div>
+          </div>
+        </div>
+
+        <!-- 9. БОМБИ -->
+        <div class="rule-section" id="r-bombs">
+          <h4 class="rule-collapse-header" data-target="rc-bombs">
+            <span class="rule-icon">&#128163;</span> 9. Бомби
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-bombs">
+            <p>Бомба (карта MAFIA, 1000$) встановлюється на будь-якому секторі поля.</p>
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">1</span><span>Зіграйте карту "Бомба" та оберіть сектор.</span></div>
+              <div class="rule-step"><span class="step-num">2</span><span>Бомба <strong>невидима</strong> для інших гравців.</span></div>
+              <div class="rule-step"><span class="step-num">3</span><span>Перший гравець, що <strong>зупиниться</strong> на цьому секторі — підірветься.</span></div>
+              <div class="rule-step"><span class="step-num">4</span><span>Вибух вбиває гравця та одного помічника.</span></div>
+            </div>
+            <div class="rule-highlight">
+              <strong>Захист:</strong> тільки карта "Народжений у сорочці" рятує від вибуху. Бронежилет та поліція НЕ допоможуть!
+            </div>
+          </div>
+        </div>
+
+        <!-- 10. BAR -->
+        <div class="rule-section" id="r-bar">
+          <h4 class="rule-collapse-header" data-target="rc-bar">
+            <span class="rule-icon">&#127864;</span> 10. BAR
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-bar">
+            <p>Зупиняючись на BAR або проходячи через нього, ви можете:</p>
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">&#128100;</span><span><strong>Найняти помічника</strong> — коштує 1000$. Вам пропонується випадковий помічник з доступних. Максимум залежить від рівня поваги.</span></div>
+              <div class="rule-step"><span class="step-num">&#127920;</span><span><strong>Казино</strong> — зіграйте в рулетку! Ставки від 500$ до 3000$. Ставте на колір (x2), третини (x3) або спробуйте MAFIA JACKPOT (2000$ за безкоштовний бізнес).</span></div>
+              <div class="rule-step"><span class="step-num">&#128164;</span><span><strong>Відпочити</strong> — пропустіть та завершіть хід.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 11. ПОЛІЦІЯ ТА В'ЯЗНИЦЯ -->
+        <div class="rule-section" id="r-police">
+          <h4 class="rule-collapse-header" data-target="rc-police">
+            <span class="rule-icon">&#128110;</span> 11. Поліція та В'язниця
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-police">
+            <h5 class="rule-mini-header">Поліція</h5>
+            <p>Зупиняючись на секторі ПОЛІЦІЯ, ви мусите сплатити хабар (залежить від рівня поваги: 100-500$). Якщо не можете заплатити — вирушаєте у в'язницю.</p>
+
+            <h5 class="rule-mini-header">В'язниця</h5>
+            <p>Потрапити можна через: сектор Поліція, карту Компромат, карту Поліція (реакція на ваш замах), подію Федерали.</p>
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">&#9939;</span><span>Стандартний термін — <strong>2 ходи</strong>.</span></div>
+              <div class="rule-step"><span class="step-num">&#128176;</span><span><strong>Відкуп</strong> — сплатіть хабар (100-500$ залежно від поваги) щоб вийти.</span></div>
+              <div class="rule-step"><span class="step-num">&#128220;</span><span><strong>Адвокат</strong> — карта MAFIA, що миттєво звільняє.</span></div>
+              <div class="rule-step"><span class="step-num">&#128100;</span><span>Помічник <strong>Лео "Акробат"</strong> — скорочує термін на 1 хід.</span></div>
+            </div>
+            <div class="rule-highlight">
+              <strong>Увага!</strong> Поки ви у в'язниці, вас можуть вбити картою "Підкуп співкамерників" — і від цього неможливо захиститись!
+            </div>
+          </div>
+        </div>
+
+        <!-- 12. АУКЦІОНИ -->
+        <div class="rule-section" id="r-auction">
+          <h4 class="rule-collapse-header" data-target="rc-auction">
+            <span class="rule-icon">&#128276;</span> 12. Аукціони
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-auction">
+            <p>Коли гравець зупиняється на вільному бізнесі та <strong>відмовляється купувати</strong>, бізнес виставляється на аукціон.</p>
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">1</span><span>Всі гравці можуть робити ставки.</span></div>
+              <div class="rule-step"><span class="step-num">2</span><span>Мінімальна ставка дорівнює ціні бізнесу.</span></div>
+              <div class="rule-step"><span class="step-num">3</span><span>Кожна нова ставка має бути вищою за попередню.</span></div>
+              <div class="rule-step"><span class="step-num">4</span><span>Коли всі пасують — переможець аукціону купує бізнес за свою ставку.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 13. БОЙОВІ ДІЇ -->
+        <div class="rule-section" id="r-combat">
+          <h4 class="rule-collapse-header" data-target="rc-combat">
+            <span class="rule-icon">&#9876;</span> 13. Бойові дії
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-combat">
+            <p>Атаки здійснюються картами MAFIA у ваш хід. Атаки доступні тільки <strong>з певного кола</strong> (налаштовується хостом).</p>
+
+            <h5 class="rule-mini-header">Процес атаки</h5>
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">1</span><span>Зіграйте карту атаки та оберіть ціль (з урахуванням обмежень дальності/району).</span></div>
+              <div class="rule-step"><span class="step-num">2</span><span>Сплатіть вартість атаки (може бути зменшена помічниками або рівнем поваги).</span></div>
+              <div class="rule-step"><span class="step-num">3</span><span>Жертва має <strong>обмежений час</strong> на реакцію.</span></div>
+            </div>
+
+            <h5 class="rule-mini-header">Реакції жертви</h5>
+            <div class="rule-grid rule-grid-reactions">
+              <div class="rule-reaction">
+                <span class="rr-icon">&#128737;</span>
+                <strong>Бронежилет</strong>
+                <p>Захищає від снайпера, кілера та засідки. Не працює проти отрути, бійні та бомби.</p>
+              </div>
+              <div class="rule-reaction">
+                <span class="rr-icon">&#128110;</span>
+                <strong>Поліція</strong>
+                <p>Відбиває будь-яку кримінальну дію. Нападник йде у в'язницю.</p>
+              </div>
+              <div class="rule-reaction">
+                <span class="rr-icon">&#128176;</span>
+                <strong>Відкуп</strong>
+                <p>Тільки для Шляхетного Дона (рівень 5). Коштує ціна атаки + 1000$.</p>
+              </div>
+            </div>
+
+            <h5 class="rule-mini-header">Вбивство помічника</h5>
+            <p>Якщо у жертви є помічники і замах успішний — <strong>гине помічник</strong>, а не гравець. Це перший рівень захисту. Помічник "Живучий Джо" виживає в одному замаху та перезаряджається при проходженні START.</p>
+
+            <h5 class="rule-mini-header">Загибель гравця</h5>
+            <p>Якщо у гравця <strong>немає помічників</strong> і замах успішний — гравець <strong>вибуває з гри</strong>. Всі його бізнеси стають вільними, гроші зникають.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="rules-footer">
+        <div class="rules-sep"><span class="rules-sep-line"></span><span class="rules-sep-diamond">&#9830;</span><span class="rules-sep-line"></span></div>
+        <p class="rules-footer-text">MAFIA BUSINESS &mdash; Настільна стратегія для 2-8 гравців</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/client.js"></script>
+</body>
+</html>
