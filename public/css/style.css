@@ -3755,6 +3755,46 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 
 /* ============================================================
+   MODE SELECTOR
+   ============================================================ */
+.mode-selector { width: 100%; max-width: 480px; margin: 0 auto; }
+.mode-selector-title {
+  font-size: 12px; letter-spacing: 4px; color: var(--text-dim);
+  text-align: center; margin-bottom: 16px;
+}
+.mode-selector-cards { display: flex; gap: 14px; }
+.mode-card {
+  flex: 1; padding: 24px 16px; text-align: center;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 12px; cursor: pointer; transition: all 0.3s;
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.mode-card:hover { border-color: var(--gold-dim); background: rgba(201,168,76,0.04); transform: translateY(-2px); }
+.mode-card:active { transform: translateY(0); }
+.mode-card-icon { color: var(--text-dim); transition: color 0.3s; }
+.mode-card:hover .mode-card-icon { color: var(--gold); }
+.mode-card-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.mode-card-desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+.mode-card-badge {
+  position: absolute; top: -8px; right: -8px;
+  padding: 2px 8px; background: linear-gradient(135deg, #c9a84c, #a08030);
+  border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  color: #1a1a2e;
+}
+.mode-card-tv { border-color: rgba(201,168,76,0.15); }
+.mode-card-tv:hover { border-color: var(--gold); box-shadow: 0 0 20px rgba(201,168,76,0.1); }
+.mode-back-btn {
+  display: block; margin: 16px auto 0; padding: 8px 20px;
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-dim); font-size: 13px; cursor: pointer; transition: all 0.2s;
+}
+.mode-back-btn:hover { border-color: var(--text-dim); color: var(--text); }
+
+@media (max-width: 480px) {
+  .mode-selector-cards { flex-direction: column; }
+}
+
+/* ============================================================
    TV MODE STYLES
    ============================================================ */
 

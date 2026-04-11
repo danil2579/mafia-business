@@ -75,40 +75,87 @@
         </div>
       </div>
 
-      <!-- Form -->
-      <div class="lobby-form">
-        <div class="input-group">
-          <label class="input-label" for="player-name">IМ'Я ГРАВЦЯ</label>
-          <input type="text" id="player-name" placeholder="Введiть ваше iм'я" maxlength="16" />
-        </div>
-        <div class="lobby-buttons">
-          <button id="btn-create" class="btn btn-primary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            Створити кiмнату
+      <!-- Mode Selector -->
+      <div id="mode-selector" class="mode-selector">
+        <div class="mode-selector-title">ОБЕРIТЬ РЕЖИМ</div>
+        <div class="mode-selector-cards">
+          <button class="mode-card" id="mode-classic">
+            <div class="mode-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            </div>
+            <div class="mode-card-title">Класична гра</div>
+            <div class="mode-card-desc">Кожен грає зi свого пристрою</div>
           </button>
-          <div class="lobby-divider-row">
-            <span class="divider-line"></span>
-            <span class="divider-text">АБО</span>
-            <span class="divider-line"></span>
-          </div>
-          <div class="join-row">
-            <input type="text" id="room-code" placeholder="Код кiмнати" maxlength="5" />
-            <button id="btn-join" class="btn btn-secondary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-              Увiйти
-            </button>
-          </div>
+          <button class="mode-card mode-card-tv" id="mode-tv-select">
+            <div class="mode-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <div class="mode-card-title">TV Режим</div>
+            <div class="mode-card-desc">Великий екран + телефони як контролери</div>
+            <div class="mode-card-badge">PARTY</div>
+          </button>
         </div>
       </div>
-      <div id="lobby-error" class="error-msg"></div>
 
-      <!-- Room Browser -->
-      <div class="lobby-rooms">
-        <button id="btn-browse-rooms" class="btn btn-secondary" style="width:100%;margin-bottom:12px;" onclick="loadPublicRooms()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          Знайти кімнату
-        </button>
-        <div id="room-list" class="room-list"></div>
+      <!-- TV Mode Sub-selector (hidden by default) -->
+      <div id="tv-mode-selector" class="mode-selector" style="display:none;">
+        <div class="mode-selector-title">TV РЕЖИМ</div>
+        <div class="mode-selector-cards">
+          <button class="mode-card mode-card-tv" id="mode-tv-host">
+            <div class="mode-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <div class="mode-card-title">Великий екран</div>
+            <div class="mode-card-desc">Вiдкрити на ТВ / планшетi / ноутбуцi — показує поле гри</div>
+          </button>
+          <button class="mode-card" id="mode-tv-phone">
+            <div class="mode-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>
+            </div>
+            <div class="mode-card-title">Контролер</div>
+            <div class="mode-card-desc">Вiдкрити на телефонi — ваш пульт керування</div>
+          </button>
+        </div>
+        <button class="mode-back-btn" id="mode-tv-back">← Назад</button>
+      </div>
+
+      <!-- Classic Form (hidden by default) -->
+      <div id="classic-lobby" style="display:none;">
+        <div class="lobby-form">
+          <div class="input-group">
+            <label class="input-label" for="player-name">IМ'Я ГРАВЦЯ</label>
+            <input type="text" id="player-name" placeholder="Введiть ваше iм'я" maxlength="16" />
+          </div>
+          <div class="lobby-buttons">
+            <button id="btn-create" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              Створити кiмнату
+            </button>
+            <div class="lobby-divider-row">
+              <span class="divider-line"></span>
+              <span class="divider-text">АБО</span>
+              <span class="divider-line"></span>
+            </div>
+            <div class="join-row">
+              <input type="text" id="room-code" placeholder="Код кiмнати" maxlength="5" />
+              <button id="btn-join" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Увiйти
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="lobby-error" class="error-msg"></div>
+
+        <!-- Room Browser -->
+        <div class="lobby-rooms">
+          <button id="btn-browse-rooms" class="btn btn-secondary" style="width:100%;margin-bottom:12px;" onclick="loadPublicRooms()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            Знайти кімнату
+          </button>
+          <div id="room-list" class="room-list"></div>
+        </div>
+        <button class="mode-back-btn" id="classic-back">← Назад</button>
       </div>
 
       <!-- Rules button -->

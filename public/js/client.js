@@ -330,6 +330,47 @@ function showScreen(screen) {
   screen.classList.add('active');
 }
 
+// ===== MODE SELECTOR =====
+if (!isTVMode && !isPhoneMode) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const modeSelector = $('#mode-selector');
+    const tvModeSelector = $('#tv-mode-selector');
+    const classicLobby = $('#classic-lobby');
+
+    // Classic mode
+    $('#mode-classic')?.addEventListener('click', () => {
+      modeSelector.style.display = 'none';
+      classicLobby.style.display = '';
+    });
+
+    // TV mode sub-selector
+    $('#mode-tv-select')?.addEventListener('click', () => {
+      modeSelector.style.display = 'none';
+      tvModeSelector.style.display = '';
+    });
+
+    // TV Host (big screen) — redirect to TV mode
+    $('#mode-tv-host')?.addEventListener('click', () => {
+      window.location.href = '/?mode=tv';
+    });
+
+    // TV Phone (controller) — redirect to phone mode
+    $('#mode-tv-phone')?.addEventListener('click', () => {
+      window.location.href = '/?mode=phone';
+    });
+
+    // Back buttons
+    $('#mode-tv-back')?.addEventListener('click', () => {
+      tvModeSelector.style.display = 'none';
+      modeSelector.style.display = '';
+    });
+    $('#classic-back')?.addEventListener('click', () => {
+      classicLobby.style.display = 'none';
+      modeSelector.style.display = '';
+    });
+  });
+}
+
 // ===== LOBBY =====
 $('#btn-create').addEventListener('click', () => {
   SFX.click();
