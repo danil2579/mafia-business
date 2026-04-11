@@ -545,6 +545,7 @@ socket.on('gameState', (state) => {
 });
 
 socket.on('gameStarted', () => {
+  if (isTVMode || isPhoneMode) return; // TV/Phone handle screen transitions via gameState
   showScreen(gameScreen);
 });
 

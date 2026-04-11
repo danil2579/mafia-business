@@ -3981,10 +3981,13 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
    PHONE CONTROLLER STYLES
    ============================================================ */
 
+/* Phone Screen container */
+#phone-screen.screen.active { display: flex; width: 100%; }
+
 /* Phone Lobby */
 .phone-lobby {
   display: flex; flex-direction: column; align-items: center;
-  padding: 30px 20px; min-height: 100vh;
+  width: 100%; padding: 40px 20px; min-height: 100vh;
   background: radial-gradient(ellipse at center, rgba(201,168,76,0.05) 0%, var(--bg) 70%);
 }
 .phone-lobby-logo {
@@ -3993,26 +3996,36 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .phone-lobby-logo span { font-size: 36px; display: block; }
 .phone-lobby-badge {
-  display: inline-block; padding: 3px 12px; margin-bottom: 20px;
+  display: inline-block; padding: 3px 12px; margin-bottom: 25px;
   background: rgba(201,168,76,0.15); border: 1px solid var(--gold-dim);
   border-radius: 4px; font-size: 11px; letter-spacing: 3px; color: var(--gold);
 }
 .phone-lobby-form { width: 100%; max-width: 360px; }
-.phone-lobby-form .input-group { margin-bottom: 12px; }
-.phone-lobby-form .character-select-section { margin: 15px 0; }
-.phone-lobby-form .character-select { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.phone-lobby-form .input-group { margin-bottom: 14px; }
+.phone-lobby-form .input-label { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 2px; color: var(--text-dim); }
+.phone-lobby-form input[type="text"] {
+  width: 100%; padding: 12px 14px; font-size: 15px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); outline: none; box-sizing: border-box;
+}
+.phone-lobby-form input[type="text"]:focus { border-color: var(--gold-dim); }
+.phone-lobby-form input[type="text"]::placeholder { color: var(--text-dim); }
+.phone-lobby-form .character-select-section { margin: 20px 0; }
+.phone-lobby-form .character-select { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 
 /* Phone Waiting */
 .phone-waiting {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100vh; text-align: center; padding: 30px;
+  width: 100%; min-height: 100vh; text-align: center; padding: 30px;
 }
-.phone-waiting-code { font-size: 20px; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
-.phone-waiting-msg { font-size: 16px; color: var(--text-dim); }
+.phone-waiting-info { text-align: center; }
+.phone-waiting-code { font-size: 24px; font-weight: 700; color: var(--gold); margin-bottom: 12px; }
+.phone-waiting-msg { font-size: 16px; color: var(--text-dim); margin-bottom: 8px; }
+#phone-players-count { font-size: 14px; color: var(--text-dim); }
 
 /* Phone Game Controller */
 .phone-game {
-  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  display: flex; flex-direction: column; width: 100%; height: 100vh; overflow: hidden;
   background: var(--bg);
 }
 .phone-header {
