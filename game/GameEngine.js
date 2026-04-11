@@ -1012,7 +1012,7 @@ class GameEngine {
     let peekCard = null;
     if (this.hasHelper(player.id, 'doubleMafia')) {
       // Peek at next card in deck
-      if (this.mafiaDiscardPile.length > 0 || this.mafiaDeck.length > 1) {
+      if (this.mafiaDiscard.length > 0 || this.mafiaDeck.length > 1) {
         const peekIdx = this.mafiaDeck.length > 1 ? 1 : 0;
         if (this.mafiaDeck[peekIdx]) peekCard = { ...this.mafiaDeck[peekIdx] };
       }
