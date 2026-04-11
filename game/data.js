@@ -37,72 +37,72 @@ const DISTRICTS = [
     id: 'trushchoby', name: 'Трущоби', color: '#4a6741',
     influenceCost: 300,
     businesses: [
-      { id: 'smitnik', name: 'Смітник', price: 900, rent: [400, 900, 1300] },
-      { id: 'second_hand', name: 'Секонд хенди', price: 950, rent: [450, 950, 1400] },
-      { id: 'zabigailivky', name: 'Забігайлівки', price: 1000, rent: [500, 1000, 1500] }
+      { id: 'kiosk', name: 'Газетний кіоск', price: 900, rent: [400, 900, 1300] },
+      { id: 'shawarma', name: 'Шаурмічна', price: 950, rent: [450, 950, 1400] },
+      { id: 'lombard', name: 'Ломбард', price: 1000, rent: [500, 1000, 1500] }
     ]
   },
   {
     id: 'ghetto', name: 'Гетто', color: '#8b4513',
     influenceCost: 500,
     businesses: [
-      { id: 'rynok', name: 'Ринок', price: 1100, rent: [550, 1100, 1650] },
-      { id: 'pralni', name: 'Пральні', price: 1200, rent: [600, 1200, 1800] },
-      { id: 'transport', name: 'Транспорт', price: 1300, rent: [650, 1300, 1950] }
+      { id: 'avto_moyka', name: 'Автомийка', price: 1100, rent: [550, 1100, 1650] },
+      { id: 'barbershop', name: 'Барбершоп', price: 1200, rent: [600, 1200, 1800] },
+      { id: 'taksopark', name: 'Таксопарк', price: 1300, rent: [650, 1300, 1950] }
     ]
   },
   {
-    id: 'spalniy', name: 'Спальний район', color: '#4682b4',
+    id: 'spalniy', name: 'Спальний район', color: '#27ae60',
     influenceCost: 700,
     businesses: [
-      { id: 'kafe', name: 'Кафе', price: 1400, rent: [700, 1400, 2100] },
-      { id: 'telefon', name: 'Телефонна станція', price: 1500, rent: [750, 1500, 2250] },
-      { id: 'magazyny', name: 'Магазини', price: 1600, rent: [800, 1600, 2400] }
+      { id: 'pitseria', name: 'Піцерія', price: 1400, rent: [700, 1400, 2100] },
+      { id: 'apteka', name: 'Аптека', price: 1500, rent: [750, 1500, 2250] },
+      { id: 'supermarket', name: 'Супермаркет', price: 1600, rent: [800, 1600, 2400] }
     ]
   },
   {
-    id: 'promzona', name: 'Промзона', color: '#2c3e50',
+    id: 'promzona', name: 'Промзона', color: '#7f8c8d',
     influenceCost: 900,
     businesses: [
-      { id: 'sklady', name: 'Склади', price: 1700, rent: [850, 1700, 2550] },
-      { id: 'butlegery', name: 'Бутлегери', price: 1800, rent: [900, 1800, 2700] },
-      { id: 'falshyvo', name: 'Фальшивомонетники', price: 1900, rent: [950, 1900, 2850] }
+      { id: 'avtoservis', name: 'Автосервіс', price: 1700, rent: [850, 1700, 2550] },
+      { id: 'sklad', name: 'Склад контрабанди', price: 1800, rent: [900, 1800, 2700] },
+      { id: 'drukarnya', name: 'Друкарня грошей', price: 1900, rent: [950, 1900, 2850] }
     ]
   },
   {
-    id: 'elitnyy', name: 'Елітний район', color: '#5dade2',
+    id: 'elitnyy', name: 'Елітний район', color: '#3498db',
     influenceCost: 1100,
     businesses: [
-      { id: 'torg_tsentry', name: 'Торгові центри', price: 2000, rent: [1000, 2000, 3000] },
-      { id: 'avtozapravky', name: 'Автозаправки', price: 2050, rent: [1050, 2050, 3100] },
-      { id: 'radiostantsiya', name: 'Радіостанція', price: 2100, rent: [1100, 2100, 3200] }
+      { id: 'avtosalon', name: 'Автосалон', price: 2000, rent: [1000, 2000, 3000] },
+      { id: 'hotel', name: 'Готель', price: 2050, rent: [1050, 2050, 3100] },
+      { id: 'telestudiya', name: 'Телестудія', price: 2100, rent: [1100, 2100, 3200] }
     ]
   },
   {
     id: 'turystychnyy', name: 'Туристичний центр', color: '#e67e22',
     influenceCost: 1300,
     businesses: [
-      { id: 'suveniry', name: 'Сувенірні лавки', price: 2200, rent: [1100, 2200, 3300] },
-      { id: 'restorany', name: 'Ресторани', price: 2300, rent: [1150, 2300, 3450] },
-      { id: 'pamyatnyky', name: "Пам'ятники архітектури", price: 2400, rent: [1200, 2400, 3600] }
+      { id: 'spa', name: 'Спа-центр', price: 2200, rent: [1100, 2200, 3300] },
+      { id: 'restoran', name: 'Ресторан', price: 2300, rent: [1150, 2300, 3450] },
+      { id: 'yacht_club', name: 'Яхт-клуб', price: 2400, rent: [1200, 2400, 3600] }
     ]
   },
   {
     id: 'red_light', name: 'Район Червоних Ліхтарів', color: '#c0392b',
     influenceCost: 1500,
     businesses: [
-      { id: 'kluby', name: 'Клуби', price: 2500, rent: [1250, 2500, 3800] },
-      { id: 'masazh', name: 'Масажні салони', price: 2600, rent: [1300, 2600, 3900] },
-      { id: 'kazyno', name: 'Казино', price: 2700, rent: [1350, 2700, 4050] }
+      { id: 'night_club', name: 'Нічний клуб', price: 2500, rent: [1250, 2500, 3800] },
+      { id: 'lounge_bar', name: 'Лаунж-бар', price: 2600, rent: [1300, 2600, 3900] },
+      { id: 'casino', name: 'Казино Рояль', price: 2700, rent: [1350, 2700, 4050] }
     ]
   },
   {
     id: 'dilovyy', name: 'Діловий квартал', color: '#8e44ad',
     influenceCost: 1700,
     businesses: [
-      { id: 'banky', name: 'Банки', price: 2800, rent: [1400, 2800, 4200] },
-      { id: 'birzha', name: 'Біржа', price: 2900, rent: [1450, 2900, 4350] },
-      { id: 'sud', name: 'Суд', price: 3000, rent: [1500, 3000, 4500] }
+      { id: 'bank', name: 'Банк', price: 2800, rent: [1400, 2800, 4200] },
+      { id: 'hedge_fund', name: 'Хедж-фонд', price: 2900, rent: [1450, 2900, 4350] },
+      { id: 'skyscraper', name: 'Хмарочос', price: 3000, rent: [1500, 3000, 4500] }
     ]
   }
 ];
@@ -304,6 +304,82 @@ const MAFIA_CARDS = [
     id: 'lucky_shirt', name: 'Народжений у сорочці', type: 'defense', cost: 0,
     description: 'При підриві бомби ніхто не гине.',
     isReaction: true, defenseAgainst: 'bomb'
+  },
+  // --- NEW CARDS ---
+  {
+    id: 'car_bomb', name: 'Автомобільна бомба', type: 'attack', cost: 2500,
+    description: 'Вбиває ціль та одного її помічника. Будь-яка відстань.',
+    range: Infinity, killsHelper: true,
+    canDodge: true, canBuyOff: true, canPolice: true
+  },
+  {
+    id: 'informer', name: 'Інформатор', type: 'utility', cost: 0,
+    description: 'Подивитися всі карти MAFIA в руці обраного гравця.'
+  },
+  {
+    id: 'tax_collector', name: 'Збирач данини', type: 'economic', cost: 0,
+    description: 'Всі гравці платять вам 500$.'
+  },
+  {
+    id: 'sabotage', name: 'Саботаж', type: 'economic', cost: 0,
+    description: 'Знищує 1 рівень впливу на обраному чужому бізнесі.'
+  },
+  {
+    id: 'witness_protection', name: 'Програма захисту свідків', type: 'defense', cost: 0,
+    description: 'Наступні 2 ходи вас не можуть атакувати.',
+    isReaction: false
+  },
+  {
+    id: 'double_agent', name: 'Подвійний агент', type: 'utility', cost: 0,
+    description: 'Вкрадіть одного помічника у обраного гравця.'
+  },
+  {
+    id: 'insurance', name: 'Страховка', type: 'economic', cost: 0,
+    description: 'Якщо ви заплатили ренту цей хід, поверніть половину грошей.'
+  },
+  {
+    id: 'blackmail', name: 'Шантаж', type: 'economic', cost: 0,
+    description: 'Обраний гравець платить вам 30% своїх грошей.'
+  },
+  // --- WAVE 2 CARDS ---
+  {
+    id: 'arson', name: 'Підпал', type: 'attack', cost: 1500,
+    description: 'Знищує 1 бізнес суперника (повертає у вільний продаж). Потрібно бути в одному районі.',
+    requireSameDistrict: true, canDodge: false, canBuyOff: true, canPolice: true,
+    destroysBusiness: true
+  },
+  {
+    id: 'forgery', name: 'Підробка документів', type: 'economic', cost: 0,
+    description: 'Перехопити наступну ренту: ви отримуєте ренту замість власника бізнесу.',
+    interceptRent: true
+  },
+  {
+    id: 'corruption', name: 'Корупція', type: 'utility', cost: 0,
+    description: 'На секторі Поліції наступні 3 ходи ви не платите хабар.'
+  },
+  {
+    id: 'street_fight', name: 'Вулична бійка', type: 'attack', cost: 500,
+    description: 'Обидва кидають кубик. Хто більше — забирає 1000$ у іншого. Потрібно бути поруч.',
+    requireSameDistrict: true, canDodge: false, canBuyOff: false, canPolice: true,
+    isDuel: true
+  },
+  {
+    id: 'money_laundering', name: 'Відмивання грошей', type: 'economic', cost: 0,
+    description: 'Подвоюєте дохід з усіх ваших бізнесів на 1 коло.'
+  },
+  {
+    id: 'fake_death', name: 'Інсценування смерті', type: 'defense', cost: 0,
+    description: 'Наступний успішний замах на вас анулюється і атакуючий втрачає карту.',
+    isReaction: false
+  },
+  {
+    id: 'wiretap', name: 'Прослуховування', type: 'utility', cost: 0,
+    description: 'Дізнайтесь усі карти та гроші обраного гравця. Показує також помічників.'
+  },
+  {
+    id: 'hostile_takeover', name: 'Вороже поглинання', type: 'economic', cost: 3000,
+    description: 'Купити чужий бізнес примусово за подвійну ціну. Гроші йдуть власнику.',
+    canPolice: true
   }
 ];
 
@@ -313,7 +389,11 @@ function buildMafiaDeck() {
     sniper: 2, robbery: 2, raider: 1, massacre: 1, ambush: 3,
     pogrom: 1, lawyer: 2, vest: 3, killer: 1, poison: 2,
     confession: 1, bribe_inmates: 1, rumors: 2, police_card: 2,
-    kompromat: 1, bomb: 2, lucky_shirt: 1
+    kompromat: 1, bomb: 2, lucky_shirt: 1,
+    car_bomb: 1, informer: 2, tax_collector: 1, sabotage: 2,
+    witness_protection: 1, double_agent: 1, insurance: 2, blackmail: 1,
+    arson: 1, forgery: 1, corruption: 1, street_fight: 2,
+    money_laundering: 1, fake_death: 1, wiretap: 1, hostile_takeover: 1
   };
   for (const card of MAFIA_CARDS) {
     const count = distribution[card.id] || 1;
@@ -393,10 +473,10 @@ const HELPERS = [
     description: 'Замахи на 500$ дешевше.' },
   { id: 'mad_dog', name: '«Скажений Пес»', ability: 'freeAmbush', passive: false,
     description: 'Засідка без карти MAFIA в одному районі. При невдачі гине.' },
-  { id: 'lenny_pike', name: 'Ленні «Щука»', ability: 'bonusOnNonMafia', passive: true, bonusAmount: 200,
-    description: 'Отримує 200$ на будь-якому секторі, що не належить мафії.' },
+  { id: 'lenny_pike', name: 'Ленні «Щука»', ability: 'bonusOnNonMafia', passive: true, bonusAmount: 500,
+    description: 'Отримує 500$ на будь-якому секторі, що не належить мафії.' },
   { id: 'leo_acrobat', name: 'Лео «Акробат»', ability: 'earlyRelease', passive: true,
-    description: 'Вийти з в\'язниці на 1 хід раніше.' },
+    description: 'При попаданні у в\'язницю одразу виходить (0 ходів).' },
   { id: 'willie_ruthless', name: 'Віллі «Безжалісний»', ability: 'robOnKill', passive: true, bonusAmount: 1000,
     description: 'За успішного замаху грабує жертву на 1000$.' },
   { id: 'tony_fox', name: 'Тоні «Лис»', ability: 'influenceOnKill', passive: true,
@@ -404,50 +484,49 @@ const HELPERS = [
   { id: 'capo_corrado', name: 'Капо Коррадо', ability: 'extraStep', passive: false,
     description: 'Після ходу можна зміститися на 1 крок уперед.' },
   { id: 'mickey_renegade', name: 'Міккі «Відступник»', ability: 'noBribe', passive: true,
-    description: 'Не платити хабарі на секторі Police.' },
+    description: 'Не платити хабарі на Police + отримує 500$ при проходженні Police.' },
   { id: 'baby_flemmi', name: 'Малюк Флеммі', ability: 'counterAttack', passive: true,
-    description: 'При замаху удар у відповідь. Кубик: 1-3 промах, 4-6 вбиває.' },
-  { id: 'tommy_morello', name: 'Томмі Морелло', ability: 'cheaperRespect', passive: true, discount: 500,
-    description: 'Підвищення рівня поваги на 500$ дешевше.' },
+    description: 'При замаху удар у відповідь. Кубик: 1-2 влучає, 3-6 промах.' },
+  { id: 'tommy_morello', name: 'Томмі Морелло', ability: 'cheaperRespect', passive: true, discount: 1000,
+    description: 'Підвищення рівня поваги на 1000$ дешевше.' },
   { id: 'nikki_king', name: 'Ніккі «Король»', ability: 'doubleMafia', passive: true,
-    description: 'На секторі MAFIA бере 2 карти замість 1.' },
-  { id: 'survivor_joe', name: 'Живучий Джо', ability: 'surviveOnce', passive: true, rechargeable: true,
-    description: 'Виживає в одному замаху. Перезарядка при проходженні START.' },
-  { id: 'steel_ronnie', name: '«Сталевий» Ронні', ability: 'noBuyOff', passive: true,
-    description: 'Від ваших замахів не можна відкупитись.' },
-  { id: 'donnie_angelo', name: 'Донні Анджело', ability: 'cheaperInfluence', passive: true, discount: 200,
-    description: 'Збільшення впливу на 200$ дешевше.' },
-  { id: 'marco_player', name: 'Марко «Гравець»', ability: 'barBonus', passive: true, bonusAmount: 500,
-    description: 'При проходженні через BAR отримує 500$.' }
+    description: 'На секторі MAFIA бере 1 карту + бачить наступну карту в колоді.' },
+  { id: 'survivor_joe', name: 'Живучий Джо', ability: 'surviveOnce', passive: true, rechargeable: false,
+    description: 'Виживає в одному замаху. Одноразово.' },
+  { id: 'steel_ronnie', name: '«Сталевий» Ронні', ability: 'doubleBuyOff', passive: true,
+    description: 'Відкуп від ваших замахів коштує вдвічі дорожче.' },
+  { id: 'donnie_angelo', name: 'Донні Анджело', ability: 'cheaperInfluence', passive: true, discount: 500,
+    description: 'Збільшення впливу на 500$ дешевше.' },
+  { id: 'marco_player', name: 'Марко «Гравець»', ability: 'barBonus', passive: true, bonusAmount: 1000,
+    description: 'При проходженні або попаданні на BAR отримує 1000$.' }
 ];
 
 // --- PLAYER CHARACTERS (up to 8) ---
 const CHARACTERS = [
-  { id: 'eddie', name: 'Едді «Божевільний»', color: '#e74c3c', icon: 'E' },
-  { id: 'don_carlo', name: 'Дон Карло', color: '#3498db', icon: 'C' },
-  { id: 'don_luca', name: 'Дон Лука', color: '#2ecc71', icon: 'L' },
-  { id: 'don_sal', name: 'Дон Сальваторе', color: '#f39c12', icon: 'S' },
-  { id: 'don_vito', name: 'Дон Віто', color: '#9b59b6', icon: 'V' },
-  { id: 'don_marco', name: 'Дон Марко', color: '#1abc9c', icon: 'M' },
-  { id: 'don_enzo', name: 'Дон Енцо', color: '#e67e22', icon: 'Z' },
-  { id: 'don_rico', name: 'Дон Ріко', color: '#95a5a6', icon: 'R' }
+  { id: 'eddie', name: 'Едді «Божевільний»', color: '#e74c3c', icon: 'E', title: 'Вуличний боєць' },
+  { id: 'carlo', name: 'Карло «Бритва»', color: '#2980b9', icon: 'C', title: 'Старий лис' },
+  { id: 'vinnie', name: 'Вінні «Кулак»', color: '#2ecc71', icon: 'V', title: 'Зелений барон' },
+  { id: 'sal', name: 'Сальваторе «Золото»', color: '#f1c40f', icon: 'S', title: 'Золотий король' },
+  { id: 'niko', name: 'Ніко «Тінь»', color: '#9b59b6', icon: 'N', title: 'Тіньовий владика' },
+  { id: 'rosa', name: 'Донна Роза', color: '#e91e90', icon: 'R', title: 'Залізна леді' },
+  { id: 'tommy', name: 'Томмі «Динаміт»', color: '#e67e22', icon: 'T', title: 'Вогняний темперамент' },
+  { id: 'frankie', name: 'Френкі «Лід»', color: '#00bcd4', icon: 'F', title: 'Холодний розрахунок' }
 ];
 
 // --- CASINO ROULETTE ---
+// Simplified: Red/Black only, green stripe = jackpot on any bet
+// Wheel has 12 sectors: 5 red, 5 black, 2 green (jackpot)
 const CASINO = {
+  sectors: [
+    'red','black','red','black','red','green',
+    'black','red','black','red','black','green'
+  ],
   betTypes: [
     { id: 'red', name: 'Червоне', payout: 2 },
-    { id: 'black', name: 'Чорне', payout: 2 },
-    { id: 'even', name: 'Парне', payout: 2 },
-    { id: 'odd', name: 'Непарне', payout: 2 },
-    { id: 'thirds_1', name: '1-12', payout: 3 },
-    { id: 'thirds_2', name: '13-24', payout: 3 },
-    { id: 'thirds_3', name: '25-36', payout: 3 },
-    { id: 'jackpot', name: 'MAFIA JACKPOT', payout: 0, special: 'freeBusiness' }
+    { id: 'black', name: 'Чорне', payout: 2 }
   ],
   minBet: 500,
-  maxBet: 3000,
-  jackpotBet: 2000
+  maxBet: 5000
 };
 
 // --- CONSTANTS ---

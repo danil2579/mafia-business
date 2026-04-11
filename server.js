@@ -13,6 +13,22 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// API: list public rooms
+app.get('/api/rooms', (req, res) => {
+  const publicRooms = [];
+  for (const [roomId, game] of rooms) {
+    if (game.phase === 'waiting' && game.players.length < 8) {
+      publicRooms.push({
+        roomId,
+        playerCount: game.players.length,
+        maxPlayers: 8,
+        hostName: game.players[0]?.name || 'Unknown'
+      });
+    }
+  }
+  res.json(publicRooms);
+});
+
 // Prevent server crash on unhandled errors
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err.message, err.stack);
@@ -25,7 +41,13 @@ process.on('unhandledRejection', (err) => {
 const rooms = new Map(); // roomId -> GameEngine
 const playerRooms = new Map(); // socketId -> roomId
 const botCounters = new Map(); // roomId -> number (for unique bot IDs)
+const turnTimers = new Map(); // roomId -> { timer, remaining }
+const disconnectedPlayers = new Map(); // `${roomId}:${playerId}` -> { socketId, name, timer }
+const chatHistory = new Map(); // roomId -> [messages]
+const auctionTimers = new Map(); // roomId -> timeout
 const BOT_NAMES = ['Бот Вінні', 'Бот Тоні', 'Бот Сальваторе', 'Бот Луїджі', 'Бот Марко', 'Бот Ніко', 'Бот Анджело', 'Бот Ренцо'];
+const TURN_TIME_LIMIT = 60; // seconds
+const RECONNECT_GRACE = 120; // seconds
 
 function generateRoomId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -72,11 +94,15 @@ function broadcastState(roomId) {
       }
     }
 
-    // Schedule bot turn if current player is a bot
+    // Schedule bot turn or start turn timer for human
     if (game.phase === 'playing') {
       const current = game.getCurrentPlayer();
       if (current && current.isBot && current.alive) {
         scheduleBotTurn(roomId);
+        clearTurnTimer(roomId);
+      } else if (current && !current.isBot && current.alive) {
+        // Start/reset turn timer for human players
+        startTurnTimer(roomId);
       }
 
       // Handle pending actions that target bots (auctions, attack reactions)
@@ -91,6 +117,128 @@ function broadcastState(roomId) {
 
 function broadcastEvent(roomId, event, data) {
   io.to(roomId).emit(event, data);
+}
+
+// --- Auction Timer System ---
+function clearAuctionTimer(roomId) {
+  if (auctionTimers.has(roomId)) {
+    clearTimeout(auctionTimers.get(roomId));
+    auctionTimers.delete(roomId);
+  }
+}
+
+function startAuctionTimer(roomId) {
+  clearAuctionTimer(roomId);
+  const timer = setTimeout(() => {
+    auctionTimers.delete(roomId);
+    resolveAuction(roomId);
+  }, 5000);
+  auctionTimers.set(roomId, timer);
+  // Broadcast timer start to all clients
+  broadcastEvent(roomId, 'auctionTimer', { timeLeft: 5 });
+}
+
+function resolveAuction(roomId) {
+  clearAuctionTimer(roomId);
+  const game = rooms.get(roomId);
+  if (!game || !game.pendingAction || game.pendingAction.type !== 'auction') return;
+  const action = game.pendingAction;
+
+  if (action.currentBidderId && action.currentBid >= action.minPrice) {
+    const winner = game.getPlayer(action.currentBidderId);
+    if (winner) {
+      winner.money -= action.currentBid;
+      winner.stats.moneySpent += action.currentBid;
+      winner.stats.businessesBought++;
+      game.businesses[action.businessId].owner = action.currentBidderId;
+      game.businesses[action.businessId].influenceLevel = 1;
+      winner.businesses.push(action.businessId);
+      game.addLog(`${winner.name} виграв аукціон за ${action.businessName}: ${action.currentBid}$.`);
+      broadcastEvent(roomId, 'auctionResult', {
+        winnerId: action.currentBidderId,
+        winnerName: winner.name,
+        amount: action.currentBid,
+        businessName: action.businessName
+      });
+    }
+  } else {
+    game.addLog(`Аукціон за ${action.businessName} не відбувся — ніхто не зробив ставку.`);
+    broadcastEvent(roomId, 'auctionResult', { winnerId: null, businessName: action.businessName });
+  }
+  game.pendingAction = null;
+  broadcastState(roomId);
+}
+
+function processAuctionRaise(roomId, playerId) {
+  const game = rooms.get(roomId);
+  if (!game || !game.pendingAction || game.pendingAction.type !== 'auction') return;
+  const action = game.pendingAction;
+  const player = game.getPlayer(playerId);
+  if (!player || !player.alive) return;
+  if (action.passed.includes(playerId)) return;
+
+  const newBid = action.currentBid === 0 ? action.minPrice : action.currentBid + action.bidStep;
+  if (player.money < newBid) return;
+
+  action.currentBid = newBid;
+  action.currentBidderId = playerId;
+  action.currentBidderName = player.name;
+  // Remove from passed if they were there (shouldn't be, but safety)
+  action.passed = action.passed.filter(id => id !== playerId);
+
+  game.addLog(`${player.name} ставить ${newBid}$ на аукціоні за ${action.businessName}.`);
+  broadcastEvent(roomId, 'auctionUpdate', {
+    currentBid: newBid,
+    currentBidderId: playerId,
+    currentBidderName: player.name,
+    passed: action.passed
+  });
+  broadcastState(roomId);
+
+  // Check if all other alive players have passed
+  const alivePlayers = game.getAlivePlayers().filter(p => p.id !== playerId);
+  const allOthersPassed = alivePlayers.every(p => action.passed.includes(p.id));
+  if (allOthersPassed) {
+    // Only one bidder left — they win
+    setTimeout(() => resolveAuction(roomId), 500);
+  } else {
+    // Restart 5s timer for counter-bids
+    startAuctionTimer(roomId);
+  }
+}
+
+function processAuctionPass(roomId, playerId) {
+  const game = rooms.get(roomId);
+  if (!game || !game.pendingAction || game.pendingAction.type !== 'auction') return;
+  const action = game.pendingAction;
+  const player = game.getPlayer(playerId);
+  if (!player || !player.alive) return;
+  if (action.passed.includes(playerId)) return;
+
+  action.passed.push(playerId);
+  game.addLog(`${player.name} пасує на аукціоні.`);
+  broadcastEvent(roomId, 'auctionUpdate', {
+    currentBid: action.currentBid,
+    currentBidderId: action.currentBidderId,
+    currentBidderName: action.currentBidderName,
+    passed: action.passed
+  });
+  broadcastState(roomId);
+
+  // Check if everyone passed
+  const alivePlayers = game.getAlivePlayers();
+  const allPassed = alivePlayers.every(p => action.passed.includes(p.id));
+  if (allPassed) {
+    // No one bid — auction fails
+    setTimeout(() => resolveAuction(roomId), 500);
+    return;
+  }
+
+  // Check if only one player left who hasn't passed (and they are the current bidder)
+  const remaining = alivePlayers.filter(p => !action.passed.includes(p.id));
+  if (remaining.length === 1 && action.currentBidderId === remaining[0].id) {
+    setTimeout(() => resolveAuction(roomId), 500);
+  }
 }
 
 // --- Bot AI ---
@@ -190,7 +338,18 @@ function resolveBotPendingAction(roomId, game, bot) {
       break;
     }
     case 'pay_rent': {
-      game.executePayRent(botId, false); // never use robbery
+      const rentAction = game.pendingAction;
+      const rentResult = game.executePayRent(botId, false); // never use robbery
+      if (rentResult && rentResult.paid && rentAction) {
+        broadcastEvent(roomId, 'rentPaid', {
+          payerName: rentAction.playerName,
+          payerCharacter: rentAction.playerCharacter,
+          ownerName: rentAction.ownerName,
+          ownerCharacter: rentAction.ownerCharacter,
+          amount: rentAction.amount,
+          businessName: rentAction.businessName
+        });
+      }
       break;
     }
     case 'seize_prison_business': {
@@ -358,43 +517,36 @@ function resolveBotPendingAction(roomId, game, bot) {
       break;
     }
     case 'auction': {
-      // Bot bids on auction
-      const minPrice = action.minPrice || 0;
-      const bid = (bot.money >= minPrice) ? minPrice : 0;
-      if (!action.bids) action.bids = {};
-      action.bids[botId] = bid;
-      // Check if all alive players have bid
-      const alivePlayers = game.getAlivePlayers();
-      const allBid = alivePlayers.every(p => action.bids.hasOwnProperty(p.id));
-      if (allBid) {
-        let winnerId = null, maxBid = 0;
-        for (const [pid, b] of Object.entries(action.bids)) {
-          if (b > maxBid) { maxBid = b; winnerId = pid; }
-        }
-        if (winnerId && maxBid >= action.minPrice) {
-          const winner = game.getPlayer(winnerId);
-          winner.money -= maxBid;
-          game.businesses[action.businessId].owner = winnerId;
-          game.businesses[action.businessId].influenceLevel = 1;
-          winner.businesses.push(action.businessId);
-          game.addLog(`${winner.name} виграв аукціон за ${action.businessName}: ${maxBid}$.`);
-        } else {
-          game.addLog(`Аукціон за ${action.businessName} не відбувся.`);
-        }
-        game.pendingAction = null;
+      // Bot decides whether to raise or pass in real-time auction
+      // Bot will raise if it can afford and hasn't passed, with some randomness
+      if (action.passed.includes(botId)) break;
+      const nextBid = action.currentBid === 0 ? action.minPrice : action.currentBid + action.bidStep;
+      const canAfford = bot.money >= nextBid;
+      const isCurrentBidder = action.currentBidderId === botId;
+      // Don't raise own bid
+      if (isCurrentBidder) break;
+      // 60% chance to raise if can afford, otherwise pass
+      if (canAfford && Math.random() < 0.6) {
+        processAuctionRaise(roomId, botId);
+      } else {
+        processAuctionPass(roomId, botId);
       }
       break;
     }
     case 'attack_reaction': {
       // Try to pay off if possible
+      let botAttackResult;
       if (action.canBuyOff && bot.money >= (action.buyOffCost || 0)) {
-        game.resolveAttackReaction(botId, 'buyOff');
+        botAttackResult = game.resolveAttackReaction(botId, 'buyOff');
       } else if (action.canVest) {
-        game.resolveAttackReaction(botId, 'vest');
+        botAttackResult = game.resolveAttackReaction(botId, 'vest');
       } else if (action.canPolice) {
-        game.resolveAttackReaction(botId, 'police');
+        botAttackResult = game.resolveAttackReaction(botId, 'police');
       } else {
-        game.resolveAttackReaction(botId, 'nothing');
+        botAttackResult = game.resolveAttackReaction(botId, 'nothing');
+      }
+      if (botAttackResult && botAttackResult.type) {
+        broadcastEvent(roomId, 'attackOutcome', botAttackResult);
       }
       break;
     }
@@ -438,39 +590,28 @@ function handleBotPendingParticipation(roomId, game) {
   const action = game.pendingAction;
   if (!action) return;
 
-  // Bots auto-bid in auctions
+  // Bots participate in real-time auctions
   if (action.type === 'auction') {
-    let changed = false;
+    // Schedule bot responses with random delay for natural feel
     for (const p of game.getAlivePlayers()) {
-      if (p.isBot && !action.bids.hasOwnProperty(p.id)) {
-        const minPrice = action.minPrice || 0;
-        action.bids[p.id] = (p.money >= minPrice) ? minPrice : 0;
-        changed = true;
+      if (p.isBot && !action.passed.includes(p.id) && action.currentBidderId !== p.id) {
+        const delay = 1500 + Math.floor(Math.random() * 2000);
+        setTimeout(() => {
+          if (!game.pendingAction || game.pendingAction.type !== 'auction') return;
+          if (action.passed.includes(p.id)) return;
+          const nextBid = action.currentBid === 0 ? action.minPrice : action.currentBid + action.bidStep;
+          const canAfford = p.money >= nextBid;
+          if (canAfford && Math.random() < 0.55) {
+            processAuctionRaise(roomId, p.id);
+          } else {
+            processAuctionPass(roomId, p.id);
+          }
+        }, delay);
       }
     }
-    if (changed) {
-      // Check if all alive players have now bid
-      const alivePlayers = game.getAlivePlayers();
-      const allBid = alivePlayers.every(pl => action.bids.hasOwnProperty(pl.id));
-      if (allBid) {
-        let winnerId = null, maxBid = 0;
-        for (const [pid, bid] of Object.entries(action.bids)) {
-          if (bid > maxBid) { maxBid = bid; winnerId = pid; }
-        }
-        if (winnerId && maxBid >= action.minPrice) {
-          const winner = game.getPlayer(winnerId);
-          winner.money -= maxBid;
-          game.businesses[action.businessId].owner = winnerId;
-          game.businesses[action.businessId].influenceLevel = 1;
-          winner.businesses.push(action.businessId);
-          game.addLog(`${winner.name} виграв аукціон за ${action.businessName}: ${maxBid}$.`);
-        } else {
-          game.addLog(`Аукціон за ${action.businessName} не відбувся.`);
-        }
-        game.pendingAction = null;
-        // Re-broadcast after resolving auction (use setTimeout to avoid recursion)
-        setTimeout(() => broadcastState(roomId), 100);
-      }
+    // Start auction timer if not already running
+    if (!auctionTimers.has(roomId)) {
+      startAuctionTimer(roomId);
     }
   }
 
@@ -480,19 +621,47 @@ function handleBotPendingParticipation(roomId, game) {
     if (target && target.isBot) {
       setTimeout(() => {
         if (!game.pendingAction || game.pendingAction.type !== 'attack_reaction') return;
+        let botTargetResult;
         if (action.canBuyOff && target.money >= (action.buyOffCost || 0)) {
-          game.resolveAttackReaction(target.id, 'buyOff');
+          botTargetResult = game.resolveAttackReaction(target.id, 'buyOff');
         } else if (action.canVest) {
-          game.resolveAttackReaction(target.id, 'vest');
+          botTargetResult = game.resolveAttackReaction(target.id, 'vest');
         } else if (action.canPolice) {
-          game.resolveAttackReaction(target.id, 'police');
+          botTargetResult = game.resolveAttackReaction(target.id, 'police');
         } else {
-          game.resolveAttackReaction(target.id, 'nothing');
+          botTargetResult = game.resolveAttackReaction(target.id, 'nothing');
+        }
+        if (botTargetResult && botTargetResult.type) {
+          broadcastEvent(roomId, 'attackOutcome', botTargetResult);
         }
         // After resolving, check if a new pending action was created (e.g. choose_kill_helper)
         resolveBotFollowUpAction(roomId, game);
         broadcastState(roomId);
       }, 1500);
+    }
+  }
+
+  // Bot auto-responds to trade offers
+  if (action.type === 'trade_offer' && action.toId) {
+    const target = game.getPlayer(action.toId);
+    if (target && target.isBot) {
+      setTimeout(() => {
+        if (!game.pendingAction || game.pendingAction.type !== 'trade_offer') return;
+        game.executeTradeOffer(action.toId, false); // Bots decline trades
+        broadcastState(roomId);
+      }, 2000);
+    }
+  }
+
+  // Bot auto-responds to alliance offers
+  if (action.type === 'alliance_offer' && action.toId) {
+    const target = game.getPlayer(action.toId);
+    if (target && target.isBot) {
+      setTimeout(() => {
+        if (!game.pendingAction || game.pendingAction.type !== 'alliance_offer') return;
+        game.executeAllianceOffer(action.toId, true); // Bots accept alliances
+        broadcastState(roomId);
+      }, 2000);
     }
   }
 
@@ -535,15 +704,73 @@ function resolveBotFollowUpAction(roomId, game) {
   }
 }
 
+// --- Turn Timer ---
+function startTurnTimer(roomId) {
+  clearTurnTimer(roomId);
+  const game = rooms.get(roomId);
+  if (!game || game.phase !== 'playing') return;
+  const current = game.getCurrentPlayer();
+  if (!current || current.isBot) return;
+
+  let remaining = TURN_TIME_LIMIT;
+  io.to(roomId).emit('turnTimer', { remaining });
+
+  const interval = setInterval(() => {
+    remaining--;
+    io.to(roomId).emit('turnTimer', { remaining });
+    if (remaining <= 0) {
+      clearTurnTimer(roomId);
+      // Auto-end turn
+      try {
+        if (game.pendingAction) {
+          // Auto-resolve common pending actions
+          const action = game.pendingAction;
+          if (action.type === 'buy_business') game.executeBuyBusiness(current.id, action.businessId, false);
+          else if (action.type === 'pay_rent') {
+            broadcastEvent(roomId, 'rentPaid', {
+              payerName: action.playerName, payerCharacter: action.playerCharacter,
+              ownerName: action.ownerName, ownerCharacter: action.ownerCharacter,
+              amount: action.amount, businessName: action.businessName
+            });
+            game.executePayRent(current.id, false);
+          }
+          else if (action.type === 'event_confirm') game.executeEventConfirm(current.id);
+          else if (action.type === 'mafia_confirm') game.executeMafiaConfirm(current.id);
+          else game.pendingAction = null;
+        }
+        if (game.turnPhase === 'roll') {
+          game.rollDiceForPlayer(current.id);
+        }
+        game.endTurn(current.id);
+        broadcastState(roomId);
+      } catch(e) { console.error('Turn timer auto-end error:', e.message); }
+    }
+  }, 1000);
+
+  turnTimers.set(roomId, { timer: interval, remaining });
+}
+
+function clearTurnTimer(roomId) {
+  const t = turnTimers.get(roomId);
+  if (t) {
+    clearInterval(t.timer);
+    turnTimers.delete(roomId);
+  }
+}
+
+function resetTurnTimer(roomId) {
+  startTurnTimer(roomId);
+}
+
 // --- Socket.IO ---
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
   // CREATE ROOM
-  socket.on('createRoom', ({ playerName }, cb) => {
+  socket.on('createRoom', ({ playerName, characterId }, cb) => {
     const roomId = generateRoomId();
     const game = new GameEngine(roomId);
-    const player = game.addPlayer(socket.id, playerName);
+    const player = game.addPlayer(socket.id, playerName, false, characterId);
     rooms.set(roomId, game);
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
@@ -552,13 +779,13 @@ io.on('connection', (socket) => {
   });
 
   // JOIN ROOM
-  socket.on('joinRoom', ({ roomId, playerName }, cb) => {
+  socket.on('joinRoom', ({ roomId, playerName, characterId }, cb) => {
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Кімнату не знайдено.' });
     if (game.phase !== 'waiting') return cb({ error: 'Гра вже розпочалась.' });
     if (game.players.length >= 8) return cb({ error: 'Кімната повна.' });
 
-    const player = game.addPlayer(socket.id, playerName);
+    const player = game.addPlayer(socket.id, playerName, false, characterId);
     if (!player) return cb({ error: 'Не вдалося приєднатися.' });
 
     playerRooms.set(socket.id, roomId);
@@ -630,6 +857,22 @@ io.on('connection', (socket) => {
     broadcastEvent(roomId, 'playerJoined', { name: botName, count: game.players.length });
   });
 
+  // CHANGE CHARACTER (in waiting room)
+  socket.on('changeCharacter', ({ characterId }) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game || game.phase !== 'waiting') return;
+    const player = game.players.find(p => p.id === socket.id);
+    if (!player) return;
+    const usedCharIds = game.players.filter(p => p.id !== socket.id).map(p => p.character?.id).filter(Boolean);
+    if (usedCharIds.includes(characterId)) return; // already taken
+    const { CHARACTERS } = require('./game/data');
+    const newChar = CHARACTERS.find(c => c.id === characterId);
+    if (!newChar) return;
+    player.character = newChar;
+    broadcastState(roomId);
+  });
+
   // ROLL DICE
   socket.on('rollDice', (_, cb) => {
    try {
@@ -686,9 +929,21 @@ io.on('connection', (socket) => {
       case 'buy_business':
         result = game.executeBuyBusiness(socket.id, data.businessId, data.buy);
         break;
-      case 'pay_rent':
+      case 'pay_rent': {
+        const rentAction = game.pendingAction;
         result = game.executePayRent(socket.id, data.useRobbery);
+        if (result && result.paid && rentAction) {
+          broadcastEvent(roomId, 'rentPaid', {
+            payerName: rentAction.playerName,
+            payerCharacter: rentAction.playerCharacter,
+            ownerName: rentAction.ownerName,
+            ownerCharacter: rentAction.ownerCharacter,
+            amount: rentAction.amount,
+            businessName: rentAction.businessName
+          });
+        }
         break;
+      }
       case 'seize_prison_business':
         result = game.executeSeizePrisonBusiness(socket.id, data.businessId, data.buy);
         break;
@@ -722,9 +977,15 @@ io.on('connection', (socket) => {
         break;
       case 'attack_reaction':
         result = game.resolveAttackReaction(socket.id, data.reaction);
+        if (result && result.type) {
+          broadcastEvent(roomId, 'attackOutcome', result);
+        }
         break;
       case 'choose_kill_helper':
         result = game.executeChooseKillHelper(data.attackerId, data.targetId, data.helperIndex);
+        if (result && result.type) {
+          broadcastEvent(roomId, 'attackOutcome', result);
+        }
         break;
       case 'choose_lose_helper':
         if (game.pendingAction && game.pendingAction.type === 'choose_lose_helper') {
@@ -988,43 +1249,36 @@ io.on('connection', (socket) => {
    }
   });
 
-  // AUCTION BID
-  socket.on('auctionBid', ({ amount }, cb) => {
+  // AUCTION RAISE
+  socket.on('auctionRaise', (data, cb) => {
     const roomId = playerRooms.get(socket.id);
     const game = rooms.get(roomId);
     if (!game || !game.pendingAction || game.pendingAction.type !== 'auction') {
       return cb({ error: 'Немає аукціону.' });
     }
     const player = game.getPlayer(socket.id);
-    if (!player.alive) return cb({ error: 'Ви вибули з гри.' });
-    if (amount > 0 && amount > player.money) return cb({ error: 'Недостатньо коштів.' });
-    game.pendingAction.bids[socket.id] = amount;
-    cb({ success: true, bid: amount });
-    broadcastEvent(roomId, 'auctionBid', { playerId: socket.id, playerName: player.name, amount });
+    if (!player || !player.alive) return cb({ error: 'Ви вибули з гри.' });
+    const action = game.pendingAction;
+    if (action.passed.includes(socket.id)) return cb({ error: 'Ви вже спасували.' });
+    if (action.currentBidderId === socket.id) return cb({ error: 'Ви вже лідер ставки.' });
+    const newBid = action.currentBid === 0 ? action.minPrice : action.currentBid + action.bidStep;
+    if (player.money < newBid) return cb({ error: 'Недостатньо коштів.' });
+    cb({ success: true, newBid });
+    processAuctionRaise(roomId, socket.id);
+  });
 
-    // Auto-resolve when all alive players have bid
-    const alivePlayers = game.getAlivePlayers();
-    const allBid = alivePlayers.every(p => game.pendingAction.bids.hasOwnProperty(p.id));
-    if (allBid) {
-      const action = game.pendingAction;
-      let winnerId = null, maxBid = 0;
-      for (const [pid, bid] of Object.entries(action.bids)) {
-        if (bid > maxBid) { maxBid = bid; winnerId = pid; }
-      }
-
-      if (winnerId && maxBid >= action.minPrice) {
-        const winner = game.getPlayer(winnerId);
-        winner.money -= maxBid;
-        game.businesses[action.businessId].owner = winnerId;
-        game.businesses[action.businessId].influenceLevel = 1;
-        winner.businesses.push(action.businessId);
-        game.addLog(`${winner.name} виграв аукціон за ${action.businessName}: ${maxBid}$.`);
-      } else {
-        game.addLog(`Аукціон за ${action.businessName} не відбувся.`);
-      }
-      game.pendingAction = null;
-      broadcastState(roomId);
+  // AUCTION PASS
+  socket.on('auctionPass', (data, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game || !game.pendingAction || game.pendingAction.type !== 'auction') {
+      return cb({ error: 'Немає аукціону.' });
     }
+    const player = game.getPlayer(socket.id);
+    if (!player || !player.alive) return cb({ error: 'Ви вибули з гри.' });
+    if (game.pendingAction.passed.includes(socket.id)) return cb({ error: 'Ви вже спасували.' });
+    cb({ success: true });
+    processAuctionPass(roomId, socket.id);
   });
 
   // SURRENDER
@@ -1035,6 +1289,50 @@ io.on('connection', (socket) => {
     const result = game.surrender(socket.id);
     cb(result);
     broadcastState(roomId);
+  });
+
+  // LEAVE GAME
+  socket.on('leaveGame', () => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return;
+    const player = game.getPlayer(socket.id);
+    if (player) {
+      player.alive = false;
+      player.disconnected = false;
+      game.addLog(`${player.name} покинув гру.`);
+      const alive = game.getAlivePlayers();
+      if (alive.length === 1 && game.phase === 'playing') {
+        game.phase = 'finished';
+        game.winner = alive[0];
+        game.addLog(`${alive[0].name} переміг!`);
+      }
+      if (alive.length === 0) rooms.delete(roomId);
+    }
+    playerRooms.delete(socket.id);
+    socket.leave(roomId);
+    broadcastState(roomId);
+  });
+
+  // RESTART GAME
+  socket.on('restartGame', (data, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Гра не знайдена.' });
+    // Only host can restart
+    if (game.hostId !== socket.id) return cb({ error: 'Тільки хост може перезапустити гру.' });
+
+    // Notify all clients to reload
+    io.to(roomId).emit('gameRestarted');
+
+    // Clean up the room — players will rejoin via reload
+    clearTurnTimer(roomId);
+    rooms.delete(roomId);
+    // Clear all player-room mappings for this room
+    for (const [sid, rid] of playerRooms.entries()) {
+      if (rid === roomId) playerRooms.delete(sid);
+    }
+    cb({ success: true });
   });
 
   // ===== CHEAT/DEBUG HANDLERS =====
@@ -1131,6 +1429,140 @@ io.on('connection', (socket) => {
     } catch(e) { cb({ error: e.message }); }
   });
 
+  // CHAT MESSAGE
+  socket.on('chatMessage', ({ message }, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game || !message) return;
+    const player = game.getPlayer(socket.id);
+    if (!player) return;
+    const trimmed = message.trim().slice(0, 200);
+    if (!trimmed) return;
+    const idx = game.players.indexOf(player);
+    const msg = {
+      playerId: socket.id,
+      playerName: player.name,
+      playerColor: player.character?.color || '#888',
+      playerIndex: idx,
+      message: trimmed,
+      timestamp: Date.now()
+    };
+    if (!chatHistory.has(roomId)) chatHistory.set(roomId, []);
+    const history = chatHistory.get(roomId);
+    history.push(msg);
+    if (history.length > 100) history.shift();
+    io.to(roomId).emit('chatMessage', msg);
+    if (cb) cb({ success: true });
+  });
+
+  // CHAT REACTION (emoji)
+  socket.on('chatReaction', ({ emoji }) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return;
+    const player = game.getPlayer(socket.id);
+    if (!player) return;
+    io.to(roomId).emit('chatReaction', {
+      playerId: socket.id,
+      playerName: player.name,
+      emoji,
+      timestamp: Date.now()
+    });
+  });
+
+  // GET CHAT HISTORY
+  socket.on('getChatHistory', (_, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const history = chatHistory.get(roomId) || [];
+    cb(history);
+  });
+
+  // TRADE OFFER
+  socket.on('tradeOffer', ({ toId, offer }, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Гра не знайдена.' });
+    const result = game.createTradeOffer(socket.id, toId, offer);
+    cb(result);
+    if (result.success) broadcastState(roomId);
+  });
+
+  // TRADE RESPONSE
+  socket.on('tradeResponse', ({ accept }, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Гра не знайдена.' });
+    const result = game.executeTradeOffer(socket.id, accept);
+    cb(result);
+    broadcastState(roomId);
+  });
+
+  // ALLIANCE OFFER
+  socket.on('allianceOffer', ({ toId, rounds }, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Гра не знайдена.' });
+    const result = game.createAlliance(socket.id, toId, rounds || 3);
+    cb(result);
+    if (result.success) broadcastState(roomId);
+  });
+
+  // ALLIANCE RESPONSE
+  socket.on('allianceResponse', ({ accept }, cb) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Гра не знайдена.' });
+    const result = game.executeAllianceOffer(socket.id, accept);
+    cb(result);
+    broadcastState(roomId);
+  });
+
+  // SET AVATAR
+  socket.on('setAvatar', ({ avatarId }) => {
+    const roomId = playerRooms.get(socket.id);
+    const game = rooms.get(roomId);
+    if (!game) return;
+    const player = game.getPlayer(socket.id);
+    if (player) {
+      player.avatar = avatarId;
+      broadcastState(roomId);
+    }
+  });
+
+  // REJOIN ROOM (reconnection)
+  socket.on('rejoinRoom', ({ roomId, playerName }, cb) => {
+    const key = Array.from(disconnectedPlayers.keys()).find(k => {
+      const dc = disconnectedPlayers.get(k);
+      return k.startsWith(roomId + ':') && dc.name === playerName;
+    });
+    if (!key) return cb({ error: 'Не вдалося перепідключитися.' });
+    const dc = disconnectedPlayers.get(key);
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Гра не знайдена.' });
+
+    const player = game.players.find(p => p.name === playerName);
+    if (!player) return cb({ error: 'Гравця не знайдено.' });
+
+    // Reassign socket ID
+    const oldId = player.id;
+    player.id = socket.id;
+    player.alive = true;
+    player.disconnected = false;
+
+    // Clean up old mappings
+    playerRooms.delete(dc.socketId);
+    clearTimeout(dc.timer);
+    disconnectedPlayers.delete(key);
+
+    // Set up new mappings
+    playerRooms.set(socket.id, roomId);
+    socket.join(roomId);
+
+    game.addLog(`${player.name} перепідключився!`);
+    cb({ success: true, playerId: socket.id, roomId });
+    broadcastState(roomId);
+  });
+
   // DISCONNECT
   socket.on('disconnect', () => {
     const roomId = playerRooms.get(socket.id);
@@ -1138,19 +1570,51 @@ io.on('connection', (socket) => {
       const game = rooms.get(roomId);
       if (game) {
         const player = game.getPlayer(socket.id);
-        if (player) {
+        if (player && game.phase === 'playing') {
+          // Grace period for reconnection
+          player.disconnected = true;
+          game.addLog(`${player.name} від'єднався. Очікування ${RECONNECT_GRACE}с...`);
+          const key = `${roomId}:${player.id}`;
+          const gracePeriod = setTimeout(() => {
+            disconnectedPlayers.delete(key);
+            if (player.disconnected) {
+              player.alive = false;
+              player.disconnected = false;
+              game.addLog(`${player.name} не повернувся. Вибуває з гри.`);
+              const alive = game.getAlivePlayers();
+              if (alive.length === 1 && game.phase === 'playing') {
+                game.phase = 'finished';
+                game.winner = alive[0];
+                game.addLog(`${alive[0].name} переміг!`);
+              }
+              if (alive.length === 0) rooms.delete(roomId);
+              broadcastState(roomId);
+            }
+          }, RECONNECT_GRACE * 1000);
+          disconnectedPlayers.set(key, { socketId: socket.id, name: player.name, timer: gracePeriod });
+          // If it's their turn, auto-end after a shorter delay
+          if (game.getCurrentPlayer()?.id === socket.id) {
+            clearTurnTimer(roomId);
+            setTimeout(() => {
+              try {
+                if (player.disconnected && game.getCurrentPlayer()?.id === player.id) {
+                  if (game.pendingAction) game.pendingAction = null;
+                  game.endTurn(player.id);
+                  broadcastState(roomId);
+                }
+              } catch(e) {}
+            }, 5000);
+          }
+        } else if (player && game.phase === 'waiting') {
+          game.removePlayer(socket.id);
+        } else if (player) {
           player.alive = false;
-          game.addLog(`${player.name} від'єднався.`);
-          // Check win
           const alive = game.getAlivePlayers();
           if (alive.length === 1 && game.phase === 'playing') {
             game.phase = 'finished';
             game.winner = alive[0];
-            game.addLog(`${alive[0].name} переміг!`);
           }
-          if (alive.length === 0) {
-            rooms.delete(roomId);
-          }
+          if (alive.length === 0) rooms.delete(roomId);
         }
         broadcastState(roomId);
       }

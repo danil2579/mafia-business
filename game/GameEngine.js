@@ -43,14 +43,22 @@ class GameEngine {
     this.turnNumber = 0;
     this.mafiaCardMinRound = 3; // min round before mafia cards can be used (configurable)
     this.maxRounds = 30;
+    this.hostId = null; // first human player to join
   }
 
   // --- SETUP ---
-  addPlayer(id, name, isBot = false) {
+  addPlayer(id, name, isBot = false, characterId = null) {
     if (this.players.length >= 8) return null;
     if (this.phase !== 'waiting') return null;
-    const charIndex = this.players.length;
-    const character = CHARACTERS[charIndex];
+    // Pick character: prefer requested, fallback to first available
+    const usedCharIds = this.players.map(p => p.character?.id).filter(Boolean);
+    let character;
+    if (characterId) {
+      character = CHARACTERS.find(c => c.id === characterId && !usedCharIds.includes(c.id));
+    }
+    if (!character) {
+      character = CHARACTERS.find(c => !usedCharIds.includes(c.id)) || CHARACTERS[this.players.length];
+    }
     const player = {
       id,
       name,
@@ -66,9 +74,18 @@ class GameEngine {
       isBot: isBot,
       canUpgradeRespect: false, // resets after passing START
       helperStates: {}, // for rechargeable abilities like Survivor Joe
-      passedStartThisTurn: false
+      passedStartThisTurn: false,
+      stats: {
+        moneyEarned: 0, moneySpent: 0, businessesBought: 0,
+        helpersHired: 0, attacksMade: 0, attacksSurvived: 0,
+        roundsSurvived: 0, mafiaCardsUsed: 0,
+        casinoWins: 0, casinoLosses: 0, timesInPrison: 0,
+        totalRentCollected: 0, totalRentPaid: 0
+      },
+      avatar: null // player chosen avatar
     };
     this.players.push(player);
+    if (!isBot && !this.hostId) this.hostId = id;
     return player;
   }
 
@@ -200,6 +217,12 @@ class GameEngine {
     return null;
   }
 
+  getDistrictByPosition(position) {
+    const districtId = this.getDistrictOfSector(position);
+    if (!districtId) return null;
+    return DISTRICTS.find(d => d.id === districtId) || null;
+  }
+
   getPlayerBusinessesInDistrict(playerId, districtId) {
     const player = this.getPlayer(playerId);
     return player.businesses.filter(bizId => {
@@ -316,8 +339,8 @@ class GameEngine {
     player.inPrison--;
     // Leo Acrobat: reduce by 1
     if (this.hasHelper(player.id, 'earlyRelease') && player.inPrison > 0) {
-      player.inPrison = Math.max(0, player.inPrison - 1);
-      this.addLog(`Лео «Акробат» допоміг ${player.name} вийти раніше!`);
+      player.inPrison = 0;
+      this.addLog(`Лео «Акробат» допоміг ${player.name} вийти одразу!`);
     }
     if (player.inPrison <= 0) {
       player.inPrison = 0;
@@ -367,8 +390,8 @@ class GameEngine {
         if (sector.type === 'BAR') {
           // Marco "Player" bonus on passing BAR
           if (this.hasHelper(player.id, 'barBonus')) {
-            player.money += 500;
-            this.addLog(`Марко «Гравець» отримав 500$ у BAR!`);
+            player.money += 1000;
+            this.addLog(`Марко «Гравець» отримав 1000$ у BAR!`);
             events.push({ type: 'barBonus', amount: 500 });
           }
           // Passing through BAR: offer to hire helper (per rules)
@@ -573,22 +596,27 @@ class GameEngine {
   handlePassStart(player) {
     const respect = this.getRespectData(player.respectLevel);
     player.money += respect.startBonus;
+    player.stats.moneyEarned += respect.startBonus;
     player.canUpgradeRespect = true;
-    // Recharge Survivor Joe
-    if (this.hasHelper(player.id, 'surviveOnce')) {
-      player.helperStates.survivorJoeActive = true;
-    }
     this.addLog(`${player.name} пройшов START: +${respect.startBonus}$.`);
     return [{ type: 'start_passed', bonus: respect.startBonus }];
   }
 
   handlePolice(player) {
     if (this.hasHelper(player.id, 'noBribe')) {
-      this.addLog(`Міккі «Відступник» допоміг ${player.name} уникнути хабара.`);
+      player.money += 500;
+      this.addLog(`Міккі «Відступник» допоміг ${player.name} уникнути хабара і заробив 500$!`);
+      return [{ type: 'police_bribe_skipped' }];
+    }
+    // Corruption card: skip bribe
+    if (player._corruptionTurns && player._corruptionTurns > 0) {
+      player._corruptionTurns--;
+      this.addLog(`${player.name} уникнув хабара завдяки корупції! (залишилось ${player._corruptionTurns} ходів)`);
       return [{ type: 'police_bribe_skipped' }];
     }
     const respect = this.getRespectData(player.respectLevel);
     player.money -= respect.policeBribe;
+    player.stats.moneySpent += respect.policeBribe;
     this.addLog(`${player.name} заплатив хабар поліції: ${respect.policeBribe}$.`);
     return [{ type: 'police_bribe', amount: respect.policeBribe }];
   }
@@ -741,8 +769,8 @@ class GameEngine {
 
     // Lenny Pike bonus: 200$ on non-mafia sectors
     if (this.hasHelper(player.id, 'bonusOnNonMafia')) {
-      player.money += 200;
-      this.addLog(`Ленні «Щука» отримав бонус 200$.`);
+      player.money += 500;
+      this.addLog(`Ленні «Щука» отримав бонус 500$.`);
     }
 
     if (!bizState.owner) {
@@ -811,7 +839,11 @@ class GameEngine {
     const baseRent = biz.rent[rentIndex];
     // Influence bonus: each upgrade above base (level 1) adds influenceCost
     const influenceBonus = Math.max(0, (bizState.influenceLevel - 1)) * district.influenceCost;
-    const rentAmount = baseRent + influenceBonus;
+    let rentAmount = baseRent + influenceBonus;
+    // Money laundering: double rent collected
+    if (owner._doubleIncome && owner._doubleIncome > 0) {
+      rentAmount *= 2;
+    }
 
     // Check if player has Robbery card (will be handled via pendingAction)
     const hasRobbery = player.mafiaCards.some(c => c.id === 'robbery');
@@ -824,7 +856,11 @@ class GameEngine {
     this.pendingAction = {
       type: 'pay_rent',
       playerId: player.id,
+      playerName: player.name,
+      playerCharacter: player.character,
       ownerId: owner.id,
+      ownerName: owner.name,
+      ownerCharacter: owner.character,
       businessId: biz.id,
       amount: rentAmount,
       businessName: biz.name,
@@ -879,6 +915,8 @@ class GameEngine {
         return { error: 'Недостатньо коштів' };
       }
       player.money -= biz.price;
+      player.stats.moneySpent += biz.price;
+      player.stats.businessesBought++;
       this.businesses[businessId].owner = playerId;
       player.businesses.push(businessId);
       // Set base influence level on the business
@@ -887,17 +925,21 @@ class GameEngine {
       this.pendingAction = null;
       return { success: true, bought: true };
     } else {
-      // Auction
+      // Real-time auction: starts at minPrice, players raise by +500$, 5s timer per bid
       this.pendingAction = {
         type: 'auction',
         businessId,
         businessName: biz.name,
-        minPrice: biz.price,
         districtId: biz.districtId,
-        bids: {},
+        minPrice: biz.price,
+        currentBid: 0,
+        currentBidderId: null,
+        currentBidderName: null,
+        bidStep: 500,
+        passed: [], // players who passed
         phase: 'bidding'
       };
-      this.addLog(`${biz.name} виставлено на аукціон!`);
+      this.addLog(`${biz.name} виставлено на аукціон! Стартова ціна: ${biz.price}$`);
       return { success: true, auction: true };
     }
   }
@@ -925,8 +967,23 @@ class GameEngine {
     // Normal rent payment
     if (player.money >= action.amount) {
       player.money -= action.amount;
-      owner.money += action.amount;
-      this.addLog(`${player.name} заплатив ${owner.name} ${action.amount}$ за ${action.businessName}.`);
+      player.stats.moneySpent += action.amount;
+      player.stats.totalRentPaid += action.amount;
+      player._lastRentPaid = action.amount;
+
+      // Check if someone has forgery (intercepts rent)
+      const interceptor = this.getAlivePlayers().find(p => p._interceptRent && p.id !== player.id && p.id !== owner.id);
+      if (interceptor) {
+        interceptor._interceptRent = false;
+        interceptor.money += action.amount;
+        interceptor.stats.moneyEarned += action.amount;
+        this.addLog(`${interceptor.name} перехопив ренту ${action.amount}$ завдяки підробці документів!`);
+      } else {
+        owner.money += action.amount;
+        owner.stats.moneyEarned += action.amount;
+        owner.stats.totalRentCollected += action.amount;
+      }
+      this.addLog(`${player.name} заплатив ${action.amount}$ за ${action.businessName}.`);
       this.pendingAction = null;
       return { success: true, paid: true };
     } else {
@@ -952,9 +1009,14 @@ class GameEngine {
 
   resolveMafia(player) {
     let cardCount = 1;
+    let peekCard = null;
     if (this.hasHelper(player.id, 'doubleMafia')) {
-      cardCount = 2;
-      this.addLog(`Ніккі «Король» бере 2 карти MAFIA!`);
+      // Peek at next card in deck
+      if (this.mafiaDiscardPile.length > 0 || this.mafiaDeck.length > 1) {
+        const peekIdx = this.mafiaDeck.length > 1 ? 1 : 0;
+        if (this.mafiaDeck[peekIdx]) peekCard = { ...this.mafiaDeck[peekIdx] };
+      }
+      this.addLog(`Ніккі «Король» підглядає наступну карту в колоді!`);
     }
     const drawnCards = [];
     for (let i = 0; i < cardCount; i++) {
@@ -965,9 +1027,10 @@ class GameEngine {
     this.pendingAction = {
       type: 'mafia_confirm',
       playerId: player.id,
-      cards: drawnCards
+      cards: drawnCards,
+      peekCard: peekCard
     };
-    return { type: 'mafia', cards: drawnCards, pendingConfirm: true };
+    return { type: 'mafia', cards: drawnCards, peekCard, pendingConfirm: true };
   }
 
   executeMafiaConfirm(playerId) {
@@ -1231,8 +1294,8 @@ class GameEngine {
   resolveBar(player) {
     // Bar landing: choose hire helpers OR casino
     if (this.hasHelper(player.id, 'barBonus')) {
-      player.money += 500;
-      this.addLog(`Марко «Гравець» отримав 500$ у BAR!`);
+      player.money += 1000;
+      this.addLog(`Марко «Гравець» отримав 1000$ у BAR!`);
     }
     const respect = this.getRespectData(player.respectLevel);
     const canHire = respect.maxHelpers > player.helpers.length;
@@ -1275,6 +1338,8 @@ class GameEngine {
     if (player.money < HELPER_HIRE_COST) return { error: 'Недостатньо коштів' };
 
     player.money -= HELPER_HIRE_COST;
+    player.stats.moneySpent += HELPER_HIRE_COST;
+    player.stats.helpersHired++;
 
     // Draw up to 3 face-down helper cards for blind selection
     const drawnHelpers = [];
@@ -1336,57 +1401,48 @@ class GameEngine {
   }
 
   // --- CASINO / ROULETTE ---
+  // Simplified: 12 sectors (5 red, 5 black, 2 green). Green = JACKPOT on any bet.
   playCasino(playerId, betType, betAmount) {
     const player = this.getPlayer(playerId);
     const bet = CASINO.betTypes.find(b => b.id === betType);
     if (!bet) return { error: 'Невідомий тип ставки' };
+    if (betAmount < CASINO.minBet || betAmount > CASINO.maxBet) return { error: 'Некоректна ставка' };
+    if (player.money < betAmount) return { error: 'Недостатньо коштів' };
 
-    const actualBet = betType === 'jackpot' ? CASINO.jackpotBet : betAmount;
-    if (player.money < actualBet) return { error: 'Недостатньо коштів' };
-    if (actualBet < CASINO.minBet || (betType !== 'jackpot' && actualBet > CASINO.maxBet))
-      return { error: 'Некоректна ставка' };
+    player.money -= betAmount;
+    player.stats.moneySpent += betAmount;
 
-    player.money -= actualBet;
+    // Spin — pick random sector from the 12-sector wheel
+    const sectorIndex = Math.floor(Math.random() * CASINO.sectors.length);
+    const sectorColor = CASINO.sectors[sectorIndex];
 
-    // Spin the roulette — generate result
-    const spinResult = Math.floor(Math.random() * 37); // 0-36
-    const won = this.checkRouletteWin(spinResult, betType);
-
-    if (betType === 'jackpot' && won) {
+    // Green = JACKPOT (free business) regardless of bet type
+    if (sectorColor === 'green') {
+      player.money += betAmount; // refund the bet
       this.addLog(`${player.name} зірвав MAFIA JACKPOT!!!`);
       this.pendingAction = {
         type: 'jackpot_choose_business',
         playerId
       };
-      return { type: 'jackpot', spinResult, won: true };
+      return { type: 'jackpot', sectorIndex, sectorColor, won: true };
     }
 
-    if (won) {
-      const winnings = actualBet * bet.payout;
+    // Red/Black — if bet matches sector color, win x2
+    if (sectorColor === betType) {
+      const winnings = betAmount * bet.payout;
       player.money += winnings;
+      player.stats.moneyEarned += winnings;
+      player.stats.casinoWins++;
       this.addLog(`${player.name} виграв ${winnings}$ у казино!`);
       this.pendingAction = null;
-      return { type: 'casino_result', spinResult, won: true, winnings };
+      return { type: 'casino_result', sectorIndex, sectorColor, won: true, winnings };
     }
 
-    this.addLog(`${player.name} програв ${actualBet}$ у казино.`);
+    // Lost
+    player.stats.casinoLosses++;
+    this.addLog(`${player.name} програв ${betAmount}$ у казино.`);
     this.pendingAction = null;
-    return { type: 'casino_result', spinResult, won: false, lost: actualBet };
-  }
-
-  checkRouletteWin(result, betType) {
-    if (result === 0) return betType === 'jackpot'; // 0 = jackpot only
-    switch (betType) {
-      case 'red': return [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(result);
-      case 'black': return [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35].includes(result);
-      case 'even': return result % 2 === 0;
-      case 'odd': return result % 2 === 1;
-      case 'thirds_1': return result >= 1 && result <= 12;
-      case 'thirds_2': return result >= 13 && result <= 24;
-      case 'thirds_3': return result >= 25 && result <= 36;
-      case 'jackpot': return result === 0;
-      default: return false;
-    }
+    return { type: 'casino_result', sectorIndex, sectorColor, won: false, lost: betAmount };
   }
 
   // --- ATTACKS ---
@@ -1413,6 +1469,8 @@ class GameEngine {
     if (card.type === 'attack') {
       if (!target || !target.alive) return { error: 'Неправильна ціль' };
       if (target.id === attacker.id) return { error: 'Не можна атакувати себе' };
+      if (this.areAllied(attacker.id, target.id)) return { error: 'Не можна атакувати союзника!' };
+      if (target._immuneUntilTurn && this.turnNumber < target._immuneUntilTurn) return { error: 'Гравець під захистом свідків!' };
 
       // Prison check: only bribe_inmates works on prisoners
       if (target.inPrison > 0 && card.id !== 'bribe_inmates') {
@@ -1444,8 +1502,76 @@ class GameEngine {
       attacker.mafiaCards = attacker.mafiaCards.filter(c => c !== card);
       this.mafiaDiscard.push(card);
       attacker.money -= cost;
+      attacker.stats.moneySpent += cost;
+      attacker.stats.attacksMade++;
+      attacker.stats.mafiaCardsUsed++;
 
       this.addLog(`${attacker.name} використовує ${card.name} проти ${target.name}! (${cost}$)`);
+
+      // --- Special attack cards that don't use standard attack_reaction ---
+      if (card.id === 'arson') {
+        // Arson: destroy 1 business owned by target in current district
+        const district = this.getDistrictByPosition(attacker.position);
+        if (!district) {
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { error: 'Ви не в районі з бізнесами.' };
+        }
+        const targetBizInDistrict = target.businesses.filter(bid => {
+          const biz = this.businesses[bid];
+          return biz && biz.districtId === district.id;
+        });
+        if (targetBizInDistrict.length === 0) {
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { error: 'У цілі немає бізнесу в цьому районі.' };
+        }
+        // If target can police-block, set up reaction
+        if (card.canPolice && target.mafiaCards.some(c => c.id === 'police_card')) {
+          this.pendingAction = {
+            type: 'attack_reaction', attackerId: attacker.id, targetId: target.id,
+            card, cost,
+            canVest: false, canPolice: true,
+            canBuyOff: card.canBuyOff && this.canPlayerBuyOff(target, cost),
+            buyOffCost: (cost + BUYOFF_EXTRA) * (this.hasHelper(attacker.id, 'doubleBuyOff') ? 2 : 1), timeLimit: 12000
+          };
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'attack_initiated', card, target: target.id, pendingReaction: true };
+        }
+        // No reaction possible — resolve immediately: destroy first business
+        const bizToDestroy = targetBizInDistrict[0];
+        this.businesses[bizToDestroy].owner = null;
+        this.businesses[bizToDestroy].influenceLevel = 0;
+        target.businesses = target.businesses.filter(b => b !== bizToDestroy);
+        const bizName = this.getBusiness(bizToDestroy)?.name || bizToDestroy;
+        this.addLog(`${bizName} знищено підпалом!`);
+        attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+        return { type: 'arson_done', businessId: bizToDestroy };
+      }
+
+      if (card.id === 'street_fight') {
+        // Duel: both roll a die, higher wins 1000$ from loser
+        const attackRoll = Math.floor(Math.random() * 6) + 1;
+        const defenseRoll = Math.floor(Math.random() * 6) + 1;
+        const prize = 1000;
+        if (attackRoll > defenseRoll) {
+          const take = Math.min(prize, target.money);
+          target.money -= take;
+          attacker.money += take;
+          this.addLog(`Бійка! ${attacker.name} (${attackRoll}) vs ${target.name} (${defenseRoll}) — ${attacker.name} виграє ${take}$!`);
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'street_fight_result', attackRoll, defenseRoll, winner: attacker.id, amount: take };
+        } else if (defenseRoll > attackRoll) {
+          const take = Math.min(prize, attacker.money);
+          attacker.money -= take;
+          target.money += take;
+          this.addLog(`Бійка! ${attacker.name} (${attackRoll}) vs ${target.name} (${defenseRoll}) — ${target.name} виграє ${take}$!`);
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'street_fight_result', attackRoll, defenseRoll, winner: target.id, amount: take };
+        } else {
+          this.addLog(`Бійка! ${attacker.name} (${attackRoll}) vs ${target.name} (${defenseRoll}) — Нічия!`);
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'street_fight_result', attackRoll, defenseRoll, winner: null, amount: 0 };
+        }
+      }
 
       // Set up pending reaction for the target
       this.pendingAction = {
@@ -1456,8 +1582,8 @@ class GameEngine {
         cost,
         canVest: card.canDodge && target.mafiaCards.some(c => c.id === 'vest'),
         canPolice: card.canPolice && target.mafiaCards.some(c => c.id === 'police_card'),
-        canBuyOff: card.canBuyOff && this.canPlayerBuyOff(target, cost) && !this.hasHelper(attacker.id, 'noBuyOff'),
-        buyOffCost: cost + BUYOFF_EXTRA,
+        canBuyOff: card.canBuyOff && this.canPlayerBuyOff(target, cost),
+        buyOffCost: (cost + BUYOFF_EXTRA) * (this.hasHelper(attacker.id, 'doubleBuyOff') ? 2 : 1),
         timeLimit: 12000 // 12 seconds
       };
 
@@ -1469,6 +1595,7 @@ class GameEngine {
     const nonAttackResult = this.playNonAttackMafiaCard(attacker, card, target, options);
     if (!nonAttackResult.error) {
       attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+      attacker.stats.mafiaCardsUsed++;
     }
     return nonAttackResult;
   }
@@ -1516,6 +1643,124 @@ class GameEngine {
         this.bombs.push({ sector: player.position, placedBy: player.id });
         this.addLog(`${player.name} встановив бомбу!`);
         return { type: 'bomb_placed', sector: player.position };
+
+      case 'informer':
+        if (!target) return { error: 'Оберіть ціль.' };
+        // Return target's mafia cards to the requesting player
+        this.addLog(`${player.name} використав Інформатора проти ${target.name}!`);
+        return { type: 'informer_used', target: target.id, cards: target.mafiaCards.map(c => ({ id: c.id, name: c.name, type: c.type })) };
+
+      case 'tax_collector':
+        let totalCollected = 0;
+        for (const p of this.getAlivePlayers()) {
+          if (p.id === player.id) continue;
+          const tax = Math.min(500, p.money);
+          p.money -= tax;
+          p.stats.moneySpent += tax;
+          totalCollected += tax;
+        }
+        player.money += totalCollected;
+        player.stats.moneyEarned += totalCollected;
+        this.addLog(`${player.name} зібрав данину: ${totalCollected}$ з усіх гравців!`);
+        return { type: 'tax_collected', amount: totalCollected };
+
+      case 'sabotage':
+        if (!options.businessId) return { error: 'Оберіть бізнес.' };
+        const sabBiz = this.businesses[options.businessId];
+        if (!sabBiz || !sabBiz.owner || sabBiz.owner === player.id) return { error: 'Невірний бізнес.' };
+        if (sabBiz.influenceLevel <= 0) return { error: 'У бізнесу немає впливу.' };
+        sabBiz.influenceLevel--;
+        this.addLog(`${player.name} зруйнував вплив на ${this.getBusiness(options.businessId)?.name}!`);
+        return { type: 'sabotage_done', businessId: options.businessId };
+
+      case 'witness_protection':
+        player._immuneUntilTurn = this.turnNumber + 2;
+        this.addLog(`${player.name} під захистом свідків на 2 ходи!`);
+        return { type: 'witness_protection_active' };
+
+      case 'double_agent':
+        if (!target) return { error: 'Оберіть ціль.' };
+        if (target.helpers.length === 0) return { error: 'У гравця немає помічників.' };
+        const respect = this.getRespectData(player.respectLevel);
+        if (player.helpers.length >= respect.maxHelpers) return { error: 'У вас максимум помічників.' };
+        const stolenHelper = target.helpers.pop();
+        player.helpers.push(stolenHelper);
+        this.addLog(`${player.name} переманив ${stolenHelper.name} від ${target.name}!`);
+        return { type: 'double_agent_used', helper: stolenHelper.name };
+
+      case 'insurance':
+        // Refund half of last rent paid this turn
+        const lastRent = player._lastRentPaid || 0;
+        if (lastRent === 0) return { error: 'Ви не платили ренту цей хід.' };
+        const refund = Math.floor(lastRent / 2);
+        player.money += refund;
+        player.stats.moneyEarned += refund;
+        player._lastRentPaid = 0;
+        this.addLog(`${player.name} повернув ${refund}$ за страховкою!`);
+        return { type: 'insurance_refund', amount: refund };
+
+      case 'blackmail':
+        if (!target) return { error: 'Оберіть ціль.' };
+        const extortion = Math.floor(target.money * 0.3);
+        target.money -= extortion;
+        target.stats.moneySpent += extortion;
+        player.money += extortion;
+        player.stats.moneyEarned += extortion;
+        this.addLog(`${player.name} шантажує ${target.name} на ${extortion}$!`);
+        return { type: 'blackmail_done', amount: extortion };
+
+      // --- WAVE 2 CARDS ---
+      case 'forgery':
+        player._interceptRent = true;
+        this.addLog(`${player.name} підробив документи — наступна рента йде йому!`);
+        return { type: 'forgery_active' };
+
+      case 'corruption':
+        player._corruptionTurns = 3;
+        this.addLog(`${player.name} підкупив поліцію на 3 ходи!`);
+        return { type: 'corruption_active' };
+
+      case 'money_laundering':
+        player._doubleIncome = (player._doubleIncome || 0) + 1;
+        this.addLog(`${player.name} відмиває гроші — подвійний дохід з бізнесів на 1 коло!`);
+        return { type: 'money_laundering_active' };
+
+      case 'fake_death':
+        player._fakeDeathActive = true;
+        this.addLog(`${player.name} підготував інсценування смерті!`);
+        return { type: 'fake_death_active' };
+
+      case 'wiretap':
+        if (!target) return { error: 'Оберіть ціль.' };
+        this.addLog(`${player.name} прослуховує ${target.name}!`);
+        return {
+          type: 'wiretap_result', target: target.id,
+          cards: target.mafiaCards.map(c => ({ id: c.id, name: c.name, type: c.type })),
+          money: target.money,
+          helpers: target.helpers.map(h => ({ name: h.name, ability: h.ability })),
+          businesses: target.businesses
+        };
+
+      case 'hostile_takeover':
+        if (!options.businessId) return { error: 'Оберіть бізнес для поглинання.' };
+        const htBiz = this.businesses[options.businessId];
+        if (!htBiz || !htBiz.owner || htBiz.owner === player.id) return { error: 'Невірний бізнес.' };
+        const htBizData = this.getBusiness(options.businessId);
+        if (!htBizData) return { error: 'Бізнес не знайдено.' };
+        const htCost = htBizData.price * 2;
+        if (player.money < htCost) return { error: `Потрібно ${htCost}$ для поглинання.` };
+        const prevOwner = this.getPlayer(htBiz.owner);
+        player.money -= htCost;
+        player.stats.moneySpent += htCost;
+        if (prevOwner) {
+          prevOwner.money += htCost;
+          prevOwner.stats.moneyEarned += htCost;
+          prevOwner.businesses = prevOwner.businesses.filter(b => b !== options.businessId);
+        }
+        htBiz.owner = player.id;
+        player.businesses.push(options.businessId);
+        this.addLog(`${player.name} поглинув ${htBizData.name} за ${htCost}$!`);
+        return { type: 'hostile_takeover_done', businessId: options.businessId, cost: htCost };
 
       default:
         return { error: 'Невідома дія.' };
@@ -1567,6 +1812,32 @@ class GameEngine {
   }
 
   executeAttack(attacker, target, card) {
+    // Fake death: blocks attack and wastes attacker's card
+    if (target._fakeDeathActive) {
+      target._fakeDeathActive = false;
+      this.addLog(`${target.name} інсценував свою смерть! Замах ${attacker.name} провалився!`);
+      this.pendingAction = null;
+      return { type: 'fake_death_triggered' };
+    }
+
+    // Arson resolve (after reaction passed): destroy business
+    if (card.id === 'arson' && card.destroysBusiness) {
+      const district = this.getDistrictOfSector(attacker.position);
+      const targetBiz = target.businesses.find(bid => {
+        const biz = this.businesses[bid];
+        return biz && biz.districtId === district;
+      });
+      if (targetBiz) {
+        this.businesses[targetBiz].owner = null;
+        this.businesses[targetBiz].influenceLevel = 0;
+        target.businesses = target.businesses.filter(b => b !== targetBiz);
+        const bizName = this.getBusiness(targetBiz)?.name || targetBiz;
+        this.addLog(`${bizName} знищено підпалом!`);
+      }
+      this.pendingAction = null;
+      return { type: 'arson_done' };
+    }
+
     // Poison: 50% chance
     if (card.id === 'poison') {
       const dice = rollDice(1);
@@ -1577,6 +1848,21 @@ class GameEngine {
         this.pendingAction = null;
         return { type: 'poison_failed', dice };
       }
+    }
+
+    // Car bomb: kills 1 helper + damages boss
+    if (card.id === 'car_bomb') {
+      if (target.helpers.length > 0) {
+        const helper = target.helpers.pop();
+        this.returnHelperToDeck(helper);
+        this.addLog(`Автомобільна бомба знищила ${helper.name} у ${target.name}!`);
+      }
+      if (target.helpers.length === 0) {
+        this.killBoss(target, 'car_bomb');
+      }
+      this.checkCounterAttack(attacker, target);
+      this.pendingAction = null;
+      return { type: 'car_bomb_result' };
     }
 
     // Massacre: kills 2 helpers
@@ -1599,7 +1885,13 @@ class GameEngine {
       // Survivor Joe check
       if (this.hasHelper(target.id, 'surviveOnce') && target.helperStates.survivorJoeActive) {
         target.helperStates.survivorJoeActive = false;
-        this.addLog(`Живучий Джо врятував людину ${target.name}!`);
+        // Survivor Joe dies saving his boss
+        const joeIdx = target.helpers.findIndex(h => h.ability === 'surviveOnce');
+        if (joeIdx >= 0) {
+          const joe = target.helpers.splice(joeIdx, 1)[0];
+          this.returnHelperToDeck(joe);
+        }
+        this.addLog(`Живучий Джо пожертвував собою заради ${target.name}!`);
         this.checkCounterAttack(attacker, target);
         this.pendingAction = null;
         return { type: 'attack_survived', by: 'survivor_joe' };
@@ -1642,7 +1934,7 @@ class GameEngine {
     // Baby Flemmi counter-attack
     if (this.hasHelper(target.id, 'counterAttack')) {
       const dice = rollDice(1);
-      if (dice[0] >= 4) {
+      if (dice[0] <= 2) {
         this.addLog(`Малюк Флеммі вдарив у відповідь! (${dice[0]}) — атакуючий постраждав!`);
         if (attacker.helpers.length > 0) {
           const helper = attacker.helpers.pop();
@@ -1686,7 +1978,7 @@ class GameEngine {
 
   killBoss(player, cause) {
     player.alive = false;
-    this.addLog(`💀 ${player.name} був ліквідований! (${cause})`);
+    this.addLog(`[X] ${player.name} був ліквідований! (${cause})`);
 
     // Return all businesses to free and reset influence
     for (const bizId of player.businesses) {
@@ -1747,7 +2039,7 @@ class GameEngine {
     if (!district) return { error: 'Район не знайдено.' };
 
     let cost = district.influenceCost;
-    if (this.hasHelper(playerId, 'cheaperInfluence')) cost -= 200;
+    if (this.hasHelper(playerId, 'cheaperInfluence')) cost -= 500;
     cost = Math.max(0, cost);
 
     if (player.money < cost) return { error: 'Недостатньо коштів.' };
@@ -1817,7 +2109,7 @@ class GameEngine {
 
     const nextLevel = RESPECT_LEVELS.find(r => r.level === player.respectLevel + 1);
     let cost = nextLevel.upgradeCost;
-    if (this.hasHelper(playerId, 'cheaperRespect')) cost -= 500;
+    if (this.hasHelper(playerId, 'cheaperRespect')) cost -= 1000;
     cost = Math.max(0, cost);
 
     if (player.money < cost) return { error: 'Недостатньо коштів.' };
@@ -1847,6 +2139,7 @@ class GameEngine {
   sendToPrison(player, turns) {
     player.inPrison = turns;
     player.position = 29; // PRISON sector
+    player.stats.timesInPrison++;
     this.addLog(`${player.name} відправлений у в'язницю на ${turns} ходів.`);
   }
 
@@ -1913,8 +2206,8 @@ class GameEngine {
       isMadDog: true,
       canVest: target.mafiaCards.some(c => c.id === 'vest'),
       canPolice: target.mafiaCards.some(c => c.id === 'police_card'),
-      canBuyOff: this.canPlayerBuyOff(target, 0) && !this.hasHelper(attackerId, 'noBuyOff'),
-      buyOffCost: BUYOFF_EXTRA,
+      canBuyOff: this.canPlayerBuyOff(target, 0),
+      buyOffCost: BUYOFF_EXTRA * (this.hasHelper(attackerId, 'doubleBuyOff') ? 2 : 1),
       timeLimit: 12000
     };
     return { type: 'mad_dog_attack', pendingReaction: true };
@@ -1932,6 +2225,10 @@ class GameEngine {
       currentPlayer._usedMadDogThisTurn = false;
       currentPlayer._mafiaCardPlayedThisTurn = 0;
       currentPlayer._usedExtraStepThisTurn = false;
+      // Decrement money laundering rounds
+      if (currentPlayer._doubleIncome && currentPlayer._doubleIncome > 0) {
+        currentPlayer._doubleIncome--;
+      }
     }
 
     // Cappo Corrado extra step handled separately
@@ -1946,6 +2243,12 @@ class GameEngine {
     }
 
     this.turnNumber++;
+    // Tick alliances at end of each full round
+    if (this.turnNumber % this.players.length === 0) this.tickAlliances();
+    // Track rounds survived for all alive players
+    for (const p of this.getAlivePlayers()) {
+      p.stats.roundsSurvived = this.getCurrentRound();
+    }
     const next = this.getCurrentPlayer();
     this.addLog(`Хід ${this.turnNumber}: ${next.name}`);
 
@@ -2043,9 +2346,137 @@ class GameEngine {
   }
 
   // --- FULL STATE (for sending to clients) ---
+  // --- TRADING ---
+  createTradeOffer(fromId, toId, offer) {
+    const from = this.getPlayer(fromId);
+    const to = this.getPlayer(toId);
+    if (!from || !to || !from.alive || !to.alive) return { error: 'Невірні гравці' };
+    if (fromId === toId) return { error: 'Не можна торгувати з собою' };
+    // Validate offer: { giveMoney, giveBusiness[], wantMoney, wantBusiness[] }
+    if (offer.giveMoney && from.money < offer.giveMoney) return { error: 'Недостатньо грошей' };
+    if (offer.giveBusiness) {
+      for (const bizId of offer.giveBusiness) {
+        if (!from.businesses.includes(bizId)) return { error: `Ви не володієте бізнесом ${bizId}` };
+      }
+    }
+    if (offer.wantBusiness) {
+      for (const bizId of offer.wantBusiness) {
+        if (!to.businesses.includes(bizId)) return { error: `${to.name} не володіє бізнесом ${bizId}` };
+      }
+    }
+    this.pendingAction = {
+      type: 'trade_offer',
+      fromId, toId,
+      fromName: from.name, toName: to.name,
+      offer,
+      playerId: toId // who needs to respond
+    };
+    this.addLog(`${from.name} пропонує угоду ${to.name}!`);
+    return { success: true };
+  }
+
+  executeTradeOffer(responderId, accept) {
+    if (!this.pendingAction || this.pendingAction.type !== 'trade_offer') return { error: 'Немає пропозиції' };
+    if (this.pendingAction.toId !== responderId) return { error: 'Не ваша угода' };
+    const { fromId, toId, offer } = this.pendingAction;
+    const from = this.getPlayer(fromId);
+    const to = this.getPlayer(toId);
+    if (!accept) {
+      this.addLog(`${to.name} відхилив угоду з ${from.name}.`);
+      this.pendingAction = null;
+      return { success: true, declined: true };
+    }
+    // Validate again
+    if (offer.giveMoney && from.money < offer.giveMoney) { this.pendingAction = null; return { error: 'Недостатньо грошей у відправника' }; }
+    if (offer.wantMoney && to.money < offer.wantMoney) { this.pendingAction = null; return { error: 'Недостатньо грошей у отримувача' }; }
+    // Execute swap
+    if (offer.giveMoney) { from.money -= offer.giveMoney; to.money += offer.giveMoney; }
+    if (offer.wantMoney) { to.money -= offer.wantMoney; from.money += offer.wantMoney; }
+    if (offer.giveBusiness) {
+      for (const bizId of offer.giveBusiness) {
+        from.businesses = from.businesses.filter(b => b !== bizId);
+        to.businesses.push(bizId);
+        this.businesses[bizId].owner = toId;
+      }
+    }
+    if (offer.wantBusiness) {
+      for (const bizId of offer.wantBusiness) {
+        to.businesses = to.businesses.filter(b => b !== bizId);
+        from.businesses.push(bizId);
+        this.businesses[bizId].owner = fromId;
+      }
+    }
+    this.addLog(`${from.name} і ${to.name} уклали угоду!`);
+    this.pendingAction = null;
+    return { success: true, accepted: true };
+  }
+
+  // --- ALLIANCES ---
+  createAlliance(fromId, toId, rounds = 3) {
+    if (!this.alliances) this.alliances = [];
+    const from = this.getPlayer(fromId);
+    const to = this.getPlayer(toId);
+    if (!from || !to) return { error: 'Невірні гравці' };
+    // Check no existing alliance between them
+    const existing = this.alliances.find(a =>
+      a.active && ((a.player1 === fromId && a.player2 === toId) || (a.player1 === toId && a.player2 === fromId))
+    );
+    if (existing) return { error: 'Альянс вже існує' };
+    this.pendingAction = {
+      type: 'alliance_offer',
+      fromId, toId,
+      fromName: from.name, toName: to.name,
+      rounds,
+      playerId: toId
+    };
+    this.addLog(`${from.name} пропонує альянс ${to.name} на ${rounds} кола!`);
+    return { success: true };
+  }
+
+  executeAllianceOffer(responderId, accept) {
+    if (!this.pendingAction || this.pendingAction.type !== 'alliance_offer') return { error: 'Немає пропозиції' };
+    if (this.pendingAction.toId !== responderId) return { error: 'Не ваша пропозиція' };
+    const { fromId, toId, rounds } = this.pendingAction;
+    const from = this.getPlayer(fromId);
+    const to = this.getPlayer(toId);
+    if (!accept) {
+      this.addLog(`${to.name} відхилив альянс з ${from.name}.`);
+      this.pendingAction = null;
+      return { success: true, declined: true };
+    }
+    if (!this.alliances) this.alliances = [];
+    this.alliances.push({
+      player1: fromId, player2: toId,
+      roundsLeft: rounds, startRound: this.getCurrentRound(), active: true
+    });
+    this.addLog(`${from.name} і ${to.name} уклали альянс на ${rounds} кола! Не можуть атакувати один одного.`);
+    this.pendingAction = null;
+    return { success: true, accepted: true };
+  }
+
+  tickAlliances() {
+    if (!this.alliances) return;
+    for (const a of this.alliances) {
+      if (!a.active) continue;
+      a.roundsLeft--;
+      if (a.roundsLeft <= 0) {
+        a.active = false;
+        const p1 = this.getPlayer(a.player1);
+        const p2 = this.getPlayer(a.player2);
+        if (p1 && p2) this.addLog(`Альянс між ${p1.name} і ${p2.name} завершився.`);
+      }
+    }
+  }
+
+  areAllied(id1, id2) {
+    if (!this.alliances) return false;
+    return this.alliances.some(a => a.active && ((a.player1 === id1 && a.player2 === id2) || (a.player1 === id2 && a.player2 === id1)));
+  }
+
   getState(forPlayerId = null) {
     return {
       roomId: this.roomId,
+      hostId: this.hostId,
       phase: this.phase,
       turnPhase: this.turnPhase,
       currentPlayerIndex: this.currentPlayerIndex,
@@ -2063,7 +2494,7 @@ class GameEngine {
         position: p.position,
         respectLevel: p.respectLevel,
         respectName: this.getRespectData(p.respectLevel).name,
-        helpers: (forPlayerId === p.id) ? p.helpers.map(h => ({ id: h.id, name: h.name, ability: h.ability, description: h.description })) : undefined,
+        helpers: (forPlayerId === p.id) ? p.helpers.map(h => ({ id: h.id, name: h.name, ability: h.ability, passive: h.passive, description: h.description })) : undefined,
         helperCount: p.helpers.length,
         businessCount: p.businesses.length,
         businesses: p.businesses,
@@ -2074,12 +2505,17 @@ class GameEngine {
         mafiaCardCount: p.mafiaCards.length,
         _usedExtraStepThisTurn: p._usedExtraStepThisTurn || false,
         // Only show own mafia cards
-        mafiaCards: (forPlayerId === p.id) ? p.mafiaCards : undefined
+        mafiaCards: (forPlayerId === p.id) ? p.mafiaCards : undefined,
+        stats: p.stats,
+        avatar: p.avatar || null
       })),
       businesses: { ...this.businesses },
       bombs: this.bombs.map(b => ({ sector: b.sector })), // Don't reveal who placed
       pendingAction: this._sanitizePendingAction(this.pendingAction),
       log: this.log.slice(-30),
+      alliances: (this.alliances || []).filter(a => a.active).map(a => ({
+        player1: a.player1, player2: a.player2, roundsLeft: a.roundsLeft
+      })),
       winner: this.winner ? { id: this.winner.id, name: this.winner.name } : null,
       board: BOARD,
       boardGrid: BOARD_GRID,

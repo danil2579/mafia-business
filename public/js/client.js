@@ -13,10 +13,108 @@ let prevMoney = {}; // track previous money for animation
 let animatingTokens = false;
 let animatingPlayerId = null; // player whose token is being animated
 let pendingActionDelay = 0; // ms to delay showing pending actions (for animation)
+
+// ===== INLINE SVG ICONS (replacing emojis) =====
+const ICON = {
+  dice: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg>`,
+  chat: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
+  send: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>`,
+  music_on: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>`,
+  music_off: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`,
+  swords: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20l5-5M14.5 5.5L18 2l4 4-3.5 3.5M14.5 5.5l-8 8L4 16l2.5 2.5 8-8M20 20l-5-5M9.5 5.5L6 2 2 6l3.5 3.5M9.5 5.5l8 8L20 16l-2.5 2.5-8-8"/></svg>`,
+  crown: `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M2 20h20L19 8l-5 5-2-7-2 7-5-5-3 12z"/></svg>`,
+  chain: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`,
+  cards: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="18" rx="2"/><path d="M7 3l4-1.5 8 17.5-4 1.5z"/></svg>`,
+  signal: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>`,
+  handshake: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 17l-4-4-3 3-4-4-5 5"/><path d="M4 7l4 4 3-3 4 4 5-5"/><path d="M2 12h2M20 12h2"/></svg>`,
+  building: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>`,
+  money: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>`,
+  bomb: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="13" r="8"/><path d="M15 5l2-2M14 6l4-1"/><path d="M11 9v4M9 11h4"/></svg>`,
+  skull: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C7 2 3 6 3 10.5c0 3 1.5 5 3.5 6.5V20h3v2h5v-2h3v-3c2-1.5 3.5-3.5 3.5-6.5C21 6 17 2 12 2z"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/><path d="M10 16h4"/></svg>`,
+  casino_chip: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>`,
+  check: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>`,
+  trade: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 16V4l-4 4M17 8v12l4-4"/></svg>`,
+  circle_green: `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#2ecc71"/></svg>`,
+  circle_red: `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#e91e90"/></svg>`,
+  circle_black: `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#2c3e50"/></svg>`,
+  lock: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>`,
+  gun: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h14l2 2v3h-6v4l-2 2H9v-6H3V8z"/><path d="M17 8l2-3h2v5"/></svg>`,
+  shield: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  police: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1l2 5h5l-4 3 1.5 5L12 11l-4.5 3L9 9 5 6h5z"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>`,
+  medal_gold: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#f0d060" stroke-width="1.5"><circle cx="12" cy="15" r="6" fill="rgba(240,208,96,0.2)"/><path d="M8 2l4 8 4-8" stroke="#f0d060"/></svg>`,
+  medal_silver: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#c0c0c0" stroke-width="1.5"><circle cx="12" cy="15" r="6" fill="rgba(192,192,192,0.2)"/><path d="M8 2l4 8 4-8" stroke="#c0c0c0"/></svg>`,
+  medal_bronze: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#cd7f32" stroke-width="1.5"><circle cx="12" cy="15" r="6" fill="rgba(205,127,50,0.2)"/><path d="M8 2l4 8 4-8" stroke="#cd7f32"/></svg>`,
+  explosion: `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2 6 5-3-3 5 6 2-6 2 3 5-5-3-2 6-2-6-5 3 3-5-6-2 6-2-3-5 5 3z"/></svg>`,
+  fire: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c-4-2-8-6-8-11 0-3 2-5 4-6 0 3 2 5 4 5 0-4 1-8 4-10 1 3 4 6 4 11 0 5-4 9-8 11z"/></svg>`,
+  document: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>`,
+  eye: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  fist: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 20l4-4M17 8l-8 8M7 4v8l-3 3M14 4l-3 3M17 4v4"/></svg>`,
+  mask: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3C7 3 3 7.5 3 11c0 2 1 3 2.5 3.5L7 21l5-3 5 3 1.5-6.5C20 14 21 13 21 11c0-3.5-4-8-9-8z"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/></svg>`,
+};
 let cardRevealActive = false; // true while card reveal is shown — blocks pending actions
 let confirmedPendingId = null; // track already-confirmed pending action to avoid re-show
 let botAnimationQueue = []; // queue of bot animations to play
 let prevCurrentPlayerId = null; // track turn changes for turn start SFX
+let selectedCharacterId = null; // selected character for lobby
+
+// ===== CHARACTER PORTRAITS (SVG) =====
+const PORTRAITS = {
+  eddie: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#e74c3c" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#e74c3c" stroke-width="1.5" fill="none"/><path d="M22 22c0-2 2-6 10-6s10 4 10 6" stroke="#e74c3c" stroke-width="1.2"/><circle cx="27" cy="23" r="1.5" fill="#e74c3c"/><circle cx="37" cy="23" r="1.5" fill="#e74c3c"/><path d="M28 29q4 3 8 0" stroke="#e74c3c" stroke-width="1.2" fill="none"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#e74c3c" opacity="0.2" stroke="#e74c3c" stroke-width="1"/><line x1="38" y1="16" x2="42" y2="12" stroke="#e74c3c" stroke-width="1.5"/><line x1="40" y1="18" x2="44" y2="14" stroke="#e74c3c" stroke-width="1.5"/></svg>`,
+  carlo: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#2980b9" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#2980b9" stroke-width="1.5" fill="none"/><path d="M20 20c2-4 6-6 12-6s10 2 12 6" stroke="#2980b9" stroke-width="1.5"/><path d="M18 20h28" stroke="#2980b9" stroke-width="1" opacity="0.5"/><circle cx="27" cy="24" r="1.5" fill="#2980b9"/><circle cx="37" cy="24" r="1.5" fill="#2980b9"/><path d="M28 29q4 2 8 0" stroke="#2980b9" stroke-width="1.2" fill="none"/><path d="M24 30l-2 4" stroke="#2980b9" stroke-width="1"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#2980b9" opacity="0.2" stroke="#2980b9" stroke-width="1"/></svg>`,
+  vinnie: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#2ecc71" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#2ecc71" stroke-width="1.5" fill="none"/><path d="M22 20c2-3 5-5 10-5s8 2 10 5" stroke="#2ecc71" stroke-width="1.5"/><circle cx="27" cy="24" r="1.5" fill="#2ecc71"/><circle cx="37" cy="24" r="1.5" fill="#2ecc71"/><path d="M29 29q3 2 6 0" stroke="#2ecc71" stroke-width="1.2" fill="none"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#2ecc71" opacity="0.2" stroke="#2ecc71" stroke-width="1"/><rect x="26" y="32" width="12" height="2" rx="1" fill="#2ecc71" opacity="0.3"/></svg>`,
+  sal: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#f1c40f" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#f1c40f" stroke-width="1.5" fill="none"/><path d="M24 16l8-4 8 4" stroke="#f1c40f" stroke-width="1.5" fill="rgba(241,196,15,0.1)"/><circle cx="27" cy="24" r="1.5" fill="#f1c40f"/><circle cx="37" cy="24" r="1.5" fill="#f1c40f"/><path d="M27 29q5 3 10 0" stroke="#f1c40f" stroke-width="1.2" fill="none"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#f1c40f" opacity="0.2" stroke="#f1c40f" stroke-width="1"/><path d="M29 40v6M35 40v6" stroke="#f1c40f" stroke-width="0.8" opacity="0.5"/></svg>`,
+  niko: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#9b59b6" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#9b59b6" stroke-width="1.5" fill="none"/><path d="M22 22c2-5 5-7 10-7s8 2 10 7" stroke="#9b59b6" stroke-width="1.5"/><rect x="24" y="22" width="6" height="3" rx="1" stroke="#9b59b6" stroke-width="0.8" fill="rgba(155,89,182,0.1)"/><rect x="34" y="22" width="6" height="3" rx="1" stroke="#9b59b6" stroke-width="0.8" fill="rgba(155,89,182,0.1)"/><circle cx="27" cy="23.5" r="1" fill="#9b59b6"/><circle cx="37" cy="23.5" r="1" fill="#9b59b6"/><path d="M29 29q3 1 6 0" stroke="#9b59b6" stroke-width="1" fill="none"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#9b59b6" opacity="0.2" stroke="#9b59b6" stroke-width="1"/></svg>`,
+  rosa: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#e91e90" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#e91e90" stroke-width="1.5" fill="none"/><path d="M20 22c2-3 4-6 12-6s10 3 12 6" stroke="#e91e90" stroke-width="1.2"/><path d="M20 22c-1 3 0 8 2 10" stroke="#e91e90" stroke-width="1" opacity="0.6"/><path d="M44 22c1 3 0 8-2 10" stroke="#e91e90" stroke-width="1" opacity="0.6"/><circle cx="27" cy="24" r="1.5" fill="#e91e90"/><circle cx="37" cy="24" r="1.5" fill="#e91e90"/><path d="M27 24l-2-1M37 24l2-1" stroke="#e91e90" stroke-width="0.8"/><path d="M28 29q4 3 8 0" stroke="#e91e90" stroke-width="1.2" fill="none"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#e91e90" opacity="0.2" stroke="#e91e90" stroke-width="1"/></svg>`,
+  tommy: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#e67e22" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#e67e22" stroke-width="1.5" fill="none"/><path d="M22 20c2-3 5-5 10-5s8 2 10 5" stroke="#e67e22" stroke-width="1.5"/><circle cx="27" cy="24" r="1.5" fill="#e67e22"/><circle cx="37" cy="24" r="1.5" fill="#e67e22"/><path d="M26 28h12" stroke="#e67e22" stroke-width="1.5"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#e67e22" opacity="0.2" stroke="#e67e22" stroke-width="1"/><path d="M24 18l-2-4M40 18l2-4" stroke="#e67e22" stroke-width="1.2"/></svg>`,
+  frankie: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="24" r="14" fill="#00bcd4" opacity="0.15"/><circle cx="32" cy="24" r="12" stroke="#00bcd4" stroke-width="1.5" fill="none"/><path d="M22 20c2-3 5-5 10-5s8 2 10 5" stroke="#00bcd4" stroke-width="1.5"/><circle cx="27" cy="24" r="1.5" fill="#00bcd4"/><circle cx="37" cy="24" r="1.5" fill="#00bcd4"/><path d="M29 29q3 1 6 0" stroke="#00bcd4" stroke-width="1" fill="none"/><path d="M20 38c2-4 7-6 12-6s10 2 12 6v8H20z" fill="#00bcd4" opacity="0.2" stroke="#00bcd4" stroke-width="1"/><line x1="26" y1="42" x2="38" y2="42" stroke="#00bcd4" stroke-width="1"/><line x1="28" y1="44" x2="36" y2="44" stroke="#00bcd4" stroke-width="0.8"/></svg>`
+};
+
+// ===== HELPER PORTRAITS (SVG) — thematic icons for each helper =====
+const HELPER_PORTRAITS = {
+  // Стенлі Поллак — бізнесмен, купує вплив (портфель + графік)
+  stanley_pollak: `<svg viewBox="0 0 48 48" fill="none"><rect x="12" y="20" width="24" height="16" rx="2" stroke="#3498db" stroke-width="1.5" fill="rgba(52,152,219,0.1)"/><path d="M18 20v-4a6 6 0 0 1 12 0v4" stroke="#3498db" stroke-width="1.5"/><rect x="20" y="25" width="8" height="5" rx="1" fill="rgba(52,152,219,0.25)" stroke="#3498db" stroke-width="1"/><circle cx="24" cy="27.5" r="1" fill="#3498db"/><path d="M14 40l4-6 4 3 4-8 4 5 4-3 4 6" stroke="#3498db" stroke-width="1" opacity="0.4"/></svg>`,
+  // «Уайті» Росс — дешевші замахи (ніж зі знижкою)
+  whitey_ross: `<svg viewBox="0 0 48 48" fill="none"><path d="M30 8l-4 24-2-1 4-23z" fill="rgba(231,76,60,0.2)" stroke="#e74c3c" stroke-width="1.2"/><path d="M26 32l-4 6h8z" fill="rgba(231,76,60,0.15)" stroke="#e74c3c" stroke-width="1"/><path d="M22 30c-2 0-4 1-5 3" stroke="#e74c3c" stroke-width="1.2"/><circle cx="14" cy="16" r="6" stroke="#e74c3c" stroke-width="1" stroke-dasharray="2 2" fill="none"/><text x="14" y="19" text-anchor="middle" fill="#e74c3c" font-size="8" font-weight="700">-$</text></svg>`,
+  // «Скажений Пес» — безкоштовна засідка (вовча голова з ікленами)
+  mad_dog: `<svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="22" r="12" fill="rgba(230,126,34,0.1)"/><path d="M14 18c2-6 5-8 10-8s8 2 10 8" stroke="#e67e22" stroke-width="1.5"/><path d="M12 18l4-10" stroke="#e67e22" stroke-width="1.5"/><path d="M36 18l-4-10" stroke="#e67e22" stroke-width="1.5"/><circle cx="20" cy="20" r="2" fill="#e67e22"/><circle cx="28" cy="20" r="2" fill="#e67e22"/><path d="M18 27l2-2 2 2 2-2 2 2 2-2 2 2" stroke="#e67e22" stroke-width="1.5" fill="none"/><path d="M16 30c2 4 5 6 8 6s6-2 8-6" stroke="#e67e22" stroke-width="1" opacity="0.4"/></svg>`,
+  // Ленні «Щука» — бонус на не-мафіа (риба/щука з монетою)
+  lenny_pike: `<svg viewBox="0 0 48 48" fill="none"><ellipse cx="24" cy="24" rx="14" ry="8" fill="rgba(46,204,113,0.1)" stroke="#2ecc71" stroke-width="1.3"/><path d="M38 24l6-6v12z" fill="rgba(46,204,113,0.2)" stroke="#2ecc71" stroke-width="1"/><circle cx="16" cy="22" r="1.5" fill="#2ecc71"/><path d="M10 24h4" stroke="#2ecc71" stroke-width="1"/><path d="M20 20c2-1 6-1 8 0" stroke="#2ecc71" stroke-width="0.8" opacity="0.5"/><path d="M20 28c2 1 6 1 8 0" stroke="#2ecc71" stroke-width="0.8" opacity="0.5"/><circle cx="34" cy="14" r="5" stroke="#2ecc71" stroke-width="1" fill="rgba(46,204,113,0.15)"/><text x="34" y="17" text-anchor="middle" fill="#2ecc71" font-size="7" font-weight="700">$</text></svg>`,
+  // Лео «Акробат» — вихід з в'язниці (розломана решітка)
+  leo_acrobat: `<svg viewBox="0 0 48 48" fill="none"><rect x="10" y="10" width="28" height="28" rx="3" stroke="#9b59b6" stroke-width="1.2" fill="rgba(155,89,182,0.06)"/><line x1="18" y1="10" x2="18" y2="38" stroke="#9b59b6" stroke-width="2"/><line x1="26" y1="10" x2="26" y2="20" stroke="#9b59b6" stroke-width="2"/><line x1="27" y1="26" x2="30" y2="38" stroke="#9b59b6" stroke-width="2"/><line x1="34" y1="10" x2="34" y2="38" stroke="#9b59b6" stroke-width="2"/><path d="M24 22c2-1 4 0 5 2" stroke="#9b59b6" stroke-width="1.5" stroke-dasharray="2 1"/><circle cx="30" cy="20" r="4" stroke="#f1c40f" stroke-width="1.2" fill="rgba(241,196,15,0.15)"/><path d="M28 20l2 2 4-4" stroke="#f1c40f" stroke-width="1.2"/></svg>`,
+  // Віллі «Безжалісний» — грабує жертв (череп з грошима)
+  willie_ruthless: `<svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="20" r="10" fill="rgba(192,57,43,0.1)" stroke="#c0392b" stroke-width="1.3"/><circle cx="20" cy="18" r="2.5" fill="none" stroke="#c0392b" stroke-width="1.2"/><circle cx="28" cy="18" r="2.5" fill="none" stroke="#c0392b" stroke-width="1.2"/><path d="M20 25h8" stroke="#c0392b" stroke-width="1"/><line x1="22" y1="25" x2="22" y2="28" stroke="#c0392b" stroke-width="0.8"/><line x1="26" y1="25" x2="26" y2="28" stroke="#c0392b" stroke-width="0.8"/><path d="M16 34l3-4h10l3 4" stroke="#c0392b" stroke-width="1"/><rect x="18" y="34" width="12" height="6" rx="1" fill="rgba(46,204,113,0.15)" stroke="#2ecc71" stroke-width="1"/><text x="24" y="39" text-anchor="middle" fill="#2ecc71" font-size="6" font-weight="700">$$$</text></svg>`,
+  // Тоні «Лис» — +1 вплив при вбивстві (лисяча морда)
+  tony_fox: `<svg viewBox="0 0 48 48" fill="none"><path d="M10 12l6 10h-2l-4 8" stroke="#e67e22" stroke-width="1.3" fill="rgba(230,126,34,0.1)"/><path d="M38 12l-6 10h2l4 8" stroke="#e67e22" stroke-width="1.3" fill="rgba(230,126,34,0.1)"/><ellipse cx="24" cy="26" rx="10" ry="8" fill="rgba(230,126,34,0.12)" stroke="#e67e22" stroke-width="1.3"/><circle cx="20" cy="24" r="1.5" fill="#e67e22"/><circle cx="28" cy="24" r="1.5" fill="#e67e22"/><path d="M21 30q3 2 6 0" stroke="#e67e22" stroke-width="1" fill="none"/><path d="M24 30v3" stroke="#e67e22" stroke-width="0.8"/><path d="M14 32c-4 4-6 6-8 6" stroke="#e67e22" stroke-width="1.2"/><path d="M34 32c4 4 6 6 8 6" stroke="#e67e22" stroke-width="1.2"/></svg>`,
+  // Капо Коррадо — додатковий крок (чоботи з крилами)
+  capo_corrado: `<svg viewBox="0 0 48 48" fill="none"><path d="M16 14h16v18c0 2-3 4-8 4s-8-2-8-4z" fill="rgba(241,196,15,0.08)" stroke="#f1c40f" stroke-width="1.3"/><path d="M16 26h16" stroke="#f1c40f" stroke-width="0.8" opacity="0.4"/><path d="M12 36l4-2v4l-4 2z" fill="rgba(241,196,15,0.15)" stroke="#f1c40f" stroke-width="1"/><path d="M36 36l-4-2v4l4 2z" fill="rgba(241,196,15,0.15)" stroke="#f1c40f" stroke-width="1"/><path d="M8 18c2-2 4-3 8-4" stroke="#f1c40f" stroke-width="1" opacity="0.6"/><path d="M6 22c2-1 4-2 10-3" stroke="#f1c40f" stroke-width="1" opacity="0.4"/><path d="M40 18c-2-2-4-3-8-4" stroke="#f1c40f" stroke-width="1" opacity="0.6"/><path d="M42 22c-2-1-4-2-10-3" stroke="#f1c40f" stroke-width="1" opacity="0.4"/><path d="M22 8l2-4 2 4" stroke="#f1c40f" stroke-width="1.2"/></svg>`,
+  // Міккі «Відступник» — без хабарів поліції (перекреслений значок поліції)
+  mickey_renegade: `<svg viewBox="0 0 48 48" fill="none"><path d="M24 8l4 6h6l-2 6 4 5h-6l-6 4-6-4H8l4-5-2-6h6z" fill="rgba(52,152,219,0.1)" stroke="#3498db" stroke-width="1.3"/><circle cx="24" cy="22" r="4" fill="rgba(52,152,219,0.15)" stroke="#3498db" stroke-width="1"/><text x="24" y="25" text-anchor="middle" fill="#3498db" font-size="6" font-weight="700">P</text><line x1="12" y1="38" x2="36" y2="8" stroke="#e74c3c" stroke-width="2" opacity="0.7"/><circle cx="36" cy="38" r="6" fill="rgba(46,204,113,0.15)" stroke="#2ecc71" stroke-width="1"/><text x="36" y="41" text-anchor="middle" fill="#2ecc71" font-size="7" font-weight="700">+$</text></svg>`,
+  // Малюк Флеммі — контратака (кулак зі зіркою удару)
+  baby_flemmi: `<svg viewBox="0 0 48 48" fill="none"><path d="M18 32l-2-6 4-2v-6l4 2 4-4 2 6 4-1-1 5 4 4-4 2v4l-5-2-4 3-2-5z" fill="rgba(231,76,60,0.1)" stroke="#e74c3c" stroke-width="1.2"/><circle cx="24" cy="24" r="6" fill="rgba(231,76,60,0.15)" stroke="#e74c3c" stroke-width="1.2"/><path d="M22 22l4 4M26 22l-4 4" stroke="#e74c3c" stroke-width="1.5"/><path d="M10 14l4 2M8 20h4M10 26l4-2" stroke="#e74c3c" stroke-width="1" opacity="0.4"/><path d="M38 14l-4 2M40 20h-4M38 26l-4-2" stroke="#e74c3c" stroke-width="1" opacity="0.4"/></svg>`,
+  // Томмі Морелло — дешевша повага (корона зі знижкою)
+  tommy_morello: `<svg viewBox="0 0 48 48" fill="none"><path d="M12 28l4-12 4 6 4-8 4 8 4-6 4 12z" fill="rgba(241,196,15,0.15)" stroke="#f1c40f" stroke-width="1.5"/><rect x="12" y="28" width="24" height="4" rx="1" fill="rgba(241,196,15,0.1)" stroke="#f1c40f" stroke-width="1.2"/><circle cx="20" cy="30" r="1" fill="#f1c40f"/><circle cx="24" cy="30" r="1" fill="#f1c40f"/><circle cx="28" cy="30" r="1" fill="#f1c40f"/><circle cx="34" cy="40" r="6" stroke="#2ecc71" stroke-width="1.2" fill="rgba(46,204,113,0.12)"/><text x="34" y="43" text-anchor="middle" fill="#2ecc71" font-size="8" font-weight="700">-$</text></svg>`,
+  // Ніккі «Король» — подвійні карти мафії (корона + карти)
+  nikki_king: `<svg viewBox="0 0 48 48" fill="none"><path d="M16 18l4-8 4 5 4-5 4 8" stroke="#f1c40f" stroke-width="1.5" fill="rgba(241,196,15,0.1)"/><rect x="16" y="18" width="16" height="3" rx="1" fill="rgba(241,196,15,0.15)" stroke="#f1c40f" stroke-width="1"/><rect x="12" y="26" width="11" height="16" rx="2" fill="rgba(155,89,182,0.1)" stroke="#9b59b6" stroke-width="1.2" transform="rotate(-8 17 34)"/><rect x="25" y="26" width="11" height="16" rx="2" fill="rgba(155,89,182,0.1)" stroke="#9b59b6" stroke-width="1.2" transform="rotate(8 30 34)"/><text x="17" y="37" text-anchor="middle" fill="#9b59b6" font-size="8" font-weight="700" transform="rotate(-8 17 37)">M</text><text x="31" y="37" text-anchor="middle" fill="#9b59b6" font-size="8" font-weight="700" transform="rotate(8 31 37)">?</text></svg>`,
+  // Живучий Джо — виживає один раз (щит з серцем)
+  survivor_joe: `<svg viewBox="0 0 48 48" fill="none"><path d="M24 6c-8 0-14 6-14 12 0 12 14 24 14 24s14-12 14-24c0-6-6-12-14-12z" fill="rgba(46,204,113,0.08)" stroke="#2ecc71" stroke-width="1.5"/><path d="M24 16c-2-3-6-3-7 0s1 6 7 10c6-4 8-7 7-10s-5-3-7 0z" fill="rgba(231,76,60,0.2)" stroke="#e74c3c" stroke-width="1.2"/><text x="24" y="36" text-anchor="middle" fill="#2ecc71" font-size="6" font-weight="700">×1</text></svg>`,
+  // «Сталевий» Ронні — подвійний відкуп (подвійний щит з $)
+  steel_ronnie: `<svg viewBox="0 0 48 48" fill="none"><rect x="8" y="12" width="14" height="20" rx="3" fill="rgba(149,165,166,0.1)" stroke="#95a5a6" stroke-width="1.5"/><rect x="26" y="12" width="14" height="20" rx="3" fill="rgba(149,165,166,0.1)" stroke="#95a5a6" stroke-width="1.5"/><text x="15" y="25" text-anchor="middle" fill="#95a5a6" font-size="10" font-weight="700">$</text><text x="33" y="25" text-anchor="middle" fill="#95a5a6" font-size="10" font-weight="700">$</text><path d="M20 36l4 6 4-6" stroke="#e74c3c" stroke-width="1.5" fill="rgba(231,76,60,0.1)"/><text x="24" y="40" text-anchor="middle" fill="#e74c3c" font-size="6" font-weight="700">×2</text></svg>`,
+  // Донні Анджело — дешевший вплив (герб з діамантом)
+  donnie_angelo: `<svg viewBox="0 0 48 48" fill="none"><path d="M24 6l16 12v14c0 6-8 12-16 12S8 38 8 32V18z" fill="rgba(142,68,173,0.08)" stroke="#8e44ad" stroke-width="1.5"/><path d="M24 16l6 8-6 8-6-8z" fill="rgba(142,68,173,0.15)" stroke="#8e44ad" stroke-width="1.2"/><circle cx="24" cy="24" r="2" fill="#8e44ad"/><text x="24" y="42" text-anchor="middle" fill="#8e44ad" font-size="6" font-weight="700">-500$</text></svg>`,
+  // Марко «Гравець» — бонус у BAR (карти + коктейль)
+  marco_player: `<svg viewBox="0 0 48 48" fill="none"><rect x="8" y="12" width="12" height="18" rx="2" fill="rgba(231,76,60,0.1)" stroke="#e74c3c" stroke-width="1.2" transform="rotate(-12 14 21)"/><rect x="20" y="12" width="12" height="18" rx="2" fill="rgba(44,62,80,0.15)" stroke="#2c3e50" stroke-width="1.2" transform="rotate(12 26 21)"/><text x="13" y="24" text-anchor="middle" fill="#e74c3c" font-size="9" font-weight="700" transform="rotate(-12 13 24)">A</text><text x="27" y="24" text-anchor="middle" fill="#ecf0f1" font-size="9" font-weight="700" transform="rotate(12 27 24)">K</text><path d="M34 30l2 12h-6l2-12z" fill="rgba(46,204,113,0.15)" stroke="#2ecc71" stroke-width="1"/><circle cx="35" cy="28" r="3" fill="rgba(46,204,113,0.1)" stroke="#2ecc71" stroke-width="0.8"/></svg>`
+};
+
+const CHARACTER_DATA = [
+  { id: 'eddie', name: 'Едді «Божевільний»', color: '#e74c3c', title: 'Вуличний боєць' },
+  { id: 'carlo', name: 'Карло «Бритва»', color: '#2980b9', title: 'Старий лис' },
+  { id: 'vinnie', name: 'Вінні «Кулак»', color: '#2ecc71', title: 'Зелений барон' },
+  { id: 'sal', name: 'Сальваторе «Золото»', color: '#f1c40f', title: 'Золотий король' },
+  { id: 'niko', name: 'Ніко «Тінь»', color: '#9b59b6', title: 'Тіньовий владика' },
+  { id: 'rosa', name: 'Донна Роза', color: '#e91e90', title: 'Залізна леді' },
+  { id: 'tommy', name: 'Томмі «Динаміт»', color: '#e67e22', title: 'Вогняний темперамент' },
+  { id: 'frankie', name: 'Френкі «Лід»', color: '#00bcd4', title: 'Холодний розрахунок' }
+];
 
 // --- DOM ---
 const $ = (sel) => document.querySelector(sel);
@@ -185,30 +283,30 @@ const SFX = {
 
 // ===== SVG ICONS for businesses =====
 const BIZ_ICONS = {
-  smitnik: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
-  second_hand: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`,
-  zabigailivky: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 10h.01M15 10h.01M9 14h.01M15 14h.01"/></svg>`,
-  rynok: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`,
-  pralni: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2"/><circle cx="7" cy="6" r="1"/></svg>`,
-  transport: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14v-5H5zM5 12V6a2 2 0 012-2h10a2 2 0 012 2v6M7.5 17v2M16.5 17v2M8 14h.01M16 14h.01"/></svg>`,
-  kafe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/></svg>`,
-  telefon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>`,
-  magazyny: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16M9 7h6M9 11h6M9 15h3M10 21v-4h4v4"/></svg>`,
-  sklady: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 21V8l8-5 8 5v13H4z"/><path d="M9 21v-6h6v6M4 8h16"/></svg>`,
-  butlegery: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2h8v4a4 4 0 01-1 2.65V22H9V8.65A4 4 0 018 6V2z"/><path d="M8 6h8"/></svg>`,
-  falshyvo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>`,
-  torg_tsentry: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M4 21V10l8-7 8 7v11M10 14h4v7h-4z"/><path d="M9 10h.01M15 10h.01"/></svg>`,
-  avtozapravky: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 10h2a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 8h8M6 12h4"/></svg>`,
-  radiostantsiya: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.9 19.1A15 15 0 0112 2a15 15 0 017.1 17.1"/><path d="M8.3 15.7A8 8 0 0112 6a8 8 0 013.7 9.7"/><circle cx="12" cy="18" r="2"/></svg>`,
-  suveniry: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 110-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>`,
-  restorany: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7h20L12 2zM17 7v15M7 7v15M2 22h20M4 12h16"/></svg>`,
-  pamyatnyky: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16M6 22V8l6-6 6 6v14M10 14h4v8h-4zM10 10h.01M14 10h.01"/></svg>`,
-  kluby: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
-  masazh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="5" r="3"/><path d="M5 21c0-4.4 3.6-8 7-8M19 21c0-4.4-3.6-8-7-8M8 14l-3 7M16 14l3 7"/></svg>`,
-  kazyno: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><circle cx="16" cy="9" r="1.5"/><circle cx="8" cy="15" r="1.5"/><circle cx="16" cy="15" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>`,
-  banky: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M12 3l9 7H3l9-7zM5 10v8M9 10v8M15 10v8M19 10v8"/></svg>`,
-  birzha: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/><path d="M17 9h3v3"/></svg>`,
-  sud: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l9 4v2H3V7l9-4zM5 9v8M9 9v8M15 9v8M19 9v8M3 17h18v4H3z"/></svg>`
+  kiosk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h3M8 14h5"/><path d="M15 11h2v4h-2z"/></svg>`,
+  shawarma: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 8c0 2 1 3.5 2 4.5V21h10v-8.5c1-1 2-2.5 2-4.5 0-3-3-6-7-6z"/><path d="M9 12h6M9 15h6M9 18h6"/></svg>`,
+  lombard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="7" r="4"/><circle cx="8" cy="14" r="3"/><circle cx="16" cy="14" r="3"/><path d="M4 21h16"/></svg>`,
+  avto_moyka: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14V9H5zM7 9l2-5h6l2 5M7.5 17v2M16.5 17v2"/><path d="M3 5l2 1M12 3v2M21 5l-2 1"/></svg>`,
+  barbershop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3v18M4 3c2 2 2 4 0 6s-2 4 0 6 2 4 0 6"/><path d="M8 6h8a4 4 0 010 8H8"/><circle cx="16" cy="10" r="1"/></svg>`,
+  taksopark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14v-5H5zM5 12l2-6h10l2 6M7.5 17v2M16.5 17v2M8 14h.01M16 14h.01"/><rect x="9" y="2" width="6" height="3"/></svg>`,
+  pitseria: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 20h20L12 2z"/><circle cx="10" cy="13" r="1.5"/><circle cx="14" cy="16" r="1.5"/><circle cx="12" cy="9" r="1"/></svg>`,
+  apteka: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg>`,
+  supermarket: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 8h14M10 21a1 1 0 100-2 1 1 0 000 2zM18 21a1 1 0 100-2 1 1 0 000 2z"/></svg>`,
+  avtoservis: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.6-3.6a5.5 5.5 0 01-7.6 7.6L6 21l-3-3 7.7-7.7a5.5 5.5 0 017.6-7.6L14.7 6.3z"/></svg>`,
+  sklad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 21V8l8-5 8 5v13H4z"/><path d="M4 8h16"/><rect x="8" y="12" width="8" height="4"/><path d="M12 12v4"/></svg>`,
+  drukarnya: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 9v6M9 12h6M6 12h.01M18 12h.01"/></svg>`,
+  avtosalon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14v-5H5zM5 12l2-6h10l2 6M7 17v2M17 17v2M8 14h.01M16 14h.01"/><path d="M9 6l1-4h4l1 4"/></svg>`,
+  hotel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V3h14v18"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-4h4v4"/></svg>`,
+  telestudiya: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 3l4 4 4-4"/><circle cx="12" cy="14" r="3"/></svg>`,
+  spa: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c-4-2-8-6-8-11a8 8 0 0116 0c0 5-4 9-8 11z"/><path d="M12 2v4M8 6l2 2M16 6l-2 2"/></svg>`,
+  restoran: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2c-2.5 0-5 2-5 5v6h3v7h2"/></svg>`,
+  yacht_club: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 20l2-2c2-2 4-2 6 0s4 2 6 0 4-2 6 0l2 2"/><path d="M12 16V4M12 4L6 16h12L12 4z"/></svg>`,
+  night_club: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M3 2l3 3M21 2l-3 3"/></svg>`,
+  lounge_bar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2h8l-3 8v5h4v2H7v-2h4v-5L8 2z"/><path d="M6 2h12"/><circle cx="17" cy="6" r="2"/></svg>`,
+  casino: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><circle cx="16" cy="9" r="1.5"/><circle cx="8" cy="15" r="1.5"/><circle cx="16" cy="15" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>`,
+  bank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M12 3l9 7H3l9-7zM5 10v8M9 10v8M15 10v8M19 10v8"/></svg>`,
+  hedge_fund: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/><path d="M17 9h3v3"/></svg>`,
+  skyscraper: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M7 21V6l5-4 5 4v15"/><path d="M10 10h4M10 14h4M10 18h4M10 7h4"/></svg>`
 };
 
 // Special cell SVG icons
@@ -259,6 +357,9 @@ function showError(msg) { $('#lobby-error').textContent = msg; }
 function showWaiting(roomId) {
   showScreen(waitingScreen);
   $('#room-id-display').textContent = roomId;
+  sessionStorage.setItem('mafia_roomId', roomId);
+  const name = $('#player-name').value.trim();
+  if (name) sessionStorage.setItem('mafia_playerName', name);
 }
 
 $('#btn-start').addEventListener('click', () => {
@@ -306,7 +407,7 @@ socket.on('gameState', (state) => {
   } else if (state.phase === 'finished') {
     showScreen(gameScreen);
     renderGame(state, true); // skip pending action
-    showVictoryScreen(state);
+    showEnhancedVictoryScreen(state);
   } else {
     // Check if we're animating — delay pending action display
     const now = Date.now();
@@ -385,6 +486,10 @@ socket.on('gameState', (state) => {
           showKillAnimation(p.name);
         }
       }
+      // Detect prison — player just got sent to prison
+      if (prev && prev.alive && p.alive && prev.inPrison === 0 && p.inPrison > 0) {
+        showPrisonEffect(p.name, p.inPrison);
+      }
     }
   }
 });
@@ -399,6 +504,42 @@ socket.on('attackAlert', (data) => {
     showAttackAlert(data);
   } else {
     showAttackNotification(data);
+  }
+});
+
+socket.on('rentPaid', (data) => {
+  if (data && data.payerName && data.ownerName) {
+    showRentPaymentEffect(data.payerName, data.payerCharacter, data.ownerName, data.ownerCharacter, data.amount, data.businessName);
+  }
+});
+
+socket.on('attackOutcome', (result) => {
+  if (!result || !result.type) return;
+  switch (result.type) {
+    case 'attack_blocked':
+      if (result.by === 'vest') {
+        showAttackEffect('shield', 'БРОНЕЖИЛЕТ!', 'Атаку відбито!', '#3498db');
+      } else if (result.by === 'police') {
+        showAttackEffect('police', 'ПОЛІЦІЯ!', 'Атакуючий їде у в\'язницю!', '#e67e22');
+      }
+      break;
+    case 'attack_bought_off':
+      showAttackEffect('money', 'ВІДКУП!', `Заплачено ${result.cost}$`, '#f1c40f');
+      break;
+    case 'attack_survived':
+      if (result.by === 'survivor_joe') {
+        showAttackEffect('hero', 'ЖИВУЧИЙ ДЖО!', 'Пожертвував собою заради боса!', '#2ecc71');
+      }
+      break;
+    case 'poison_failed':
+      showAttackEffect('fail', 'ОТРУТА НЕ СПРАЦЮВАЛА!', `Кубик: ${result.dice}`, '#9b59b6');
+      break;
+    case 'fake_death_triggered':
+      showAttackEffect('ghost', 'ФАЛЬШИВА СМЕРТЬ!', 'Замах провалився!', '#95a5a6');
+      break;
+    case 'helper_killed':
+      showAttackEffect('skull', `${result.helperName}`, 'Помічника вбито!', '#e74c3c');
+      break;
   }
 });
 
@@ -440,7 +581,7 @@ function renderOrderRollPhase(state) {
 
   // Build roll panel content
   const panel = document.getElementById('ro-panel');
-  let html = '<h2>🎲 Хто ходить першим?</h2>';
+  let html = `<h2>${ICON.dice} Хто ходить першим?</h2>`;
 
   for (const p of state.players) {
     const roll = state.orderRolls ? state.orderRolls[p.id] : null;
@@ -448,7 +589,10 @@ function renderOrderRollPhase(state) {
     const color = PLAYER_COLORS[state.players.indexOf(p)] || '#888';
 
     html += `<div class="ro-player-row ${isCurrentRoller ? 'current' : ''}">`;
-    html += `<div class="ro-player-avatar" style="background:${color}">${p.name[0]}</div>`;
+    const charId = p.character?.id;
+    html += charId && PORTRAITS[charId]
+      ? `<div class="ro-player-avatar avatar-portrait" style="--char-color:${p.character.color}">${PORTRAITS[charId]}</div>`
+      : `<div class="ro-player-avatar" style="background:${color}">${p.name[0]}</div>`;
     html += `<span class="ro-player-name">${p.name}</span>`;
 
     if (roll) {
@@ -463,7 +607,7 @@ function renderOrderRollPhase(state) {
   }
 
   if (state.orderRollCurrentId === myId) {
-    html += `<button id="btn-order-roll" class="btn btn-roll ro-roll-btn">🎲 КИНУТИ КУБИКИ</button>`;
+    html += `<button id="btn-order-roll" class="btn btn-roll ro-roll-btn">${ICON.dice} КИНУТИ КУБИКИ</button>`;
   }
 
   panel.innerHTML = html;
@@ -473,13 +617,13 @@ function renderOrderRollPhase(state) {
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
       rollBtn.disabled = true;
-      rollBtn.textContent = '🎲 Кидаю...';
+      rollBtn.textContent = '${ICON.dice} Кидаю...';
       SFX.diceRoll();
       socket.emit('rollForOrder', {}, (res) => {
         if (res.error) {
           alert(res.error);
           rollBtn.disabled = false;
-          rollBtn.textContent = '🎲 КИНУТИ КУБИКИ';
+          rollBtn.textContent = '${ICON.dice} КИНУТИ КУБИКИ';
         }
       });
     });
@@ -494,14 +638,49 @@ function renderWaitingRoom(state) {
     const slot = document.createElement('div');
     slot.className = `player-slot ${p ? 'filled' : ''}`;
     if (p) {
+      const charId = p.character?.id;
+      const charColor = p.character?.color || PLAYER_COLORS[i];
+      const portrait = charId && PORTRAITS[charId]
+        ? `<div class="avatar avatar-portrait" style="--char-color:${charColor}">${PORTRAITS[charId]}</div>`
+        : `<div class="avatar" style="background:${charColor}">${p.name[0].toUpperCase()}</div>`;
       slot.innerHTML = `
-        <div class="avatar" style="background:${PLAYER_COLORS[i]}">${p.name[0].toUpperCase()}</div>
+        ${portrait}
         <div class="pname">${p.name}</div>
       `;
     } else {
       slot.innerHTML = '<div style="color:var(--text-muted);font-size:24px">+</div><div class="pname" style="color:var(--text-muted)">Очікує...</div>';
     }
     list.appendChild(slot);
+  }
+
+  // --- Character select grid ---
+  const grid = document.getElementById('character-select');
+  if (grid) {
+    const takenCharIds = state.players.map(p => p.character?.id).filter(Boolean);
+    const me = state.players.find(p => p.id === myId);
+    const myCharId = me?.character?.id;
+    grid.innerHTML = '';
+    for (const ch of CHARACTER_DATA) {
+      const isTaken = takenCharIds.includes(ch.id);
+      const isMine = ch.id === myCharId;
+      const takenBy = isTaken && !isMine ? state.players.find(p => p.character?.id === ch.id) : null;
+      const el = document.createElement('div');
+      el.className = 'char-option' + (isMine ? ' selected' : '') + (isTaken && !isMine ? ' taken' : '');
+      el.dataset.charId = ch.id;
+      el.innerHTML = `
+        <div class="char-portrait" style="--char-color:${ch.color}">${PORTRAITS[ch.id]}</div>
+        <div class="char-name">${ch.name.split(' ')[0]}</div>
+        ${takenBy ? `<div class="char-taken-label">${takenBy.name}</div>` : ''}
+      `;
+      if (!isTaken || isMine) {
+        el.addEventListener('click', () => {
+          if (isMine) return;
+          SFX.click();
+          socket.emit('changeCharacter', { characterId: ch.id });
+        });
+      }
+      grid.appendChild(el);
+    }
   }
 
   const isHost = state.players[0] && state.players[0].id === myId;
@@ -963,7 +1142,7 @@ function showJackpotChooseOverlay(state) {
   overlay.innerHTML = `
     <div class="jackpot-particles" id="jp-particles"></div>
     <div class="jackpot-content">
-      <div class="jackpot-crown">👑</div>
+      <div class="jackpot-crown">${ICON.crown}</div>
       <div class="jackpot-title">MAFIA JACKPOT</div>
       <div class="jackpot-subtitle">Оберіть будь-який бізнес — він ваш!</div>
       <div class="jackpot-grid" id="jackpot-grid"></div>
@@ -1140,8 +1319,14 @@ function showHiddenHelperChoice(cardCount) {
         }
         // Reveal the chosen card with flip animation
         if (res && res.hired) {
+          const iconEl = card.querySelector('.hh-card-front-icon');
           const front = card.querySelector('.hh-card-front-name');
           const desc = card.querySelector('.hh-card-front-desc');
+          // Show SVG portrait if available
+          if (res.hired.id && HELPER_PORTRAITS[res.hired.id]) {
+            iconEl.innerHTML = HELPER_PORTRAITS[res.hired.id];
+            iconEl.classList.add('hh-has-portrait');
+          }
           front.textContent = res.hired.name;
           desc.textContent = res.hired.description || '';
           card.classList.add('hh-flipped');
@@ -1200,7 +1385,7 @@ function showExplosion(playerName) {
   // Text
   const text = document.createElement('div');
   text.className = 'explosion-text';
-  text.innerHTML = `<h1>💥 ВИБУХ!</h1><p>${playerName} підірвався на бомбі!</p>`;
+  text.innerHTML = `<h1>${ICON.bomb} ВИБУХ!</h1><p>${playerName} підірвався на бомбі!</p>`;
   overlay.appendChild(text);
 
   document.body.appendChild(overlay);
@@ -1230,6 +1415,205 @@ function showKillAnimation(playerName, reason) {
   document.body.appendChild(overlay);
   SFX.attack();
   setTimeout(() => overlay.remove(), 4500);
+}
+
+// ===== PRISON EFFECT =====
+function showPrisonEffect(playerName, turns) {
+  const overlay = document.createElement('div');
+  overlay.className = 'prison-effect-overlay';
+
+  // Dark bars descending
+  const bars = document.createElement('div');
+  bars.className = 'prison-bars';
+  for (let i = 0; i < 7; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'prison-bar';
+    bar.style.left = (8 + i * 14) + '%';
+    bar.style.animationDelay = (i * 0.06) + 's';
+    bars.appendChild(bar);
+  }
+  overlay.appendChild(bars);
+
+  // Flash
+  const flash = document.createElement('div');
+  flash.className = 'prison-flash';
+  overlay.appendChild(flash);
+
+  // Content
+  const content = document.createElement('div');
+  content.className = 'prison-effect-content';
+  content.innerHTML = `
+    <div class="prison-effect-icon">⛓️</div>
+    <div class="prison-effect-title">ЗА ҐРАТИ!</div>
+    <div class="prison-effect-name">${playerName}</div>
+    <div class="prison-effect-turns">${turns} ${turns === 1 ? 'хід' : 'ходи'} за ґратами</div>
+  `;
+  overlay.appendChild(content);
+
+  // Chain particles
+  const chainEmojis = ['⛓️', '🔒', '⛓️', '🔗', '🔒'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'prison-chain-particle';
+    const angle = (Math.PI * 2 * i) / 12;
+    const dist = 100 + Math.random() * 180;
+    p.style.setProperty('--px', `${Math.cos(angle) * dist}px`);
+    p.style.setProperty('--py', `${Math.sin(angle) * dist}px`);
+    p.style.left = '50%';
+    p.style.top = '50%';
+    p.textContent = chainEmojis[i % chainEmojis.length];
+    p.style.animationDelay = (Math.random() * 0.3) + 's';
+    overlay.appendChild(p);
+  }
+
+  document.body.appendChild(overlay);
+  SFX.prisonDoor();
+  setTimeout(() => overlay.remove(), 4000);
+}
+
+// ===== ATTACK OUTCOME EFFECT =====
+function showAttackEffect(type, title, subtitle, color) {
+  const overlay = document.createElement('div');
+  overlay.className = 'attack-effect-overlay';
+  overlay.style.setProperty('--effect-color', color);
+
+  // Background flash
+  const flash = document.createElement('div');
+  flash.className = 'attack-effect-flash';
+  overlay.appendChild(flash);
+
+  // Icon
+  const iconMap = {
+    shield: '🛡️', police: '🚔', money: '💰', hero: '💀➜🛡️',
+    fail: '💨', ghost: '👻', skull: '💀'
+  };
+  const iconEl = document.createElement('div');
+  iconEl.className = 'attack-effect-icon';
+  iconEl.textContent = iconMap[type] || '⚡';
+  overlay.appendChild(iconEl);
+
+  // Title
+  const titleEl = document.createElement('div');
+  titleEl.className = 'attack-effect-title';
+  titleEl.textContent = title;
+  overlay.appendChild(titleEl);
+
+  // Subtitle
+  const subEl = document.createElement('div');
+  subEl.className = 'attack-effect-subtitle';
+  subEl.textContent = subtitle;
+  overlay.appendChild(subEl);
+
+  // Particles
+  const particleColors = [color, '#fff', color + '99'];
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'attack-effect-particle';
+    const angle = (Math.PI * 2 * i) / 20;
+    const dist = 80 + Math.random() * 200;
+    p.style.setProperty('--px', `${Math.cos(angle) * dist}px`);
+    p.style.setProperty('--py', `${Math.sin(angle) * dist}px`);
+    p.style.left = '50%';
+    p.style.top = '50%';
+    p.style.background = particleColors[Math.floor(Math.random() * particleColors.length)];
+    p.style.width = (3 + Math.random() * 5) + 'px';
+    p.style.height = p.style.width;
+    p.style.animationDelay = (Math.random() * 0.4) + 's';
+    overlay.appendChild(p);
+  }
+
+  // Shockwave ring
+  const ring = document.createElement('div');
+  ring.className = 'attack-effect-ring';
+  overlay.appendChild(ring);
+
+  document.body.appendChild(overlay);
+
+  // Sound
+  if (type === 'shield' || type === 'hero') SFX.click();
+  else if (type === 'police') SFX.prisonDoor();
+  else if (type === 'money') SFX.payRent();
+  else SFX.attack();
+
+  setTimeout(() => overlay.remove(), 3500);
+}
+
+// ===== RENT PAYMENT EFFECT =====
+function showRentPaymentEffect(payerName, payerChar, ownerName, ownerChar, amount, businessName) {
+  const overlay = document.createElement('div');
+  overlay.className = 'rent-effect-overlay';
+
+  // Backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'rent-effect-backdrop';
+  overlay.appendChild(backdrop);
+
+  // Container
+  const container = document.createElement('div');
+  container.className = 'rent-effect-container';
+
+  // Payer avatar (left)
+  const payerSide = document.createElement('div');
+  payerSide.className = 'rent-effect-player rent-payer';
+  const payerColor = payerChar?.color || '#e74c3c';
+  const payerPortrait = payerChar?.id && PORTRAITS[payerChar.id] ? PORTRAITS[payerChar.id] : `<span style="font-size:32px;color:${payerColor}">${payerName[0]}</span>`;
+  payerSide.innerHTML = `
+    <div class="rent-avatar" style="--char-color:${payerColor}">${payerPortrait}</div>
+    <div class="rent-player-name" style="color:${payerColor}">${payerName}</div>
+    <div class="rent-player-label">Платить</div>
+  `;
+
+  // Center — money transfer
+  const center = document.createElement('div');
+  center.className = 'rent-effect-center';
+  center.innerHTML = `
+    <div class="rent-business-name">${businessName}</div>
+    <div class="rent-arrow-track">
+      <div class="rent-money-coin rent-coin-1">$</div>
+      <div class="rent-money-coin rent-coin-2">$</div>
+      <div class="rent-money-coin rent-coin-3">$</div>
+      <div class="rent-arrow">→</div>
+    </div>
+    <div class="rent-amount">-${amount}$</div>
+  `;
+
+  // Owner avatar (right)
+  const ownerSide = document.createElement('div');
+  ownerSide.className = 'rent-effect-player rent-owner';
+  const ownerColor = ownerChar?.color || '#2ecc71';
+  const ownerPortrait = ownerChar?.id && PORTRAITS[ownerChar.id] ? PORTRAITS[ownerChar.id] : `<span style="font-size:32px;color:${ownerColor}">${ownerName[0]}</span>`;
+  ownerSide.innerHTML = `
+    <div class="rent-avatar" style="--char-color:${ownerColor}">${ownerPortrait}</div>
+    <div class="rent-player-name" style="color:${ownerColor}">${ownerName}</div>
+    <div class="rent-player-label">Отримує</div>
+  `;
+
+  container.appendChild(payerSide);
+  container.appendChild(center);
+  container.appendChild(ownerSide);
+  overlay.appendChild(container);
+
+  // Money particles flying from left to right
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('div');
+    p.className = 'rent-particle';
+    p.textContent = '$';
+    const yOffset = (Math.random() - 0.5) * 120;
+    p.style.setProperty('--y-offset', `${yOffset}px`);
+    p.style.animationDelay = (0.3 + Math.random() * 1.2) + 's';
+    p.style.top = `calc(50% + ${(Math.random() - 0.5) * 40}px)`;
+    p.style.fontSize = (12 + Math.random() * 10) + 'px';
+    p.style.opacity = (0.3 + Math.random() * 0.5);
+    overlay.appendChild(p);
+  }
+
+  document.body.appendChild(overlay);
+  SFX.payRent();
+
+  setTimeout(() => {
+    overlay.classList.add('rent-fade-out');
+    setTimeout(() => overlay.remove(), 600);
+  }, 3800);
 }
 
 // ===== VICTORY SCREEN =====
@@ -1292,12 +1676,16 @@ function renderPlayerPanels(state) {
     panel.className = `player-panel ${isCurrent ? 'current-turn' : ''} ${!p.alive ? 'dead' : ''} ${p.inPrison > 0 ? 'in-prison' : ''}`;
 
     const helperTags = p.helpers
-      ? p.helpers.map(h => `<div class="helper-card"><div class="hc-name">${h.name}</div><div class="hc-desc">${h.description}</div></div>`).join('')
-      : (p.helperCount > 0 ? `<div class="helper-card"><div class="hc-name">\uD83D\uDC64 Помічники: ${p.helperCount}</div></div>` : '');
+      ? p.helpers.map(h => {
+          const icon = HELPER_PORTRAITS[h.id] || '';
+          const passiveTag = h.passive !== undefined ? `<span class="hc-badge ${h.passive ? 'passive' : 'active'}">${h.passive ? 'пасив' : 'актив'}</span>` : '';
+          return `<div class="helper-card">${icon ? `<div class="hc-icon">${icon}</div>` : ''}<div class="hc-text"><div class="hc-name">${h.name}</div><div class="hc-desc">${h.description}</div></div>${passiveTag}</div>`;
+        }).join('')
+      : (p.helperCount > 0 ? `<div class="helper-card"><div class="hc-icon"><svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="8" stroke="rgba(212,175,55,0.5)" stroke-width="1.5" fill="rgba(212,175,55,0.08)"/><path d="M12 40c2-6 6-10 12-10s10 4 12 10" stroke="rgba(212,175,55,0.5)" stroke-width="1.5" fill="rgba(212,175,55,0.05)"/></svg></div><div class="hc-text"><div class="hc-name">Помічники: ${p.helperCount}</div></div></div>` : '');
 
     panel.innerHTML = `
       <div class="pp-header">
-        <div class="pp-avatar" style="background:${p.character.color}">${p.name[0]}</div>
+        <div class="pp-avatar ${p.character?.id && PORTRAITS[p.character.id] ? 'pp-avatar-portrait' : ''}" style="${p.character?.id && PORTRAITS[p.character.id] ? `--char-color:${p.character.color}` : `background:${p.character.color}`}">${p.character?.id && PORTRAITS[p.character.id] ? PORTRAITS[p.character.id] : p.name[0]}</div>
         <div class="pp-info">
           <div class="pp-name">${p.name} ${isCurrent ? '◀' : ''} ${p.id === myId ? '(Ви)' : ''}</div>
           <div class="pp-respect">${p.respectName} (Lv.${p.respectLevel})</div>
@@ -1305,9 +1693,11 @@ function renderPlayerPanels(state) {
         <div class="pp-money">${p.money}$</div>
       </div>
       <div class="pp-details">
-        ${p.inPrison > 0 ? `<span class="pp-tag prison">⛓ ${p.inPrison} ходів</span>` : ''}
-        <span class="pp-tag cards">🃏 ${p.mafiaCardCount}</span>
-        <span class="pp-tag">🏢 ${p.businessCount}</span>
+        ${p.inPrison > 0 ? `<span class="pp-tag prison">${ICON.chain} ${p.inPrison} ходів</span>` : ''}
+        <span class="pp-tag cards">${ICON.cards} ${p.mafiaCardCount}</span>
+        ${p.disconnected ? `<span class="pp-tag prison">${ICON.signal} Відключений</span>` : ''}
+        ${state.alliances?.some(a => ((a.player1 === p.id && a.player2 === myId) || (a.player1 === myId && a.player2 === p.id))) ? `<span class="pp-tag alliance">${ICON.handshake} Альянс</span>` : ''}
+        <span class="pp-tag">${ICON.building} ${p.businessCount}</span>
         ${!p.alive ? '<span class="pp-tag prison">☠ Ліквідовано</span>' : ''}
       </div>
       ${helperTags}
@@ -1356,15 +1746,20 @@ function showPlayerProfile(player, state) {
   let helpersHtml = '';
   if (isMe && player.helpers && player.helpers.length > 0) {
     for (const h of player.helpers) {
+      const icon = HELPER_PORTRAITS[h.id] || '';
       helpersHtml += `
         <div class="ppr-helper">
-          <div class="ppr-helper-name">${h.name}</div>
-          <div class="ppr-helper-desc">${h.description}</div>
+          ${icon ? `<div class="ppr-helper-icon">${icon}</div>` : ''}
+          <div class="ppr-helper-info">
+            <div class="ppr-helper-name">${h.name}</div>
+            <div class="ppr-helper-desc">${h.description}</div>
+          </div>
+          <span class="ppr-helper-badge ${h.passive ? 'passive' : 'active'}">${h.passive ? 'Пасивний' : 'Активний'}</span>
         </div>
       `;
     }
   } else if (!isMe && player.helperCount > 0) {
-    helpersHtml = `<div class="ppr-helper"><div class="ppr-helper-name">Помічників: ${player.helperCount}</div><div class="ppr-helper-desc">Деталі приховані</div></div>`;
+    helpersHtml = `<div class="ppr-helper"><div class="ppr-helper-info"><div class="ppr-helper-name">Помічників: ${player.helperCount}</div><div class="ppr-helper-desc">Деталі приховані</div></div></div>`;
   } else {
     helpersHtml = '<div class="ppr-empty">Немає помічників</div>';
   }
@@ -1402,7 +1797,7 @@ function showPlayerProfile(player, state) {
     <div class="player-profile">
       <button class="pp-close">&times;</button>
       <div class="pp-profile-header">
-        <div class="pp-big-avatar" style="background:${player.character.color}">${player.name[0]}</div>
+        <div class="pp-big-avatar ${player.character?.id && PORTRAITS[player.character.id] ? 'pp-avatar-portrait' : ''}" style="${player.character?.id && PORTRAITS[player.character.id] ? `--char-color:${player.character.color}` : `background:${player.character.color}`}">${player.character?.id && PORTRAITS[player.character.id] ? PORTRAITS[player.character.id] : player.name[0]}</div>
         <div>
           <div class="pp-profile-name">${player.name}</div>
           <div class="pp-profile-respect">${currentLvl.name || ''} · Рівень ${player.respectLevel}</div>
@@ -1491,6 +1886,12 @@ function renderTopBar(state) {
   if (surrenderBtn) {
     surrenderBtn.style.display = (me && me.alive && state.phase === 'playing') ? '' : 'none';
   }
+  // Show/hide restart button (host only, game in progress or finished)
+  const restartBtn = $('#btn-restart');
+  if (restartBtn) {
+    const isHost = state.hostId === myId;
+    restartBtn.style.display = (isHost && (state.phase === 'playing' || state.phase === 'finished')) ? '' : 'none';
+  }
 }
 
 // ===== ACTION PANEL =====
@@ -1506,7 +1907,7 @@ function renderActionPanel(state) {
 
   if (isMyTurn && state.turnPhase === 'action' && !state.pendingAction) {
     if (me.canUpgradeRespect && me.respectLevel < 5) {
-      const btn = createActionBtn('⬆ Підвищити повагу', () => {
+      const btn = createActionBtn('Підвищити повагу', () => {
         SFX.respectUp();
         socket.emit('upgradeRespect', {}, handleResult);
       });
@@ -1522,7 +1923,7 @@ function renderActionPanel(state) {
         return bs && bs.owner === myId && (bs.influenceLevel || 0) < 4;
       });
       if (upgradeableBiz.length > 0) {
-        const btn = createActionBtn('★ Купити вплив (Поллак)', () => {
+        const btn = createActionBtn('Купити вплив (Поллак)', () => {
           SFX.click();
           // Show business selection
           const bizButtons = upgradeableBiz.map(bizId => {
@@ -1548,7 +1949,7 @@ function renderActionPanel(state) {
 
     // Mad Dog: free ambush
     if (me.helpers && me.helpers.some(h => h.ability === 'freeAmbush')) {
-      const btn = createActionBtn('🐕 Скажений Пес (Засідка)', () => {
+      const btn = createActionBtn('Скажений Пес (Засідка)', () => {
         SFX.attack();
         const others = state.players.filter(p => p.id !== myId && p.alive);
         showCenterPanel('Скажений Пес', 'Оберіть ціль для засідки:', others.map(p => ({
@@ -1563,7 +1964,29 @@ function renderActionPanel(state) {
       actionBtns.appendChild(btn);
     }
 
-    const endBtn = createActionBtn('✅ Завершити хід', () => {
+    // Trade button
+    const tradeBtn = createActionBtn(`${ICON.trade} Торгівля`, () => {
+      SFX.click();
+      const others = state.players.filter(p => p.id !== myId && p.alive);
+      showCenterPanel('Торгівля', 'Оберіть гравця для угоди:', others.map(p => ({
+        text: p.name,
+        action: () => { hideCenterPanel(); showTradeUI(p); }
+      })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
+    }, 'btn-secondary');
+    actionBtns.appendChild(tradeBtn);
+
+    // Alliance button
+    const allyBtn = createActionBtn(`${ICON.handshake} Альянс`, () => {
+      SFX.click();
+      const others = state.players.filter(p => p.id !== myId && p.alive);
+      showCenterPanel('Альянс', 'Оберіть гравця для альянсу:', others.map(p => ({
+        text: `${p.name} ${state.alliances?.some(a => a.active !== false && ((a.player1 === myId && a.player2 === p.id) || (a.player1 === p.id && a.player2 === myId))) ? '(вже союзник)' : ''}`,
+        action: () => { hideCenterPanel(); showAllianceUI(p); }
+      })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
+    }, 'btn-secondary');
+    actionBtns.appendChild(allyBtn);
+
+    const endBtn = createActionBtn(`${ICON.check} Завершити хід`, () => {
       SFX.click();
       socket.emit('endTurn', {}, handleResult);
     }, 'btn-secondary');
@@ -1574,9 +1997,9 @@ function renderActionPanel(state) {
 
   if (isMyTurn && me && me.inPrison > 0 && state.turnPhase === 'roll') {
     btnRoll.disabled = false;
-    btnRoll.textContent = `⛓ У в'язниці (${me.inPrison})`;
+    btnRoll.innerHTML = `${ICON.chain} У в'язниці (${me.inPrison})`;
     if (me.mafiaCards && me.mafiaCards.some(c => c.id === 'lawyer')) {
-      const btn = createActionBtn('📜 Використати Адвоката', () => {
+      const btn = createActionBtn('Використати Адвоката', () => {
         SFX.buy();
         socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
       });
@@ -1588,7 +2011,7 @@ function renderActionPanel(state) {
 function createActionBtn(text, onClick, extraClass = '') {
   const btn = document.createElement('button');
   btn.className = `btn ${extraClass || 'btn-primary'}`;
-  btn.textContent = text;
+  btn.innerHTML = text;
   btn.addEventListener('click', onClick);
   return btn;
 }
@@ -1640,9 +2063,9 @@ function renderMafiaCards(state) {
       <div class="mc-name">${card.name}</div>
       ${card.cost > 0 ? `<div class="mc-cost">${card.cost}$</div>` : ''}
       <div class="mc-desc">${card.description}</div>
-      ${locked ? `<div class="mc-locked">🔒 з ${state.mafiaCardMinRound}-го кола</div>` : ''}
+      ${locked ? `<div class="mc-locked">${ICON.lock} з ${state.mafiaCardMinRound}-го кола</div>` : ''}
     `;
-    el.addEventListener('click', () => onMafiaCardClick(card, state));
+    el.addEventListener('click', () => onMafiaCardClickExtended(card, state));
     list.appendChild(el);
   }
 }
@@ -1653,7 +2076,7 @@ function onMafiaCardClick(card, state) {
 
   // Check round lock for attack cards
   if (card.type === 'attack' && state.currentRound < state.mafiaCardMinRound) {
-    showEventDisplay(`<p style="color:var(--red-light)">🔒 Карти атаки доступні з ${state.mafiaCardMinRound}-го кола! (зараз коло ${state.currentRound})</p>`, 2500);
+    showEventDisplay(`<p style="color:var(--red-light)">${ICON.lock} Карти атаки доступні з ${state.mafiaCardMinRound}-го кола! (зараз коло ${state.currentRound})</p>`, 2500);
     return;
   }
 
@@ -1762,6 +2185,7 @@ function handlePendingAction(state) {
     confirmedPendingId = null; // reset when no pending action
     hideCenterPanel();
     hideModal();
+    hideAuctionPanel();
     return;
   }
   // Clear confirmedPendingId if the pending action type changed (new action appeared)
@@ -1812,7 +2236,7 @@ function handlePendingAction(state) {
     case 'seize_prison_business':
       SFX.event();
       showCenterPanel(
-        `🔒 ${action.ownerName} у в'язниці!`,
+        `${ICON.lock} ${action.ownerName} у в'язниці!`,
         `${action.name} без захисту. Купити за ${action.price}$?`,
         [
           { text: `Захопити (${action.price}$)`, action: () => {
@@ -1836,14 +2260,14 @@ function handlePendingAction(state) {
           hideCenterPanel();
         }},
         ...(action.canRob ? [{
-          text: '🔫 Пограбувати!', action: () => {
+          text: `${ICON.gun} Пограбувати!`, action: () => {
             SFX.attack();
             socket.emit('resolveAction', { actionType: 'pay_rent', data: { useRobbery: true } }, handleResult);
             hideCenterPanel();
           }, cls: 'btn-danger'
         }] : []),
         ...(action.canBuyout ? [{
-          text: `🏢 Викупити (${action.buyoutPrice}$)`, action: () => {
+          text: `${ICON.building} Викупити (${action.buyoutPrice}$)`, action: () => {
             SFX.buy();
             socket.emit('resolveAction', { actionType: 'buyout_business', data: { businessId: action.businessId } }, handleResult);
             hideCenterPanel();
@@ -1854,7 +2278,7 @@ function handlePendingAction(state) {
 
     case 'police_landing_choice':
       SFX.event();
-      showCenterPanel('👮 Поліція', 'Оберіть дію:', action.choices.map(c => ({
+      showCenterPanel(`${ICON.police} Поліція`, 'Оберіть дію:', action.choices.map(c => ({
         text: c.label,
         action: () => {
           SFX.buy();
@@ -2007,7 +2431,7 @@ function handlePendingAction(state) {
       if (!me) break;
       showExplosion(me.name);
       setTimeout(() => {
-      showCenterPanel('💣 Вибух бомби!', 'Оберіть помічника, який загине:', me.helpers.map((h, i) => ({
+      showCenterPanel(`${ICON.bomb} Вибух бомби!`, 'Оберіть помічника, який загине:', me.helpers.map((h, i) => ({
         text: h.name,
         action: () => {
           socket.emit('resolveAction', { actionType: 'bomb_choose_helper', data: { helperIndex: i } }, handleResult);
@@ -2072,8 +2496,9 @@ function handlePendingAction(state) {
     case 'mafia_confirm':
       if (confirmedPendingId === 'mafia_confirm') break; // already confirmed, skip re-show
       if (action.playerId === myId && action.cards && action.cards.length > 0) {
+        const peekInfo = action.peekCard ? `\n\n👁 Наступна карта в колоді: ${action.peekCard.name}` : '';
         showCardReveal('mafia', 'КАРТА MAFIA', action.cards.map(c => c.name).join(', '),
-          action.cards.map(c => c.description).join('\n'), () => {
+          action.cards.map(c => c.description).join('\n') + peekInfo, () => {
             confirmedPendingId = 'mafia_confirm';
             socket.emit('resolveAction', { actionType: 'mafia_confirm', data: {} }, handleResult);
           });
@@ -2106,9 +2531,46 @@ function handlePendingAction(state) {
     case 'auction': {
       const meForAuction = state.players.find(p => p.id === myId);
       if (!meForAuction || !meForAuction.alive) break;
-      showAuctionModal(action, state);
+      showAuctionPanel(action, state);
       break;
     }
+
+    case 'trade_offer':
+      if (action.playerId === myId) {
+        const offerDesc = [];
+        if (action.offer.giveMoney) offerDesc.push(`${action.fromName} дає ${action.offer.giveMoney}$`);
+        if (action.offer.wantMoney) offerDesc.push(`Хоче ${action.offer.wantMoney}$`);
+        if (action.offer.giveBusiness?.length) offerDesc.push(`Дає бізнеси: ${action.offer.giveBusiness.length}`);
+        if (action.offer.wantBusiness?.length) offerDesc.push(`Хоче бізнеси: ${action.offer.wantBusiness.length}`);
+        SFX.event();
+        showCenterPanel(`Угода від ${action.fromName}`, offerDesc.join('\n'), [
+          { text: 'Прийняти', action: () => {
+            socket.emit('tradeResponse', { accept: true }, handleResult);
+            hideCenterPanel();
+          }},
+          { text: 'Відхилити', action: () => {
+            socket.emit('tradeResponse', { accept: false }, handleResult);
+            hideCenterPanel();
+          }, cls: 'btn-danger' }
+        ]);
+      }
+      break;
+
+    case 'alliance_offer':
+      if (action.playerId === myId) {
+        SFX.event();
+        showCenterPanel(`Альянс від ${action.fromName}`, `${action.fromName} пропонує альянс на ${action.rounds} кола. Ви не зможете атакувати один одного.`, [
+          { text: 'Прийняти', action: () => {
+            socket.emit('allianceResponse', { accept: true }, handleResult);
+            hideCenterPanel();
+          }},
+          { text: 'Відхилити', action: () => {
+            socket.emit('allianceResponse', { accept: false }, handleResult);
+            hideCenterPanel();
+          }, cls: 'btn-danger' }
+        ]);
+      }
+      break;
   }
 }
 
@@ -2194,24 +2656,150 @@ function showTargetSelectionModal(card, state) {
     };
   }).concat([{ text: 'Скасувати', action: hideModal, cls: 'btn-secondary' }]);
 
-  showModal(`🔫 ${card.name}`, desc, buttons);
+  showModal(`${ICON.gun} ${card.name}`, desc, buttons);
 }
 
-function showAuctionModal(action, state) {
-  showModal(`🏢 Аукціон: ${action.businessName}`, `Мінімальна ціна: ${action.minPrice}$`, [
-    { text: 'Зробити ставку', action: () => {
-      const amount = prompt(`Ваша ставка (мін ${action.minPrice}$):`, action.minPrice);
-      if (amount && parseInt(amount) >= action.minPrice) {
-        SFX.buy();
-        socket.emit('auctionBid', { amount: parseInt(amount) }, handleResult);
-      }
-    }},
-    { text: 'Пропустити', action: () => {
-      socket.emit('auctionBid', { amount: 0 }, handleResult);
-      hideModal();
-    }, cls: 'btn-secondary' }
-  ]);
+// ===== AUCTION (real-time bidding) =====
+let auctionTimerInterval = null;
+
+function showAuctionPanel(action, state) {
+  hideModal();
+  hideCenterPanel();
+  const overlay = document.getElementById('auction-overlay');
+  if (!overlay) return;
+  overlay.classList.add('active');
+
+  const me = state.players.find(p => p.id === myId);
+  const hasPassed = action.passed && action.passed.includes(myId);
+  const isLeader = action.currentBidderId === myId;
+  const nextBid = action.currentBid === 0 ? action.minPrice : action.currentBid + (action.bidStep || 500);
+  const canAfford = me && me.money >= nextBid;
+
+  // District color
+  const districtColors = {
+    trushchoby: '#8b5e3c', ghetto: '#6a6a6a', spalniy: '#5b8c5a', promzona: '#7a7a2a',
+    elitnyy: '#c9a84c', turystychnyy: '#2a8bc9', red_light: '#c94c6a', dilovyy: '#4c6ac9'
+  };
+  const dColor = districtColors[action.districtId] || 'var(--gold)';
+
+  let bidderDisplay = action.currentBidderName
+    ? `<span class="auction-bidder-name">${action.currentBidderName}</span>`
+    : `<span class="auction-no-bid">Ще немає ставок</span>`;
+
+  overlay.innerHTML = `
+    <div class="auction-container" style="--auction-color: ${dColor}">
+      <div class="auction-header">
+        <div class="auction-gavel">${ICON.building}</div>
+        <h2>АУКЦІОН</h2>
+        <div class="auction-business-name">${action.businessName}</div>
+      </div>
+      <div class="auction-body">
+        <div class="auction-bid-display">
+          <div class="auction-label">Поточна ставка</div>
+          <div class="auction-amount">${action.currentBid > 0 ? action.currentBid + '$' : action.minPrice + '$ (стартова)'}</div>
+          <div class="auction-label">Лідер</div>
+          <div class="auction-leader">${bidderDisplay}</div>
+        </div>
+        <div class="auction-timer-bar">
+          <div class="auction-timer-fill" id="auction-timer-fill"></div>
+        </div>
+        <div class="auction-timer-text" id="auction-timer-text">5с</div>
+        <div class="auction-actions">
+          <button class="btn btn-auction-raise" id="btn-auction-raise" ${hasPassed || isLeader || !canAfford ? 'disabled' : ''}>
+            ${ICON.money} Ставка ${nextBid}$
+          </button>
+          <button class="btn btn-auction-pass" id="btn-auction-pass" ${hasPassed ? 'disabled' : ''}>
+            Пас
+          </button>
+        </div>
+        ${hasPassed ? '<div class="auction-passed-msg">Ви спасували</div>' : ''}
+        ${isLeader ? '<div class="auction-leader-msg">Ви лідер ставки!</div>' : ''}
+        ${!canAfford && !hasPassed && !isLeader ? '<div class="auction-no-money">Недостатньо коштів</div>' : ''}
+      </div>
+      <div class="auction-log" id="auction-log"></div>
+    </div>
+  `;
+
+  const raiseBtn = document.getElementById('btn-auction-raise');
+  const passBtn = document.getElementById('btn-auction-pass');
+
+  if (raiseBtn) {
+    raiseBtn.addEventListener('click', () => {
+      SFX.buy();
+      raiseBtn.disabled = true;
+      socket.emit('auctionRaise', {}, (res) => {
+        if (res && res.error) handleResult(res);
+      });
+    });
+  }
+  if (passBtn) {
+    passBtn.addEventListener('click', () => {
+      SFX.click();
+      passBtn.disabled = true;
+      socket.emit('auctionPass', {}, (res) => {
+        if (res && res.error) handleResult(res);
+      });
+    });
+  }
 }
+
+function hideAuctionPanel() {
+  const overlay = document.getElementById('auction-overlay');
+  if (overlay) overlay.classList.remove('active');
+  if (auctionTimerInterval) {
+    clearInterval(auctionTimerInterval);
+    auctionTimerInterval = null;
+  }
+}
+
+// Auction socket events
+socket.on('auctionUpdate', (data) => {
+  // Re-render auction panel if visible
+  if (gameState && gameState.pendingAction && gameState.pendingAction.type === 'auction') {
+    // Update action data
+    gameState.pendingAction.currentBid = data.currentBid;
+    gameState.pendingAction.currentBidderId = data.currentBidderId;
+    gameState.pendingAction.currentBidderName = data.currentBidderName;
+    gameState.pendingAction.passed = data.passed;
+    showAuctionPanel(gameState.pendingAction, gameState);
+  }
+});
+
+socket.on('auctionTimer', (data) => {
+  // Start countdown animation
+  const fill = document.getElementById('auction-timer-fill');
+  const text = document.getElementById('auction-timer-text');
+  if (!fill || !text) return;
+
+  let timeLeft = data.timeLeft;
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  requestAnimationFrame(() => {
+    fill.style.transition = `width ${timeLeft}s linear`;
+    fill.style.width = '0%';
+  });
+
+  if (auctionTimerInterval) clearInterval(auctionTimerInterval);
+  text.textContent = timeLeft + 'с';
+  auctionTimerInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft <= 0) {
+      text.textContent = '0с';
+      clearInterval(auctionTimerInterval);
+      auctionTimerInterval = null;
+    } else {
+      text.textContent = timeLeft + 'с';
+    }
+  }, 1000);
+});
+
+socket.on('auctionResult', (data) => {
+  hideAuctionPanel();
+  if (data.winnerId) {
+    const isMe = data.winnerId === myId;
+    if (isMe) SFX.buy();
+  }
+});
 
 // ===== ATTACK ALERT =====
 function showAttackAlert(data) {
@@ -2248,7 +2836,7 @@ function showAttackAlert(data) {
   if (data.canVest) {
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary';
-    btn.textContent = '🛡 Бронежилет';
+    btn.innerHTML = `${ICON.shield} Бронежилет`;
     btn.addEventListener('click', () => {
       clearInterval(attackTimer);
       SFX.click();
@@ -2261,7 +2849,7 @@ function showAttackAlert(data) {
   if (data.canPolice) {
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary';
-    btn.textContent = '👮 Поліція';
+    btn.innerHTML = `${ICON.police} Поліція`;
     btn.addEventListener('click', () => {
       clearInterval(attackTimer);
       SFX.prisonDoor();
@@ -2274,7 +2862,7 @@ function showAttackAlert(data) {
   if (data.canBuyOff) {
     const btn = document.createElement('button');
     btn.className = 'btn btn-secondary';
-    btn.textContent = `💰 Відкупитись (${data.buyOffCost}$)`;
+    btn.innerHTML = `${ICON.money} Відкупитись (${data.buyOffCost}$)`;
     btn.addEventListener('click', () => {
       clearInterval(attackTimer);
       SFX.payRent();
@@ -2325,17 +2913,23 @@ function showCasino() {
   $('#btn-casino-close').style.display = 'none';
   $('#btn-spin').disabled = false;
 
+  // Reset wheel
+  const wheel = $('#roulette-wheel');
+  wheel.style.transition = 'none';
+  wheel.style.transform = 'rotate(0deg)';
+  wheel.classList.remove('spinning');
+  setTimeout(() => { wheel.style.transition = 'transform 4s cubic-bezier(0.15,0.75,0.25,1)'; }, 50);
+
   const bets = $('#casino-bets');
   bets.innerHTML = '';
   const betTypes = [
-    { id: 'red', label: '🔴 Червоне', cls: 'red' },
-    { id: 'black', label: '⚫ Чорне', cls: 'black' },
-    { id: 'jackpot', label: '👑 JACKPOT', cls: 'green' }
+    { id: 'red', label: `${ICON.circle_red} ЧЕРВОНЕ`, cls: 'red' },
+    { id: 'black', label: `${ICON.circle_black} ЧОРНЕ`, cls: 'black' }
   ];
   for (const bt of betTypes) {
     const el = document.createElement('div');
     el.className = `casino-bet ${bt.cls}`;
-    el.textContent = bt.label;
+    el.innerHTML = bt.label;
     el.addEventListener('click', () => {
       SFX.click();
       $$('.casino-bet').forEach(e => e.classList.remove('selected'));
@@ -2345,8 +2939,13 @@ function showCasino() {
     bets.appendChild(el);
   }
 
+  // Jackpot hint
+  $('#casino-jackpot-hint').innerHTML = `${ICON.crown} Зелений сектор = MAFIA JACKPOT`;
+
   const slider = $('#bet-amount');
   const display = $('#bet-display');
+  slider.value = 500;
+  display.textContent = '500$';
   slider.oninput = () => { display.textContent = slider.value + '$'; };
 }
 
@@ -2357,53 +2956,59 @@ $('#btn-spin').addEventListener('click', () => {
   SFX.casino();
 
   const wheel = $('#roulette-wheel');
+  wheel.classList.add('spinning');
 
   socket.emit('resolveAction', {
     actionType: 'casino',
     data: { betType: selectedBetType, betAmount }
   }, (res) => {
-    // Calculate target rotation based on server result
-    // Wheel has 37 sectors (0-36), each = 360/37 ≈ 9.73 degrees
-    // Red numbers: 1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36
-    // Green: 0. Rest: black.
-    // Spin to land on the correct color zone
-    const spinResult = res.spinResult !== undefined ? res.spinResult : 0;
-    const sectorAngle = 360 / 37;
-    // We want the marker (at top) to point at the spinResult sector
-    // Sector 0 is at top (0 deg). Sector N is at N * sectorAngle clockwise.
-    // To point marker at sector N, rotate wheel by -(N * sectorAngle) + full spins
-    const targetAngle = -(spinResult * sectorAngle);
-    const fullSpins = 1440 + Math.floor(Math.random() * 720);
-    const finalRotation = fullSpins + targetAngle;
+    if (res.error) {
+      wheel.classList.remove('spinning');
+      const resultEl = $('#casino-result');
+      resultEl.textContent = res.error;
+      resultEl.className = 'casino-result lose';
+      $('#btn-spin').disabled = false;
+      return;
+    }
+
+    // 12 sectors, each 30deg. Sectors: red,black,red,black,red,green,black,red,black,red,black,green
+    const sectorIndex = res.sectorIndex !== undefined ? res.sectorIndex : 0;
+    const sectorAngle = 30; // 360 / 12
+    // Land marker on the middle of the target sector
+    // Sector 0 starts at 0deg (top). Marker is at top, wheel rotates clockwise.
+    // To point at sector N: rotate wheel so sector N's center aligns with top
+    // Sector N occupies [N*30, (N+1)*30] degrees in the conic-gradient (clockwise from top).
+    // Wheel rotates clockwise (positive deg). To land marker (top) on sector N's center,
+    // we need totalRotation mod 360 = 360 - targetCenter (so that sector aligns with top).
+    const targetCenter = sectorIndex * sectorAngle + sectorAngle / 2;
+    const jitter = (Math.random() - 0.5) * 18;
+    const fullSpins = 1800 + Math.floor(Math.random() * 720);
+    const finalRotation = fullSpins + (360 - targetCenter) + jitter;
     wheel.style.transform = `rotate(${finalRotation}deg)`;
 
+    const colorNames = { red: 'Червоне', black: 'Чорне', green: 'Зелене' };
+
     setTimeout(() => {
+      wheel.classList.remove('spinning');
       const resultEl = $('#casino-result');
-      if (res.error) {
-        resultEl.textContent = res.error;
-        resultEl.className = 'casino-result lose';
-        $('#btn-spin').disabled = false;
-        return;
-      }
-      // Determine color for display
-      const redNums = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-      let colorName = spinResult === 0 ? '🟢 Зелене (0)' : (redNums.includes(spinResult) ? '🔴 Червоне' : '⚫ Чорне');
+      const sectorColor = res.sectorColor || 'red';
+      const colorName = colorNames[sectorColor] || sectorColor;
 
       if (res.type === 'jackpot') {
         SFX.jackpot();
-        resultEl.textContent = '👑 MAFIA JACKPOT! 👑';
+        resultEl.innerHTML = `${ICON.crown} MAFIA JACKPOT! ${ICON.crown}<br><small style="color:var(--green-light)">Зелений сектор — оберіть бізнес безкоштовно!</small>`;
         resultEl.className = 'casino-result jackpot';
       } else if (res.won) {
         SFX.win();
-        resultEl.textContent = `${colorName} — Виграш +${res.winnings}$`;
+        resultEl.innerHTML = `${colorName} — Виграш +${res.winnings}$`;
         resultEl.className = 'casino-result win';
       } else {
         SFX.lose();
-        resultEl.textContent = `${colorName} — Програш -${res.lost}$`;
+        resultEl.innerHTML = `${colorName} — Програш -${res.lost}$`;
         resultEl.className = 'casino-result lose';
       }
       $('#btn-casino-close').style.display = 'inline-block';
-    }, 3500);
+    }, 4200);
   });
 });
 
@@ -2413,7 +3018,8 @@ $('#btn-casino-close').addEventListener('click', () => {
   const wheel = $('#roulette-wheel');
   wheel.style.transition = 'none';
   wheel.style.transform = 'rotate(0deg)';
-  setTimeout(() => { wheel.style.transition = 'transform 3s cubic-bezier(0.2, 0.8, 0.3, 1)'; }, 50);
+  wheel.classList.remove('spinning');
+  setTimeout(() => { wheel.style.transition = 'transform 4s cubic-bezier(0.15, 0.75, 0.25, 1)'; }, 50);
 });
 
 // ===== LOG =====
@@ -2438,6 +3044,30 @@ $('#btn-surrender').addEventListener('dblclick', () => {
 });
 $('#btn-surrender').addEventListener('click', () => {
   // Single click shows a hint, does nothing
+});
+
+// ===== LEAVE GAME =====
+$('#btn-leave').addEventListener('click', () => {
+  SFX.click();
+  if (confirm('Вийти з гри? Ви втратите прогрес!')) {
+    socket.emit('leaveGame', {});
+    location.reload();
+  }
+});
+
+// ===== RESTART MATCH =====
+$('#btn-restart').addEventListener('click', () => {
+  SFX.click();
+  if (confirm('Перезапустити матч? Всі гравці повернуться в лобі кімнати.')) {
+    socket.emit('restartGame', {}, (res) => {
+      if (res.error) showError(res.error);
+    });
+  }
+});
+
+socket.on('gameRestarted', () => {
+  // Game was restarted, reload to get fresh state
+  location.reload();
 });
 
 // ===== FULLSCREEN =====
@@ -2519,6 +3149,610 @@ document.querySelectorAll('.rules-nav-link').forEach(link => {
   });
 });
 
+// ===== CHAT SYSTEM =====
+let chatOpen = false;
+let chatUnread = 0;
+let chatMessages = [];
+
+function initChat() {
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatPanel = document.getElementById('chat-panel');
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
+  if (!chatToggle || !chatPanel) return;
+
+  chatToggle.addEventListener('click', () => {
+    chatOpen = !chatOpen;
+    chatPanel.classList.toggle('open', chatOpen);
+    chatToggle.classList.toggle('active', chatOpen);
+    if (chatOpen) {
+      chatUnread = 0;
+      updateChatBadge();
+      chatInput?.focus();
+      scrollChatToBottom();
+    }
+  });
+
+  if (chatSend) chatSend.addEventListener('click', sendChatMessage);
+  if (chatInput) chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+  });
+
+  // Quick emoji buttons
+  document.querySelectorAll('.chat-emoji-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('chatReaction', { emoji: btn.dataset.emoji });
+    });
+  });
+
+  // Load chat history
+  socket.emit('getChatHistory', {}, (history) => {
+    chatMessages = history || [];
+    renderChatMessages();
+  });
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  if (!input || !input.value.trim()) return;
+  socket.emit('chatMessage', { message: input.value.trim() });
+  input.value = '';
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const msg of chatMessages.slice(-100)) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    const time = new Date(msg.timestamp);
+    div.innerHTML = `
+      <span class="chat-msg-name" style="color:${msg.playerColor}">${msg.playerName}</span>
+      <span class="chat-msg-time">${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}</span>
+      <div class="chat-msg-text">${escapeHtml(msg.message)}</div>
+    `;
+    container.appendChild(div);
+  }
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  const container = document.getElementById('chat-messages');
+  if (container) container.scrollTop = container.scrollHeight;
+}
+
+function updateChatBadge() {
+  const badge = document.getElementById('chat-badge');
+  if (badge) {
+    badge.textContent = chatUnread;
+    badge.style.display = chatUnread > 0 ? 'flex' : 'none';
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+socket.on('chatMessage', (msg) => {
+  chatMessages.push(msg);
+  if (chatMessages.length > 100) chatMessages.shift();
+  renderChatMessages();
+  if (!chatOpen) {
+    chatUnread++;
+    updateChatBadge();
+  }
+});
+
+socket.on('chatReaction', (data) => {
+  // Show floating emoji near player panel
+  showFloatingEmoji(data.playerId, data.emoji);
+});
+
+function showFloatingEmoji(playerId, emoji) {
+  const panels = document.querySelectorAll('.player-panel');
+  const state = gameState;
+  if (!state) return;
+  const idx = state.players.findIndex(p => p.id === playerId);
+  if (idx < 0 || !panels[idx]) return;
+  const el = document.createElement('div');
+  el.className = 'floating-emoji';
+  el.textContent = emoji;
+  panels[idx].style.position = 'relative';
+  panels[idx].appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+
+// ===== TURN TIMER =====
+let turnTimerRemaining = 0;
+
+socket.on('turnTimer', ({ remaining }) => {
+  turnTimerRemaining = remaining;
+  renderTurnTimer(remaining);
+  // Play tick sound when < 10s and it's my turn
+  if (remaining <= 10 && remaining > 0 && gameState?.currentPlayerId === myId) {
+    playTone(800 + (10 - remaining) * 50, 0.05, 'sine', 0.04);
+  }
+});
+
+function renderTurnTimer(remaining) {
+  let timerEl = document.getElementById('turn-timer');
+  if (!timerEl) return;
+  if (remaining <= 0) {
+    timerEl.style.display = 'none';
+    return;
+  }
+  timerEl.style.display = 'flex';
+  const pct = remaining / 60;
+  const color = remaining > 30 ? '#2ecc71' : remaining > 10 ? '#f39c12' : '#e74c3c';
+  const circumference = 2 * Math.PI * 18;
+  const offset = circumference * (1 - pct);
+  timerEl.innerHTML = `
+    <svg width="44" height="44" viewBox="0 0 44 44">
+      <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+      <circle cx="22" cy="22" r="18" fill="none" stroke="${color}" stroke-width="3"
+        stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
+        transform="rotate(-90 22 22)" stroke-linecap="round"
+        style="transition: stroke-dashoffset 1s linear, stroke 0.5s;"/>
+    </svg>
+    <span class="timer-text" style="color:${color}">${remaining}</span>
+  `;
+  if (remaining <= 10) timerEl.classList.add('timer-critical');
+  else timerEl.classList.remove('timer-critical');
+}
+
+// ===== AMBIENT MUSIC =====
+let musicPlaying = false;
+let musicNodes = null;
+
+function startAmbientMusic() {
+  if (musicPlaying || !audioCtx) return;
+  ensureAudio();
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0, audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 2);
+  master.connect(audioCtx.destination);
+
+  // Bass drone
+  const bass = audioCtx.createOscillator();
+  bass.type = 'sine';
+  bass.frequency.value = 55;
+  const bassGain = audioCtx.createGain();
+  bassGain.gain.value = 0.5;
+  bass.connect(bassGain);
+  bassGain.connect(master);
+  bass.start();
+
+  // Pad chord (Am)
+  const chords = [
+    [220, 261.6, 329.6], // Am
+    [196, 246.9, 293.7], // Dm(ish)
+    [164.8, 196, 246.9], // Em(ish)
+    [220, 261.6, 329.6]  // Am
+  ];
+  let chordIdx = 0;
+  const padOscs = [];
+  for (let i = 0; i < 3; i++) {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = chords[0][i];
+    const g = audioCtx.createGain();
+    g.gain.value = 0.15;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 400;
+    osc.connect(filt);
+    filt.connect(g);
+    g.connect(master);
+    osc.start();
+    padOscs.push(osc);
+  }
+
+  // Chord progression interval
+  const chordInterval = setInterval(() => {
+    chordIdx = (chordIdx + 1) % chords.length;
+    padOscs.forEach((osc, i) => {
+      osc.frequency.linearRampToValueAtTime(chords[chordIdx][i], audioCtx.currentTime + 2);
+    });
+  }, 8000);
+
+  // Heartbeat rhythm
+  const heartbeatInterval = setInterval(() => {
+    try {
+      const bufLen = audioCtx.sampleRate * 0.1;
+      const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const g = audioCtx.createGain();
+      g.gain.value = 0.08;
+      const filt = audioCtx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 100;
+      src.connect(filt);
+      filt.connect(g);
+      g.connect(master);
+      src.start();
+    } catch(e) {}
+  }, 2000);
+
+  musicPlaying = true;
+  musicNodes = { master, bass, bassGain, padOscs, chordInterval, heartbeatInterval };
+}
+
+function stopAmbientMusic() {
+  if (!musicPlaying || !musicNodes) return;
+  const { master, bass, padOscs, chordInterval, heartbeatInterval } = musicNodes;
+  master.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
+  clearInterval(chordInterval);
+  clearInterval(heartbeatInterval);
+  setTimeout(() => {
+    try { bass.stop(); } catch(e) {}
+    padOscs.forEach(o => { try { o.stop(); } catch(e) {} });
+  }, 2500);
+  musicPlaying = false;
+  musicNodes = null;
+}
+
+function toggleMusic() {
+  if (musicPlaying) { stopAmbientMusic(); localStorage.setItem('mafia_music', 'off'); }
+  else { startAmbientMusic(); localStorage.setItem('mafia_music', 'on'); }
+  updateMusicButton();
+}
+
+function updateMusicButton() {
+  const btn = document.getElementById('btn-music');
+  if (btn) btn.innerHTML = musicPlaying ? ICON.music_on : ICON.music_off;
+}
+
+// ===== ENHANCED VICTORY SCREEN =====
+function showEnhancedVictoryScreen(state) {
+  if (state.phase !== 'finished') return;
+  let winner = null;
+  if (state.winner) winner = state.players.find(p => p.id === state.winner.id);
+  if (!winner) {
+    const alive = state.players.filter(p => p.alive);
+    winner = alive.length === 1 ? alive[0] : (alive.length > 0 ? alive.reduce((a,b) => a.money > b.money ? a : b) : state.players.reduce((a,b) => a.money > b.money ? a : b));
+  }
+  if (!winner) return;
+
+  SFX.epicVictory();
+  const overlay = document.getElementById('victory-overlay');
+  document.getElementById('victory-name').textContent = winner.name;
+
+  // Build stats for all players, ranked
+  const ranked = [...state.players].sort((a, b) => {
+    if (a.alive !== b.alive) return b.alive ? 1 : -1;
+    let aWealth = a.money + (a.businesses || []).length * 2000;
+    let bWealth = b.money + (b.businesses || []).length * 2000;
+    return bWealth - aWealth;
+  });
+
+  let statsHtml = '<div class="victory-leaderboard">';
+  ranked.forEach((p, i) => {
+    const isWinner = p.id === winner.id;
+    const medal = i === 0 ? ICON.medal_gold : i === 1 ? ICON.medal_silver : i === 2 ? ICON.medal_bronze : `#${i+1}`;
+    const s = p.stats || {};
+    statsHtml += `
+      <div class="vl-row ${isWinner ? 'vl-winner' : ''} ${!p.alive ? 'vl-dead' : ''}">
+        <span class="vl-rank">${medal}</span>
+        <span class="vl-avatar ${p.character?.id && PORTRAITS[p.character.id] ? 'avatar-portrait' : ''}" style="${p.character?.id && PORTRAITS[p.character.id] ? `--char-color:${p.character.color}` : `background:${p.character?.color || '#888'}`}">${p.character?.id && PORTRAITS[p.character.id] ? PORTRAITS[p.character.id] : p.name[0]}</span>
+        <div class="vl-info">
+          <div class="vl-name">${p.name} ${!p.alive ? '☠' : ''}</div>
+          <div class="vl-stats-row">
+            <span>${ICON.money} ${p.money}$</span>
+            <span>${ICON.building} ${p.businessCount || 0}</span>
+            <span>${ICON.cards} ${s.mafiaCardsUsed || 0}</span>
+            <span>${ICON.swords} ${s.attacksMade || 0}</span>
+            <span>${ICON.casino_chip} ${(s.casinoWins||0)}W/${(s.casinoLosses||0)}L</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  statsHtml += '</div>';
+  document.getElementById('victory-stats').innerHTML = statsHtml;
+
+  // Particles
+  const particlesContainer = document.getElementById('victory-particles');
+  if (particlesContainer) {
+    particlesContainer.innerHTML = '';
+    const colors = ['#c9a84c', '#e8c95a', '#f0d060', '#fff', '#8a6d1b', '#e74c3c', '#3498db', '#2ecc71'];
+    for (let i = 0; i < 80; i++) {
+      const p = document.createElement('div');
+      p.className = 'victory-particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.animationDuration = (3 + Math.random() * 4) + 's';
+      p.style.animationDelay = (Math.random() * 5) + 's';
+      particlesContainer.appendChild(p);
+    }
+  }
+  overlay.classList.add('active');
+}
+
+// ===== TRADING UI =====
+function showTradeUI(targetPlayer) {
+  const state = gameState;
+  if (!state) return;
+  const me = state.players.find(p => p.id === myId);
+  if (!me) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'trade-overlay active';
+  let myBizHtml = (me.businesses || []).map(bizId => {
+    const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
+    const biz = dist?.businesses.find(b => b.id === bizId);
+    return `<label class="trade-biz-label"><input type="checkbox" value="${bizId}" class="trade-give-biz"> ${biz?.name || bizId}</label>`;
+  }).join('');
+  let theirBizHtml = (targetPlayer.businesses || []).map(bizId => {
+    const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
+    const biz = dist?.businesses.find(b => b.id === bizId);
+    return `<label class="trade-biz-label"><input type="checkbox" value="${bizId}" class="trade-want-biz"> ${biz?.name || bizId}</label>`;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="trade-modal">
+      <h3>Угода з ${targetPlayer.name}</h3>
+      <div class="trade-columns">
+        <div class="trade-col">
+          <h4>Ви даєте</h4>
+          <label>Гроші: <input type="number" id="trade-give-money" value="0" min="0" max="${me.money}" step="500"></label>
+          <div class="trade-biz-list">${myBizHtml || '<span style="color:#666">Немає бізнесів</span>'}</div>
+        </div>
+        <div class="trade-col">
+          <h4>Ви отримуєте</h4>
+          <label>Гроші: <input type="number" id="trade-want-money" value="0" min="0" max="${targetPlayer.money}" step="500"></label>
+          <div class="trade-biz-list">${theirBizHtml || '<span style="color:#666">Немає бізнесів</span>'}</div>
+        </div>
+      </div>
+      <div class="trade-actions">
+        <button class="btn btn-primary" id="trade-send">Запропонувати</button>
+        <button class="btn btn-secondary" id="trade-cancel">Скасувати</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#trade-cancel').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#trade-send').addEventListener('click', () => {
+    const giveMoney = parseInt(document.getElementById('trade-give-money').value) || 0;
+    const wantMoney = parseInt(document.getElementById('trade-want-money').value) || 0;
+    const giveBusiness = [...overlay.querySelectorAll('.trade-give-biz:checked')].map(c => c.value);
+    const wantBusiness = [...overlay.querySelectorAll('.trade-want-biz:checked')].map(c => c.value);
+    socket.emit('tradeOffer', { toId: targetPlayer.id, offer: { giveMoney, wantMoney, giveBusiness, wantBusiness } }, (res) => {
+      if (res.error) showEventDisplay(`<p style="color:var(--red-light)">${res.error}</p>`, 3000);
+      else showEventDisplay('<p style="color:var(--green-light)">Пропозицію відправлено!</p>', 2000);
+      overlay.remove();
+    });
+  });
+}
+
+// ===== ALLIANCE UI =====
+function showAllianceUI(targetPlayer) {
+  showCenterPanel(`Альянс з ${targetPlayer.name}`, 'Запропонувати мирний альянс? (3 кола без атак)', [
+    { text: 'Запропонувати (3 кола)', action: () => {
+      socket.emit('allianceOffer', { toId: targetPlayer.id, rounds: 3 }, (res) => {
+        if (res.error) showEventDisplay(`<p style="color:var(--red-light)">${res.error}</p>`, 3000);
+        else showEventDisplay('<p style="color:var(--green-light)">Пропозицію альянсу відправлено!</p>', 2000);
+      });
+      hideCenterPanel();
+    }},
+    { text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }
+  ]);
+}
+
+// ===== RECONNECT =====
+(function initReconnect() {
+  // Store session info
+  socket.on('connect', () => {
+    const savedRoom = sessionStorage.getItem('mafia_roomId');
+    const savedName = sessionStorage.getItem('mafia_playerName');
+    if (savedRoom && savedName && !myRoomId) {
+      socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName }, (res) => {
+        if (res.success) {
+          myId = res.playerId;
+          myRoomId = res.roomId;
+          showScreen(gameScreen);
+        } else {
+          sessionStorage.removeItem('mafia_roomId');
+          sessionStorage.removeItem('mafia_playerName');
+        }
+      });
+    }
+  });
+
+  // Save session on join
+  const origCreateCb = socket.listeners('createRoom');
+  // Intercept gameState to save session
+  socket.on('gameState', (state) => {
+    if (myRoomId && state.phase !== 'waiting') {
+      sessionStorage.setItem('mafia_roomId', myRoomId);
+      const me = state.players.find(p => p.id === myId);
+      if (me) sessionStorage.setItem('mafia_playerName', me.name);
+    }
+  });
+})();
+
+// ===== ADD INTERACTION BUTTONS TO PLAYER PANELS =====
+// Override renderPlayerPanels to add trade/alliance buttons
+const _origRenderPlayerPanels = renderPlayerPanels;
+// Note: We modify behavior in the existing function instead
+
+// ===== HANDLE TRADE/ALLIANCE PENDING ACTIONS =====
+// Add handler for trade_offer and alliance_offer in handlePendingAction
+const _origHandlePendingAction = handlePendingAction;
+
+// ===== INIT NEW FEATURES =====
+document.addEventListener('DOMContentLoaded', () => {
+  initChat();
+  // Music auto-start preference
+  if (localStorage.getItem('mafia_music') === 'on') {
+    document.addEventListener('click', function musicAutoStart() {
+      ensureAudio();
+      startAmbientMusic();
+      updateMusicButton();
+      document.removeEventListener('click', musicAutoStart);
+    }, { once: true });
+  }
+  // Music toggle button
+  const musicBtn = document.getElementById('btn-music');
+  if (musicBtn) musicBtn.addEventListener('click', toggleMusic);
+});
+
+// Handle new mafia card clicks (informer, tax_collector, sabotage, etc.)
+const _origOnMafiaCardClick = onMafiaCardClick;
+
+// Override onMafiaCardClick to handle new cards
+function onMafiaCardClickExtended(card, state) {
+  const isMyTurn = state.currentPlayerId === myId;
+  if (!isMyTurn || state.turnPhase !== 'action') return;
+  if (card.type === 'attack' && state.currentRound < state.mafiaCardMinRound) {
+    showEventDisplay(`<p style="color:var(--red-light)">${ICON.lock} Карти атаки доступні з ${state.mafiaCardMinRound}-го кола!</p>`, 2500);
+    return;
+  }
+  SFX.mafia();
+
+  // New cards
+  if (card.id === 'informer' || card.id === 'double_agent' || card.id === 'blackmail') {
+    showTargetSelectionModal(card, state);
+    return;
+  }
+  if (card.id === 'tax_collector') {
+    socket.emit('playMafiaCard', { cardId: 'tax_collector' }, handleResult);
+    return;
+  }
+  if (card.id === 'sabotage') {
+    // Show business selection for sabotage
+    const othersBiz = [];
+    for (const p of state.players) {
+      if (p.id === myId || !p.alive) continue;
+      for (const bizId of (p.businesses || [])) {
+        const bs = state.businesses[bizId];
+        if (bs && (bs.influenceLevel || 0) > 0) {
+          const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
+          const biz = dist?.businesses.find(b => b.id === bizId);
+          othersBiz.push({ text: `${biz?.name || bizId} (${p.name}) ★${bs.influenceLevel}`, bizId });
+        }
+      }
+    }
+    if (othersBiz.length === 0) {
+      showEventDisplay('<p style="color:var(--red-light)">Немає бізнесів з впливом для саботажу.</p>', 2500);
+      return;
+    }
+    showCenterPanel('Саботаж', 'Оберіть бізнес для знищення впливу:', othersBiz.map(b => ({
+      text: b.text,
+      action: () => {
+        socket.emit('playMafiaCard', { cardId: 'sabotage', options: { businessId: b.bizId } }, handleResult);
+        hideCenterPanel();
+      }
+    })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
+    return;
+  }
+  if (card.id === 'witness_protection') {
+    socket.emit('playMafiaCard', { cardId: 'witness_protection' }, handleResult);
+    return;
+  }
+  if (card.id === 'insurance') {
+    socket.emit('playMafiaCard', { cardId: 'insurance' }, handleResult);
+    return;
+  }
+  // --- Wave 2 cards ---
+  if (card.id === 'wiretap') {
+    showTargetSelectionModal(card, state);
+    return;
+  }
+  if (card.id === 'forgery') {
+    socket.emit('playMafiaCard', { cardId: 'forgery' }, handleResult);
+    return;
+  }
+  if (card.id === 'corruption') {
+    socket.emit('playMafiaCard', { cardId: 'corruption' }, handleResult);
+    return;
+  }
+  if (card.id === 'money_laundering') {
+    socket.emit('playMafiaCard', { cardId: 'money_laundering' }, handleResult);
+    return;
+  }
+  if (card.id === 'fake_death') {
+    socket.emit('playMafiaCard', { cardId: 'fake_death' }, handleResult);
+    return;
+  }
+  if (card.id === 'hostile_takeover') {
+    // Show business selection for hostile takeover
+    const htBiz = [];
+    for (const p of state.players) {
+      if (p.id === myId || !p.alive) continue;
+      for (const bizId of (p.businesses || [])) {
+        const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
+        const biz = dist?.businesses.find(b => b.id === bizId);
+        if (biz) {
+          htBiz.push({ text: `${biz.name} (${p.name}) — ${biz.price * 2}$`, bizId });
+        }
+      }
+    }
+    if (htBiz.length === 0) {
+      showEventDisplay('<p style="color:var(--red-light)">Немає бізнесів для поглинання.</p>', 2500);
+      return;
+    }
+    showCenterPanel(`${ICON.building} Вороже поглинання`, 'Оберіть бізнес для примусової покупки:', htBiz.map(b => ({
+      text: b.text,
+      action: () => {
+        socket.emit('playMafiaCard', { cardId: 'hostile_takeover', options: { businessId: b.bizId } }, handleResult);
+        hideCenterPanel();
+      }
+    })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
+    return;
+  }
+
+  // Fall through to original handler for existing cards
+  if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
+    showTargetSelectionModal(card, state);
+  } else if (card.id === 'bomb') {
+    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
+  } else if (card.id === 'lawyer') {
+    socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
+  } else if (card.id === 'confession') {
+    showCenterPanel('Явка з повинною', "Вирушити у в'язницю на 1 хід?", [
+      { text: 'Так', action: () => { socket.emit('playMafiaCard', { cardId: 'confession' }, handleResult); hideCenterPanel(); } },
+      { text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }
+    ]);
+  } else if (card.id === 'raider' || card.id === 'pogrom') {
+    socket.emit('playMafiaCard', { cardId: card.id }, handleResult);
+  }
+}
+
+// ===== LOBBY ROOM BROWSER =====
+async function loadPublicRooms() {
+  try {
+    const res = await fetch('/api/rooms');
+    const rooms = await res.json();
+    const container = document.getElementById('room-list');
+    if (!container) return;
+    if (rooms.length === 0) {
+      container.innerHTML = '<div class="no-rooms">Немає відкритих кімнат</div>';
+      return;
+    }
+    container.innerHTML = rooms.map(r => `
+      <div class="room-item" data-room="${r.roomId}">
+        <span class="room-host">${r.hostName}</span>
+        <span class="room-players">${r.playerCount}/8</span>
+        <span class="room-code">${r.roomId}</span>
+        <button class="btn btn-secondary btn-sm room-join-btn" data-code="${r.roomId}">Увійти</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.room-join-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('room-code').value = btn.dataset.code;
+        document.getElementById('btn-join').click();
+      });
+    });
+  } catch(e) {}
+}
+
 // ===== CHEAT/DEBUG PANEL =====
 (function initCheatPanel() {
   const CHEAT_CARDS = [
@@ -2538,7 +3772,23 @@ document.querySelectorAll('.rules-nav-link').forEach(link => {
     { id: 'police_card', name: 'Поліція', type: 'defense' },
     { id: 'kompromat', name: 'Компромат', type: 'utility' },
     { id: 'bomb', name: 'Бомба', type: 'trap' },
-    { id: 'lucky_shirt', name: 'Народжений у сорочці', type: 'defense' }
+    { id: 'lucky_shirt', name: 'Народжений у сорочці', type: 'defense' },
+    { id: 'car_bomb', name: 'Авто-бомба', type: 'attack' },
+    { id: 'informer', name: 'Інформатор', type: 'utility' },
+    { id: 'tax_collector', name: 'Збирач данини', type: 'economic' },
+    { id: 'sabotage', name: 'Саботаж', type: 'economic' },
+    { id: 'witness_protection', name: 'Захист свідків', type: 'defense' },
+    { id: 'double_agent', name: 'Подвійний агент', type: 'utility' },
+    { id: 'insurance', name: 'Страховка', type: 'defense' },
+    { id: 'blackmail', name: 'Шантаж', type: 'economic' },
+    { id: 'arson', name: 'Підпал', type: 'attack' },
+    { id: 'forgery', name: 'Підробка документів', type: 'economic' },
+    { id: 'corruption', name: 'Корупція', type: 'utility' },
+    { id: 'street_fight', name: 'Вулична бійка', type: 'attack' },
+    { id: 'money_laundering', name: 'Відмивання грошей', type: 'economic' },
+    { id: 'fake_death', name: 'Інсценування смерті', type: 'defense' },
+    { id: 'wiretap', name: 'Прослуховування', type: 'utility' },
+    { id: 'hostile_takeover', name: 'Вороже поглинання', type: 'economic' }
   ];
 
   const CHEAT_HELPERS = [
