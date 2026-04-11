@@ -1662,6 +1662,13 @@ function showCardDrawnEffect(data) {
   document.body.appendChild(overlay);
   SFX.cardFlip();
 
+  // For mafia cards: trigger fly-away animation after 3.5s (separate from entrance)
+  if (isMafia) {
+    setTimeout(() => {
+      overlay.querySelectorAll('.cde-card').forEach(c => c.classList.add('cde-fly'));
+    }, 3500);
+  }
+
   setTimeout(() => {
     overlay.classList.add('cde-fade-out');
     setTimeout(() => { overlay.remove(); _cdeProtectedUntil = 0; }, 500);
@@ -4244,7 +4251,7 @@ function renderTVRollOrder(state) {
     const title = document.querySelector('.tv-ro-title');
     if (title) title.after(statusEl);
   }
-  const currentPlayer = state.orderRollCurrent !== undefined ? state.players[state.orderRollCurrent] : null;
+  const currentPlayer = state.orderRollCurrentId ? state.players.find(p => p.id === state.orderRollCurrentId) : null;
   if (currentPlayer && !currentPlayer.isBot) {
     statusEl.innerHTML = `Очікуємо: <strong>${currentPlayer.name}</strong> кидає кубик на телефоні...`;
     statusEl.style.display = '';
@@ -4262,7 +4269,7 @@ function renderTVRollOrder(state) {
     el.className = 'tv-ro-player';
     const portrait = PORTRAITS[p.character?.id] || '';
     const rollVal = (state.orderRolls && state.orderRolls[p.id]) ? state.orderRolls[p.id] : '...';
-    const isCurrent = state.orderRollCurrent !== undefined && state.players[state.orderRollCurrent]?.id === p.id;
+    const isCurrent = state.orderRollCurrentId === p.id;
     if (isCurrent) el.classList.add('tv-ro-current');
     el.innerHTML = `
       <div class="tv-ro-portrait">${portrait}</div>
@@ -4577,7 +4584,7 @@ function renderPhoneRollOrder(state) {
   $('#phone-status').textContent = '';
 
   const main = $('#phone-main');
-  const isCurrent = state.orderRollCurrent !== undefined && state.players[state.orderRollCurrent]?.id === myId;
+  const isCurrent = state.orderRollCurrentId === myId;
   const alreadyRolled = state.orderRolls && state.orderRolls[myId];
 
   if (isCurrent && !alreadyRolled) {
