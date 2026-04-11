@@ -1600,11 +1600,20 @@ function showAttackEffect(type, title, subtitle, color) {
 }
 
 // ===== CARD DRAWN EFFECT (for other players) =====
+let _cdeProtectedUntil = 0; // timestamp: don't remove overlay before this
 function showCardDrawnEffect(data) {
+  const now = Date.now();
   const existing = document.querySelector('.card-drawn-overlay');
-  if (existing) existing.remove();
+  // Only remove existing overlay if its minimum display time has passed
+  if (existing) {
+    if (now < _cdeProtectedUntil) return; // still showing, don't interrupt
+    existing.remove();
+  }
 
   const isMafia = data.type === 'mafia';
+  const displayTime = isMafia ? 4500 : 5000; // minimum display time in ms
+  _cdeProtectedUntil = now + displayTime;
+
   const portrait = data.playerCharacter?.id && PORTRAITS[data.playerCharacter.id]
     ? PORTRAITS[data.playerCharacter.id] : '';
   const avatarColor = data.playerCharacter?.color || '#888';
@@ -1655,8 +1664,8 @@ function showCardDrawnEffect(data) {
 
   setTimeout(() => {
     overlay.classList.add('cde-fade-out');
-    setTimeout(() => overlay.remove(), 500);
-  }, isMafia ? 4000 : 4500);
+    setTimeout(() => { overlay.remove(); _cdeProtectedUntil = 0; }, 500);
+  }, displayTime);
 }
 
 // ===== RENT PAYMENT EFFECT =====
@@ -4225,6 +4234,26 @@ function renderTVRollOrder(state) {
   $('#tv-game').style.display = 'none';
   $('#tv-victory').style.display = 'none';
   $('#tv-roll-order').style.display = '';
+
+  // Status message — who we're waiting for
+  let statusEl = document.getElementById('tv-ro-status');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'tv-ro-status';
+    statusEl.className = 'tv-ro-status';
+    const title = document.querySelector('.tv-ro-title');
+    if (title) title.after(statusEl);
+  }
+  const currentPlayer = state.orderRollCurrent !== undefined ? state.players[state.orderRollCurrent] : null;
+  if (currentPlayer && !currentPlayer.isBot) {
+    statusEl.innerHTML = `Очікуємо: <strong>${currentPlayer.name}</strong> кидає кубик на телефоні...`;
+    statusEl.style.display = '';
+  } else if (currentPlayer && currentPlayer.isBot) {
+    statusEl.innerHTML = `<strong>${currentPlayer.name}</strong> кидає кубик...`;
+    statusEl.style.display = '';
+  } else {
+    statusEl.style.display = 'none';
+  }
 
   const container = $('#tv-ro-players');
   container.innerHTML = '';
