@@ -1178,7 +1178,7 @@ function showCenterPanel(title, description, buttons) {
   for (const btn of buttons) {
     const el = document.createElement('button');
     el.className = `btn ${btn.cls || 'btn-primary'}`;
-    el.textContent = btn.text;
+    el.innerHTML = btn.text;
     el.addEventListener('click', () => {
       btn.action();
     });
