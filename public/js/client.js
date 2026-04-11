@@ -513,6 +513,16 @@ socket.on('rentPaid', (data) => {
   }
 });
 
+socket.on('cardDrawn', (data) => {
+  if (!data || !data.playerName) return;
+  // Don't show to the player who drew the card (they have their own reveal)
+  if (gameState) {
+    const me = gameState.players.find(p => p.id === myId);
+    if (me && me.name === data.playerName) return;
+  }
+  showCardDrawnEffect(data);
+});
+
 socket.on('attackOutcome', (result) => {
   if (!result || !result.type) return;
   switch (result.type) {
@@ -1536,6 +1546,66 @@ function showAttackEffect(type, title, subtitle, color) {
   else SFX.attack();
 
   setTimeout(() => overlay.remove(), 3500);
+}
+
+// ===== CARD DRAWN EFFECT (for other players) =====
+function showCardDrawnEffect(data) {
+  const existing = document.querySelector('.card-drawn-overlay');
+  if (existing) existing.remove();
+
+  const isMafia = data.type === 'mafia';
+  const portrait = data.playerCharacter?.id && PORTRAITS[data.playerCharacter.id]
+    ? PORTRAITS[data.playerCharacter.id] : '';
+  const avatarColor = data.playerCharacter?.color || '#888';
+
+  // For mafia: show face-down card(s) flying to player
+  // For event: show open card with name/description
+  let cardContent = '';
+  if (isMafia) {
+    let cardsHtml = '';
+    for (let i = 0; i < (data.cardCount || 1); i++) {
+      cardsHtml += `<div class="cde-card cde-card-mafia" style="animation-delay:${i * 0.15}s">
+        <div class="cde-card-back">
+          <div class="cde-card-back-pattern">&#9760;</div>
+          <div class="cde-card-back-label">MAFIA</div>
+        </div>
+      </div>`;
+    }
+    cardContent = `
+      <div class="cde-cards">${cardsHtml}</div>
+      <div class="cde-text">${data.playerName} отримав ${data.cardCount} карту MAFIA</div>
+    `;
+  } else {
+    cardContent = `
+      <div class="cde-card cde-card-event">
+        <div class="cde-card-front">
+          <div class="cde-card-icon">&#9733;</div>
+          <div class="cde-card-type">ПОДІЯ</div>
+          <div class="cde-card-name">${data.cardName || ''}</div>
+          <div class="cde-card-desc">${data.cardDescription || ''}</div>
+        </div>
+      </div>
+      <div class="cde-text">${data.playerName}: ${data.cardName}</div>
+    `;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'card-drawn-overlay';
+  overlay.innerHTML = `
+    <div class="cde-container ${isMafia ? 'cde-mafia' : 'cde-event'}">
+      <div class="cde-player">
+        <div class="cde-avatar" style="--char-color:${avatarColor}">${portrait || data.playerName[0]}</div>
+      </div>
+      ${cardContent}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  SFX.cardFlip();
+
+  setTimeout(() => {
+    overlay.classList.add('cde-fade-out');
+    setTimeout(() => overlay.remove(), 500);
+  }, isMafia ? 2500 : 3500);
 }
 
 // ===== RENT PAYMENT EFFECT =====

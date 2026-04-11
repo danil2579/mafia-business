@@ -2801,6 +2801,85 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 
 /* ============================================================
+   CARD DRAWN EFFECT (for other players)
+   ============================================================ */
+.card-drawn-overlay {
+  position: fixed; inset: 0; z-index: 9500;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.4);
+  animation: cdeOverlayIn 0.3s ease-out;
+  pointer-events: none;
+}
+.card-drawn-overlay.cde-fade-out { animation: cdeOverlayOut 0.5s ease-in forwards; }
+
+.cde-container {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  animation: cdeContainerIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.cde-player { display: flex; align-items: center; gap: 10px; }
+.cde-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 2px solid var(--char-color, #888);
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 15px rgba(var(--char-color, 136,136,136), 0.3);
+  overflow: hidden;
+}
+.cde-avatar svg { width: 36px; height: 36px; }
+
+.cde-cards { display: flex; gap: 10px; justify-content: center; }
+
+.cde-card {
+  width: 100px; height: 140px; border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  animation: cdeCardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.cde-card-mafia {
+  background: linear-gradient(145deg, #1a0a2e, #2d1045, #1a0a2e);
+  border: 2px solid rgba(138,43,226,0.5);
+}
+.cde-card-back {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+}
+.cde-card-back-pattern { font-size: 36px; opacity: 0.6; color: #9b59b6; }
+.cde-card-back-label {
+  font-size: 11px; letter-spacing: 4px; color: rgba(155,89,182,0.7);
+  font-weight: 700;
+}
+
+.cde-card-event {
+  background: linear-gradient(145deg, #0a1628, #0f2444, #0a1628);
+  border: 2px solid rgba(52,152,219,0.5);
+}
+.cde-card-front {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; padding: 10px;
+}
+.cde-card-icon { font-size: 28px; color: #3498db; }
+.cde-card-type { font-size: 9px; letter-spacing: 3px; color: rgba(52,152,219,0.8); font-weight: 700; }
+.cde-card-name { font-size: 13px; color: #fff; font-weight: 700; text-align: center; }
+.cde-card-desc { font-size: 9px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.3; }
+
+.cde-text {
+  font-size: 14px; color: rgba(255,255,255,0.9); letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* Mafia cards fly toward player after showing */
+.cde-mafia .cde-card { animation: cdeCardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both, cdeMafiaFly 0.8s ease-in 1.8s both; }
+.cde-event .cde-card { animation: cdeCardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+@keyframes cdeOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cdeOverlayOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes cdeContainerIn { from { opacity: 0; transform: scale(0.7) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes cdeCardIn { from { opacity: 0; transform: scale(0.3) rotateY(90deg); } to { opacity: 1; transform: scale(1) rotateY(0deg); } }
+@keyframes cdeMafiaFly {
+  0% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.4) translateY(-80px) translateX(30px); }
+}
+
+/* ============================================================
    RENT PAYMENT EFFECT OVERLAY
    ============================================================ */
 .rent-effect-overlay {

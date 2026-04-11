@@ -419,6 +419,7 @@
         <a href="#r-police" class="rules-nav-link">Поліція</a>
         <a href="#r-auction" class="rules-nav-link">Аукціони</a>
         <a href="#r-combat" class="rules-nav-link">Бій</a>
+        <a href="#r-trade" class="rules-nav-link">Торгівля</a>
       </div>
 
       <div class="rules-body">
@@ -470,7 +471,7 @@
               <div class="rule-special-cell rule-cell-mafia">
                 <span class="rsc-icon">&#9760;</span>
                 <strong>MAFIA</strong>
-                <span>Берете 1 карту MAFIA (4 клітини на полі).</span>
+                <span>Берете карти MAFIA: 1 (Шпана/Капо), 2 (Консільєрі/Мол.Бос), 3 (Дон).</span>
               </div>
               <div class="rule-special-cell rule-cell-event">
                 <span class="rsc-icon">&#9889;</span>
@@ -512,6 +513,9 @@
               <strong>Рента:</strong> залежить від кількості ваших бізнесів у районі. 1 бізнес = базова рента, 2 = подвійна, 3 = потрійна.
             </div>
             <p><strong>Вплив</strong> — додаткове посилення району. Зупинившись на СВОЄМУ бізнесі, можете купити фішку впливу. Вартість впливу залежить від району.</p>
+            <div class="rule-highlight">
+              <strong>Захоплення через вплив:</strong> якщо ви маєте більше зірок впливу в районі, ніж власник бізнесу — ви можете <strong>викупити</strong> його бізнес за повну ціну (додатково до ренти).
+            </div>
 
             <div class="rule-districts-table">
               <div class="rule-district-row rule-district-header">
@@ -585,7 +589,7 @@
             <span class="rule-chevron">&#9660;</span>
           </h4>
           <div class="rule-collapse-body open" id="rc-mafia">
-            <p>Всього <strong>28 карт</strong> в колоді. Отримуєте при проходженні START та на клітинах MAFIA. Типи карт:</p>
+            <p>Всього <strong>28 карт</strong> в колоді. Отримуєте при проходженні START та на клітинах MAFIA. Кількість карт залежить від рівня поваги: Шпана/Капо — 1, Консільєрі/Мол.Бос — 2, Шляхетний Дон — 3. Типи карт:</p>
 
             <div class="rule-card-types">
               <span class="rule-card-type rct-attack">&#9876; Атака</span>
@@ -941,7 +945,7 @@
               <div class="rule-step"><span class="step-num">&#128100;</span><span>Помічник <strong>Лео "Акробат"</strong> — скорочує термін на 1 хід.</span></div>
             </div>
             <div class="rule-highlight">
-              <strong>Увага!</strong> Поки ви у в'язниці, вас можуть вбити картою "Підкуп співкамерників" — і від цього неможливо захиститись!
+              <strong>Увага!</strong> Поки ви у в'язниці: вас можуть вбити картою "Підкуп співкамерників" (неможливо захиститись!), а ваші бізнеси можуть бути <strong>захоплені</strong> іншими гравцями за повну ціну.
             </div>
           </div>
         </div>
@@ -1006,11 +1010,31 @@
           </div>
         </div>
 
+        <!-- 14. ТОРГІВЛЯ ТА АЛЬЯНСИ -->
+        <div class="rule-section" id="r-trade">
+          <h4 class="rule-collapse-header" data-target="rc-trade">
+            <span class="rule-icon">&#129309;</span> 14. Торгівля та альянси
+            <span class="rule-chevron">&#9660;</span>
+          </h4>
+          <div class="rule-collapse-body open" id="rc-trade">
+            <h5 class="rule-mini-header">Торгівля</h5>
+            <p>Натисніть на панель іншого гравця, щоб запропонувати обмін. Можна обмінювати:</p>
+            <div class="rule-steps">
+              <div class="rule-step"><span class="step-num">&#128176;</span><span><strong>Гроші</strong> — запропонуйте або запросіть будь-яку суму.</span></div>
+              <div class="rule-step"><span class="step-num">&#127970;</span><span><strong>Бізнеси</strong> — обмінюйте свої бізнеси на бізнеси суперника.</span></div>
+            </div>
+            <p>Інший гравець може прийняти або відхилити пропозицію.</p>
+
+            <h5 class="rule-mini-header">Альянси</h5>
+            <p>Запропонуйте мирний альянс іншому гравцю на <strong>3 кола</strong>. Під час альянсу ви не можете атакувати один одного. Альянс закінчується автоматично після 3 кіл.</p>
+          </div>
+        </div>
+
       </div>
 
       <div class="rules-footer">
         <div class="rules-sep"><span class="rules-sep-line"></span><span class="rules-sep-diamond">&#9830;</span><span class="rules-sep-line"></span></div>
-        <p class="rules-footer-text">MAFIA BUSINESS &mdash; Настільна стратегія для 2-8 гравців</p>
+        <p class="rules-footer-text">MAFIA BUSINESS &mdash; Настільна стратегія для 2-8 гравців. Гра обмежена 30 колами.</p>
       </div>
     </div>
   </div>

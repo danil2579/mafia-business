@@ -297,6 +297,27 @@ function executeBotTurn(roomId) {
 
     broadcastState(roomId);
 
+    // Broadcast card draw effects for bots
+    if (result && result.landingResult) {
+      const lr = result.landingResult;
+      if (lr.type === 'mafia' && lr.cards && lr.cards.length > 0) {
+        broadcastEvent(roomId, 'cardDrawn', {
+          type: 'mafia',
+          playerName: current.name,
+          playerCharacter: current.character,
+          cardCount: lr.cards.length
+        });
+      } else if (lr.type === 'event' && lr.card) {
+        broadcastEvent(roomId, 'cardDrawn', {
+          type: 'event',
+          playerName: current.name,
+          playerCharacter: current.character,
+          cardName: lr.card.name,
+          cardDescription: lr.card.description
+        });
+      }
+    }
+
     // After broadcasting (which triggers client animation), wait for animation
     // before resolving pending action
     if (game.pendingAction || game.turnPhase === 'action') {
@@ -885,6 +906,28 @@ io.on('connection', (socket) => {
 
     cb(result);
     broadcastState(roomId);
+
+    // Broadcast card draw effects to all players
+    if (result && result.landingResult) {
+      const player = game.getPlayer(socket.id);
+      const lr = result.landingResult;
+      if (lr.type === 'mafia' && lr.cards && lr.cards.length > 0) {
+        broadcastEvent(roomId, 'cardDrawn', {
+          type: 'mafia',
+          playerName: player.name,
+          playerCharacter: player.character,
+          cardCount: lr.cards.length
+        });
+      } else if (lr.type === 'event' && lr.card) {
+        broadcastEvent(roomId, 'cardDrawn', {
+          type: 'event',
+          playerName: player.name,
+          playerCharacter: player.character,
+          cardName: lr.card.name,
+          cardDescription: lr.card.description
+        });
+      }
+    }
 
     // Auto-end turn if player is in prison (skip turn) or just released (skip this turn too)
     if (result && (result.inPrison || result.released)) {
