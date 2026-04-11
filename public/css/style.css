@@ -2867,7 +2867,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 
 /* Mafia cards fly toward player after showing */
-.cde-mafia .cde-card { animation: cdeCardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both, cdeMafiaFly 0.8s ease-in 1.8s both; }
+.cde-mafia .cde-card { animation: cdeCardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both, cdeMafiaFly 0.8s ease-in 3s both; }
 .cde-event .cde-card { animation: cdeCardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both; }
 
 @keyframes cdeOverlayIn { from { opacity: 0; } to { opacity: 1; } }

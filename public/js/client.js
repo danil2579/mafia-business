@@ -1605,7 +1605,7 @@ function showCardDrawnEffect(data) {
   setTimeout(() => {
     overlay.classList.add('cde-fade-out');
     setTimeout(() => overlay.remove(), 500);
-  }, isMafia ? 2500 : 3500);
+  }, isMafia ? 4000 : 4500);
 }
 
 // ===== RENT PAYMENT EFFECT =====
@@ -3051,8 +3051,8 @@ $('#btn-spin').addEventListener('click', () => {
     // Wheel rotates clockwise (positive deg). To land marker (top) on sector N's center,
     // we need totalRotation mod 360 = 360 - targetCenter (so that sector aligns with top).
     const targetCenter = sectorIndex * sectorAngle + sectorAngle / 2;
-    const jitter = (Math.random() - 0.5) * 18;
-    const fullSpins = 1800 + Math.floor(Math.random() * 720);
+    const jitter = (Math.random() - 0.5) * 16;
+    const fullSpins = (5 + Math.floor(Math.random() * 3)) * 360; // must be multiple of 360
     const finalRotation = fullSpins + (360 - targetCenter) + jitter;
     wheel.style.transform = `rotate(${finalRotation}deg)`;
 

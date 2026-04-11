@@ -1355,7 +1355,7 @@ class GameEngine {
     if (drawnHelpers.length === 1) {
       const helper = drawnHelpers[0];
       player.helpers.push(helper);
-      this.addLog(`${player.name} найняв ${helper.name}!`);
+      this.addLog(`${player.name} найняв помічника.`);
       if (player.helpers.length < respect.maxHelpers && player.money >= HELPER_HIRE_COST) {
         this.pendingAction = { type: 'hire_another', playerId, canHireMore: true };
         return { hired: helper, canHireMore: true };
@@ -1384,7 +1384,7 @@ class GameEngine {
 
     const chosenHelper = drawnHelpers[cardIndex];
     player.helpers.push(chosenHelper);
-    this.addLog(`${player.name} найняв ${chosenHelper.name}!`);
+    this.addLog(`${player.name} найняв помічника.`);
 
     // Return unchosen cards to bottom of deck
     for (let i = 0; i < drawnHelpers.length; i++) {
