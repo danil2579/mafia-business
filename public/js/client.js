@@ -2279,14 +2279,14 @@ $('#btn-roll').addEventListener('click', () => {
         setTimeout(() => {
           showCardReveal('mafia', 'КАРТА MAFIA', lr.cards.map(c => c.name).join(', '),
             lr.cards.map(c => c.description).join('\n'), () => {
-              confirmedPendingId = 'mafia_confirm';
+              confirmedPendingId = 'mafia_confirm|';
               socket.emit('resolveAction', { actionType: 'mafia_confirm', data: {} }, handleResult);
             });
         }, animDelay);
       } else if (lr.type === 'event' && lr.card) {
         setTimeout(() => {
           showCardReveal('event', 'ПОДІЯ', lr.card.name, lr.card.description, () => {
-            confirmedPendingId = 'event_confirm';
+            confirmedPendingId = 'event_confirm|' + (lr.card.id || '');
             socket.emit('resolveAction', { actionType: 'event_confirm', data: {} }, handleResult);
           });
         }, animDelay);
@@ -2325,9 +2325,14 @@ function handlePendingAction(state) {
     hideAuctionPanel();
     return;
   }
-  // Clear confirmedPendingId if the pending action type changed (new action appeared)
-  if (confirmedPendingId && action.type !== confirmedPendingId) {
-    confirmedPendingId = null;
+  // Clear confirmedPendingId if a new/different pending action appeared
+  if (confirmedPendingId) {
+    // Reset if type changed, or if it's the same type but different content
+    // (e.g. event_confirm → "Без гальм" moves player → lands on EVENT → new event_confirm)
+    const actionKey = action.type + '|' + (action.card?.id || action.businessId || '');
+    if (confirmedPendingId !== actionKey) {
+      confirmedPendingId = null;
+    }
   }
 
   // Defer if card reveal is still showing (e.g. event card before secondary landing)
@@ -2630,27 +2635,31 @@ function handlePendingAction(state) {
       }
       break;
 
-    case 'mafia_confirm':
-      if (confirmedPendingId === 'mafia_confirm') break; // already confirmed, skip re-show
+    case 'mafia_confirm': {
+      const mafiaKey = 'mafia_confirm|';
+      if (confirmedPendingId === mafiaKey) break; // already confirmed, skip re-show
       if (action.playerId === myId && action.cards && action.cards.length > 0) {
         const peekInfo = action.peekCard ? `\n\n👁 Наступна карта в колоді: ${action.peekCard.name}` : '';
         showCardReveal('mafia', 'КАРТА MAFIA', action.cards.map(c => c.name).join(', '),
           action.cards.map(c => c.description).join('\n') + peekInfo, () => {
-            confirmedPendingId = 'mafia_confirm';
+            confirmedPendingId = mafiaKey;
             socket.emit('resolveAction', { actionType: 'mafia_confirm', data: {} }, handleResult);
           });
       }
       break;
+    }
 
-    case 'event_confirm':
-      if (confirmedPendingId === 'event_confirm') break; // already confirmed, skip re-show
+    case 'event_confirm': {
+      const eventKey = 'event_confirm|' + (action.card?.id || '');
+      if (confirmedPendingId === eventKey) break; // already confirmed, skip re-show
       if (action.playerId === myId && action.card) {
         showCardReveal('event', 'ПОДІЯ', action.card.name, action.card.description, () => {
-          confirmedPendingId = 'event_confirm';
+          confirmedPendingId = eventKey;
           socket.emit('resolveAction', { actionType: 'event_confirm', data: {} }, handleResult);
         });
       }
       break;
+    }
 
     case 'event_card_drawn':
       if (action.card) {

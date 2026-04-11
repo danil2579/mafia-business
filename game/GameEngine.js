@@ -1883,18 +1883,30 @@ class GameEngine {
     // Regular attack: target is helper first, then boss
     if (target.helpers.length > 0) {
       // Survivor Joe check
-      if (this.hasHelper(target.id, 'surviveOnce') && target.helperStates.survivorJoeActive) {
-        target.helperStates.survivorJoeActive = false;
-        // Survivor Joe dies saving his boss
-        const joeIdx = target.helpers.findIndex(h => h.ability === 'surviveOnce');
-        if (joeIdx >= 0) {
-          const joe = target.helpers.splice(joeIdx, 1)[0];
-          this.returnHelperToDeck(joe);
+      if (this.hasHelper(target.id, 'surviveOnce')) {
+        if (target.helperStates.survivorJoeActive) {
+          // Joe is ready — blocks the attack and goes on recharge for 1 round
+          target.helperStates.survivorJoeActive = false;
+          target.helperStates.survivorJoeRechargeUntilTurn = this.turnNumber + this.players.length; // 1 full round
+          this.addLog(`Живучий Джо захистив ${target.name}! Перезарядка — 1 коло.`);
+          this.checkCounterAttack(attacker, target);
+          this.pendingAction = null;
+          return { type: 'attack_survived', by: 'survivor_joe' };
+        } else if (target.helperStates.survivorJoeRechargeUntilTurn && this.turnNumber < target.helperStates.survivorJoeRechargeUntilTurn) {
+          // Joe is recharging — he dies!
+          const joeIdx = target.helpers.findIndex(h => h.ability === 'surviveOnce');
+          if (joeIdx >= 0) {
+            const joe = target.helpers.splice(joeIdx, 1)[0];
+            this.returnHelperToDeck(joe);
+          }
+          target.helperStates.survivorJoeRechargeUntilTurn = null;
+          this.addLog(`Живучий Джо ще перезаряджався і загинув під час замаху на ${target.name}!`);
+          this.checkCounterAttack(attacker, target);
+          this.pendingAction = null;
+          return { type: 'attack_killed_helper', helper: 'survivor_joe', recharging: true };
         }
-        this.addLog(`Живучий Джо пожертвував собою заради ${target.name}!`);
-        this.checkCounterAttack(attacker, target);
-        this.pendingAction = null;
-        return { type: 'attack_survived', by: 'survivor_joe' };
+        // Joe finished recharging (survivorJoeActive is false but recharge expired) — shouldn't happen
+        // but handle gracefully: fall through to normal helper kill
       }
 
       // Kill a helper (attacker chooses which)
@@ -2245,6 +2257,17 @@ class GameEngine {
     this.turnNumber++;
     // Tick alliances at end of each full round
     if (this.turnNumber % this.players.length === 0) this.tickAlliances();
+    // Recharge Survivor Joe when his cooldown expires
+    for (const p of this.getAlivePlayers()) {
+      if (p.helperStates && !p.helperStates.survivorJoeActive
+          && p.helperStates.survivorJoeRechargeUntilTurn
+          && this.turnNumber >= p.helperStates.survivorJoeRechargeUntilTurn
+          && this.hasHelper(p.id, 'surviveOnce')) {
+        p.helperStates.survivorJoeActive = true;
+        p.helperStates.survivorJoeRechargeUntilTurn = null;
+        this.addLog(`Живучий Джо у ${p.name} знову готовий до захисту!`);
+      }
+    }
     // Track rounds survived for all alive players
     for (const p of this.getAlivePlayers()) {
       p.stats.roundsSurvived = this.getCurrentRound();
