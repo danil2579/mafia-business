@@ -51,6 +51,11 @@ const ICON = {
   fist: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 20l4-4M17 8l-8 8M7 4v8l-3 3M14 4l-3 3M17 4v4"/></svg>`,
   mask: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3C7 3 3 7.5 3 11c0 2 1 3 2.5 3.5L7 21l5-3 5 3 1.5-6.5C20 14 21 13 21 11c0-3.5-4-8-9-8z"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/></svg>`,
 };
+// ===== TV / PHONE MODE DETECTION =====
+const urlParams = new URLSearchParams(window.location.search);
+const isTVMode = urlParams.get('mode') === 'tv';
+const isPhoneMode = urlParams.get('mode') === 'phone';
+
 let cardRevealActive = false; // true while card reveal is shown — blocks pending actions
 let confirmedPendingId = null; // track already-confirmed pending action to avoid re-show
 let botAnimationQueue = []; // queue of bot animations to play
@@ -397,6 +402,10 @@ document.querySelectorAll('.btn-setting-minus').forEach(btn => {
 
 // ===== SOCKET EVENTS =====
 socket.on('gameState', (state) => {
+  // Branch for TV/Phone modes
+  if (isTVMode) { renderTVState(state); return; }
+  if (isPhoneMode) { renderPhoneState(state); return; }
+
   const prevState = gameState;
   gameState = state;
   if (state.phase === 'waiting') {
@@ -3617,6 +3626,7 @@ function showAllianceUI(targetPlayer) {
 
 // ===== RECONNECT =====
 (function initReconnect() {
+  if (isTVMode || isPhoneMode) return; // TV/Phone handle their own reconnection
   // Store session info
   socket.on('connect', () => {
     const savedRoom = sessionStorage.getItem('mafia_roomId');
@@ -3658,7 +3668,14 @@ const _origHandlePendingAction = handlePendingAction;
 
 // ===== INIT NEW FEATURES =====
 document.addEventListener('DOMContentLoaded', () => {
-  initChat();
+  // If TV or Phone mode, hide default lobby immediately
+  if (isTVMode || isPhoneMode) {
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    if (isTVMode) $('#tv-screen').classList.add('active');
+    if (isPhoneMode) $('#phone-screen').classList.add('active');
+  }
+
+  if (!isTVMode && !isPhoneMode) initChat();
   // Music auto-start preference
   if (localStorage.getItem('mafia_music') === 'on') {
     document.addEventListener('click', function musicAutoStart() {
@@ -4059,4 +4076,967 @@ function handleResult(res) {
     console.warn(res.error);
     showEventDisplay(`<p style="color:var(--red-light)">${res.error}</p>`, 2000);
   }
+}
+
+// ============================================================
+// TV MODE
+// ============================================================
+if (isTVMode) {
+  document.addEventListener('DOMContentLoaded', () => {
+    // Show TV screen on load
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    const tvScreen = $('#tv-screen');
+    tvScreen.classList.add('active');
+
+    // Create room on load
+    socket.emit('createRoomTV', {}, (res) => {
+      if (res.error) { alert(res.error); return; }
+      myRoomId = res.roomId;
+      $('#tv-room-code').textContent = res.roomId;
+      const host = location.origin;
+      $('#tv-join-hint').textContent = `Приєднуйтесь: ${host}/?mode=phone&room=${res.roomId}`;
+    });
+
+    // Add bot button
+    $('#tv-btn-add-bot').addEventListener('click', () => {
+      socket.emit('addBot', {}, (res) => {
+        if (res && res.error) alert(res.error);
+      });
+    });
+
+    // Start game button
+    $('#tv-btn-start').addEventListener('click', () => {
+      socket.emit('startGame', {}, (res) => {
+        if (res && res.error) alert(res.error);
+      });
+    });
+
+    // Fullscreen
+    const fsBtn = $('#tv-btn-fullscreen');
+    if (fsBtn) fsBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    });
+
+    // Restart
+    const restBtn = $('#tv-btn-restart');
+    if (restBtn) restBtn.addEventListener('click', () => {
+      if (confirm('Перезапустити матч?')) {
+        socket.emit('restartGame', {}, (res) => {
+          if (res && res.error) alert(res.error);
+          else location.reload();
+        });
+      }
+    });
+
+    socket.on('gameRestarted', () => location.reload());
+  });
+}
+
+function renderTVState(state) {
+  gameState = state;
+  const tvScreen = $('#tv-screen');
+  if (!tvScreen.classList.contains('active')) {
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    tvScreen.classList.add('active');
+  }
+
+  if (state.phase === 'waiting') {
+    renderTVWaiting(state);
+  } else if (state.phase === 'rolling_order') {
+    renderTVRollOrder(state);
+  } else if (state.phase === 'finished') {
+    renderTVGame(state);
+    renderTVVictory(state);
+  } else {
+    renderTVGame(state);
+  }
+}
+
+function renderTVWaiting(state) {
+  $('#tv-waiting').style.display = '';
+  $('#tv-game').style.display = 'none';
+  $('#tv-victory').style.display = 'none';
+  $('#tv-roll-order').style.display = 'none';
+
+  const list = $('#tv-players-list');
+  list.innerHTML = '';
+  for (const p of state.players) {
+    const el = document.createElement('div');
+    el.className = 'tv-player-card';
+    const portrait = PORTRAITS[p.character?.id] || '';
+    el.innerHTML = `
+      <div class="tv-player-portrait">${portrait}</div>
+      <div class="tv-player-name">${p.name}</div>
+      ${p.isBot ? '<div class="tv-player-bot">BOT</div>' : ''}
+    `;
+    list.appendChild(el);
+  }
+
+  // Show/hide start button
+  const canStart = state.players.length >= 2;
+  $('#tv-btn-start').style.display = canStart ? '' : 'none';
+}
+
+function renderTVRollOrder(state) {
+  $('#tv-waiting').style.display = 'none';
+  $('#tv-game').style.display = 'none';
+  $('#tv-victory').style.display = 'none';
+  $('#tv-roll-order').style.display = '';
+
+  const container = $('#tv-ro-players');
+  container.innerHTML = '';
+  for (const p of state.players) {
+    const el = document.createElement('div');
+    el.className = 'tv-ro-player';
+    const portrait = PORTRAITS[p.character?.id] || '';
+    const rollVal = (state.orderRolls && state.orderRolls[p.id]) ? state.orderRolls[p.id] : '...';
+    const isCurrent = state.orderRollCurrent !== undefined && state.players[state.orderRollCurrent]?.id === p.id;
+    if (isCurrent) el.classList.add('tv-ro-current');
+    el.innerHTML = `
+      <div class="tv-ro-portrait">${portrait}</div>
+      <div class="tv-ro-name">${p.name}</div>
+      <div class="tv-ro-roll">${ICON.dice} ${rollVal}</div>
+    `;
+    container.appendChild(el);
+  }
+}
+
+function renderTVGame(state) {
+  $('#tv-waiting').style.display = 'none';
+  $('#tv-roll-order').style.display = 'none';
+  $('#tv-game').style.display = '';
+
+  if (state.phase === 'finished') {
+    // Keep game visible behind victory
+  } else {
+    $('#tv-victory').style.display = 'none';
+  }
+
+  // Room badge
+  const badge = $('#tv-room-badge');
+  if (badge && myRoomId) badge.textContent = myRoomId;
+
+  // Turn info
+  const turnInfo = $('#tv-turn-info');
+  const current = state.players[state.currentPlayerIndex];
+  if (current) {
+    const color = current.character?.color || '#fff';
+    turnInfo.innerHTML = `<span style="color:${color}">${current.name}</span> — ${state.turnPhase === 'roll' ? 'кидає кубики' : 'дія'}`;
+  }
+
+  // Round info
+  const roundInfo = $('#tv-round-info');
+  if (roundInfo) roundInfo.textContent = `Коло ${state.currentRound || 1}`;
+
+  // Restart button
+  const restBtn = $('#tv-btn-restart');
+  if (restBtn) restBtn.style.display = (state.phase === 'playing' || state.phase === 'finished') ? '' : 'none';
+
+  // Board — reuse renderBoard but target TV container
+  renderBoardInto(state, '#tv-game-board');
+
+  // Player panels
+  renderTVPlayerPanels(state);
+
+  // Log
+  renderTVLog(state);
+}
+
+function renderBoardInto(state, selector) {
+  const board = document.querySelector(selector);
+  if (!board) return;
+  board.innerHTML = '';
+
+  const cellMap = {};
+  const gridData = state.boardGrid || {};
+  for (const sector of state.board) {
+    const pos = gridData[sector.index];
+    if (pos) cellMap[`${pos.row}-${pos.col}`] = sector;
+  }
+
+  for (let row = 1; row <= 8; row++) {
+    for (let col = 1; col <= 12; col++) {
+      const cell = document.createElement('div');
+      const key = `${row}-${col}`;
+      const sector = cellMap[key];
+
+      if (sector) {
+        const side = getSide(row, col);
+        const cornerClass = getCornerSide(sector.index);
+        cell.className = `board-cell ${sector.type.toLowerCase()} ${side} ${cornerClass}`.trim();
+        cell.dataset.index = sector.index;
+        renderCellInner(cell, sector, state, side);
+
+        // Player tokens
+        const tokens = getPlayersOnSector(sector.index, state);
+        tokens.forEach((p, i) => {
+          const token = document.createElement('div');
+          token.className = 'player-token';
+          token.dataset.pid = p.id;
+          const pColor = p.character ? p.character.color : '#888';
+          token.style.background = pColor;
+          token.style.color = pColor;
+          token.title = p.name;
+          token.textContent = (p.name || '?')[0];
+          if (tokens.length === 1) {
+            token.style.top = '50%'; token.style.left = '50%';
+            token.style.transform = 'translate(-50%, -50%)';
+          } else {
+            const radius = Math.min(tokens.length <= 4 ? 13 : 16, 18);
+            const angle = (2 * Math.PI * i / tokens.length) - Math.PI / 2;
+            token.style.top = '50%'; token.style.left = '50%';
+            token.style.transform = `translate(calc(-50% + ${(Math.cos(angle)*radius).toFixed(1)}px), calc(-50% + ${(Math.sin(angle)*radius).toFixed(1)}px))`;
+          }
+          cell.appendChild(token);
+        });
+
+        // Bombs
+        if (state.bombs && state.bombs.some(b => b.sector === sector.index)) {
+          cell.classList.add('has-bomb');
+          const bomb = document.createElement('div');
+          bomb.className = 'bomb-marker';
+          bomb.innerHTML = `<svg viewBox="0 0 64 64" width="18" height="18"><circle cx="32" cy="38" r="20" fill="#1a1a1a" stroke="#ff4400" stroke-width="2"/><circle cx="32" cy="38" r="16" fill="#333"/><rect x="29" y="12" width="6" height="12" rx="3" fill="#888"/><circle cx="32" cy="8" r="5" fill="#ff6600" opacity="0.9"><animate attributeName="r" values="4;6;4" dur="0.8s" repeatCount="indefinite"/></circle></svg>`;
+          cell.appendChild(bomb);
+        }
+      } else {
+        cell.className = 'board-cell empty';
+      }
+
+      cell.style.gridRow = row;
+      cell.style.gridColumn = col;
+      board.appendChild(cell);
+    }
+  }
+}
+
+function renderTVPlayerPanels(state) {
+  const container = $('#tv-player-panels');
+  if (!container) return;
+  container.innerHTML = '';
+
+  for (const p of state.players) {
+    const el = document.createElement('div');
+    el.className = 'tv-pp';
+    const isCurrent = state.players[state.currentPlayerIndex]?.id === p.id;
+    if (isCurrent) el.classList.add('tv-pp-active');
+    if (!p.alive) el.classList.add('tv-pp-dead');
+    if (p.inPrison > 0) el.classList.add('tv-pp-prison');
+
+    const color = p.character?.color || '#888';
+    const portrait = PORTRAITS[p.character?.id] || '';
+    const bizCount = (p.businesses || []).length;
+    const helperCount = (p.helpers || []).length;
+    const respectLevel = p.respectLevel || 1;
+
+    el.innerHTML = `
+      <div class="tv-pp-header" style="border-color:${color}">
+        <div class="tv-pp-portrait">${portrait}</div>
+        <div class="tv-pp-info">
+          <div class="tv-pp-name" style="color:${color}">${p.name}</div>
+          <div class="tv-pp-money">$${(p.money || 0).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="tv-pp-stats">
+        <span title="Повага">${ICON.crown} ${respectLevel}</span>
+        <span title="Бізнеси">${ICON.building} ${bizCount}</span>
+        <span title="Помічники">${ICON.handshake} ${helperCount}</span>
+        ${p.inPrison > 0 ? `<span class="tv-pp-prison-badge">${ICON.lock} ${p.inPrison}</span>` : ''}
+        ${!p.alive ? '<span class="tv-pp-dead-badge">ВИБУВ</span>' : ''}
+      </div>
+    `;
+    container.appendChild(el);
+  }
+}
+
+function renderTVLog(state) {
+  const logEl = $('#tv-game-log');
+  if (!logEl || !state.log) return;
+  const entries = state.log.slice(-15); // show last 15
+  logEl.innerHTML = entries.map(l => `<div class="tv-log-entry">${l.message}</div>`).join('');
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderTVVictory(state) {
+  $('#tv-victory').style.display = '';
+  const content = $('#tv-victory-content');
+  if (!state.winner) {
+    content.innerHTML = '<div class="tv-victory-title">ГРА ЗАВЕРШЕНА</div>';
+    return;
+  }
+  const w = state.winner;
+  const portrait = PORTRAITS[w.character?.id] || '';
+  const color = w.character?.color || '#c9a84c';
+  content.innerHTML = `
+    <div class="tv-victory-crown">${ICON.crown}</div>
+    <div class="tv-victory-portrait" style="border-color:${color}">${portrait}</div>
+    <div class="tv-victory-title" style="color:${color}">${w.name}</div>
+    <div class="tv-victory-subtitle">ПЕРЕМОЖЕЦЬ!</div>
+    <div class="tv-victory-stats">
+      <div>$${(w.money || 0).toLocaleString()}</div>
+      <div>${ICON.building} ${(w.businesses || []).length} бізнесів</div>
+      <div>${ICON.crown} Повага: ${w.respectLevel || 1}</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// PHONE CONTROLLER MODE
+// ============================================================
+let phoneSelectedCharacterId = null;
+let phoneActiveTab = 'actions';
+
+if (isPhoneMode) {
+  document.addEventListener('DOMContentLoaded', () => {
+    // Show phone screen
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    $('#phone-screen').classList.add('active');
+
+    // Pre-fill room code from URL
+    const roomFromUrl = urlParams.get('room');
+    if (roomFromUrl) $('#phone-room-code').value = roomFromUrl;
+
+    // Build character select
+    const charContainer = $('#phone-character-select');
+    if (charContainer) {
+      CHARACTER_DATA.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'char-option';
+        el.innerHTML = `<div class="char-portrait">${PORTRAITS[c.id] || ''}</div><div class="char-name">${c.name}</div>`;
+        el.addEventListener('click', () => {
+          charContainer.querySelectorAll('.char-option').forEach(o => o.classList.remove('selected'));
+          el.classList.add('selected');
+          phoneSelectedCharacterId = c.id;
+        });
+        charContainer.appendChild(el);
+      });
+    }
+
+    // Join button
+    $('#phone-btn-join').addEventListener('click', () => {
+      const name = $('#phone-player-name').value.trim();
+      const code = $('#phone-room-code').value.trim().toUpperCase();
+      if (!name) { $('#phone-lobby-error').textContent = "Введіть ім'я!"; return; }
+      if (!code) { $('#phone-lobby-error').textContent = 'Введіть код кімнати!'; return; }
+      socket.emit('joinRoom', { roomId: code, playerName: name, characterId: phoneSelectedCharacterId }, (res) => {
+        if (res.error) { $('#phone-lobby-error').textContent = res.error; return; }
+        myId = res.playerId;
+        myRoomId = res.roomId;
+        sessionStorage.setItem('mafia_roomId', res.roomId);
+        sessionStorage.setItem('mafia_playerName', name);
+        // Switch to waiting
+        $('#phone-lobby').style.display = 'none';
+        $('#phone-waiting').style.display = '';
+        $('#phone-room-display').textContent = res.roomId;
+      });
+    });
+
+    // Tab switching
+    document.querySelectorAll('.phone-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.phone-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        phoneActiveTab = tab.dataset.tab;
+        if (gameState) renderPhoneTabContent(gameState);
+      });
+    });
+
+    // Reconnection
+    socket.on('connect', () => {
+      const savedRoom = sessionStorage.getItem('mafia_roomId');
+      const savedName = sessionStorage.getItem('mafia_playerName');
+      if (savedRoom && savedName && !myRoomId) {
+        socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName }, (res) => {
+          if (res.success) {
+            myId = res.playerId;
+            myRoomId = res.roomId;
+          } else {
+            sessionStorage.removeItem('mafia_roomId');
+            sessionStorage.removeItem('mafia_playerName');
+          }
+        });
+      }
+    });
+
+    socket.on('gameRestarted', () => location.reload());
+  });
+}
+
+function renderPhoneState(state) {
+  const prevState = gameState;
+  gameState = state;
+
+  const phoneScreen = $('#phone-screen');
+  if (!phoneScreen.classList.contains('active')) {
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    phoneScreen.classList.add('active');
+  }
+
+  if (state.phase === 'waiting') {
+    $('#phone-lobby').style.display = 'none';
+    $('#phone-waiting').style.display = '';
+    $('#phone-game').style.display = 'none';
+    $('#phone-players-count').textContent = `Гравців: ${state.players.length}`;
+    return;
+  }
+
+  if (state.phase === 'rolling_order') {
+    $('#phone-lobby').style.display = 'none';
+    $('#phone-waiting').style.display = 'none';
+    $('#phone-game').style.display = '';
+    renderPhoneRollOrder(state);
+    return;
+  }
+
+  // playing or finished
+  $('#phone-lobby').style.display = 'none';
+  $('#phone-waiting').style.display = 'none';
+  $('#phone-game').style.display = '';
+  renderPhoneGame(state);
+}
+
+function renderPhoneRollOrder(state) {
+  const me = state.players.find(p => p.id === myId);
+  const header = $('#phone-player-info');
+  if (me) {
+    const color = me.character?.color || '#fff';
+    header.innerHTML = `<span style="color:${color}">${me.name}</span>`;
+  }
+  $('#phone-turn-indicator').textContent = 'Визначення порядку ходів';
+  $('#phone-status').textContent = '';
+
+  const main = $('#phone-main');
+  const isCurrent = state.orderRollCurrent !== undefined && state.players[state.orderRollCurrent]?.id === myId;
+  const alreadyRolled = state.orderRolls && state.orderRolls[myId];
+
+  if (isCurrent && !alreadyRolled) {
+    main.innerHTML = `<button class="phone-btn-roll" id="phone-roll-order-btn">${ICON.dice} Кинути кубик</button>`;
+    document.getElementById('phone-roll-order-btn').addEventListener('click', () => {
+      socket.emit('rollForOrder', {}, (res) => {
+        if (res.error) alert(res.error);
+      });
+    });
+  } else if (alreadyRolled) {
+    main.innerHTML = `<div class="phone-roll-result">${ICON.dice} Ваш результат: ${state.orderRolls[myId]}</div>`;
+  } else {
+    main.innerHTML = '<div class="phone-waiting-turn">Очікуйте свою чергу...</div>';
+  }
+
+  $('#phone-tab-content').innerHTML = '';
+}
+
+function renderPhoneGame(state) {
+  const me = state.players.find(p => p.id === myId);
+  if (!me) return;
+
+  const color = me.character?.color || '#fff';
+  const header = $('#phone-player-info');
+  header.innerHTML = `
+    <span style="color:${color}">${me.name}</span>
+    <span class="phone-money">$${(me.money || 0).toLocaleString()}</span>
+    <span class="phone-respect">${ICON.crown} ${me.respectLevel || 1}</span>
+  `;
+
+  const isMyTurn = state.players[state.currentPlayerIndex]?.id === myId;
+  const current = state.players[state.currentPlayerIndex];
+  const turnInd = $('#phone-turn-indicator');
+  turnInd.innerHTML = isMyTurn ? '<span class="phone-your-turn">ВАШ ХІД!</span>' :
+    `Хід: <span style="color:${current?.character?.color || '#fff'}">${current?.name || '?'}</span>`;
+
+  const status = $('#phone-status');
+  status.textContent = `Коло ${state.currentRound || 1} | ${state.turnPhase === 'roll' ? 'Кубики' : 'Дія'}`;
+
+  // Main action area
+  const main = $('#phone-main');
+  main.innerHTML = '';
+
+  if (state.phase === 'finished') {
+    const winner = state.winner;
+    main.innerHTML = `<div class="phone-victory">${ICON.crown} ${winner ? winner.name + ' переміг!' : 'Гру завершено!'}</div>`;
+    return;
+  }
+
+  if (!me.alive) {
+    main.innerHTML = '<div class="phone-dead">Ви вибули з гри</div>';
+    return;
+  }
+
+  if (me.inPrison > 0) {
+    main.innerHTML = `<div class="phone-prison">${ICON.lock} Ви у в'язниці (${me.inPrison} ходів)</div>`;
+  }
+
+  if (isMyTurn) {
+    if (state.turnPhase === 'roll') {
+      const rollBtn = document.createElement('button');
+      rollBtn.className = 'phone-btn-roll';
+      rollBtn.innerHTML = `${ICON.dice} КИНУТИ КУБИКИ`;
+      rollBtn.addEventListener('click', () => {
+        rollBtn.disabled = true;
+        socket.emit('rollDice', {}, (res) => {
+          if (res && res.error) {
+            rollBtn.disabled = false;
+            alert(res.error);
+          }
+        });
+      });
+      main.appendChild(rollBtn);
+    } else if (state.turnPhase === 'action') {
+      // Handle pending actions
+      if (state.pendingAction && state.pendingAction.playerId === myId) {
+        renderPhonePendingAction(state, main);
+      } else {
+        // End turn + other action buttons
+        const endBtn = document.createElement('button');
+        endBtn.className = 'phone-btn-action phone-btn-end';
+        endBtn.innerHTML = 'ЗАВЕРШИТИ ХІД';
+        endBtn.addEventListener('click', () => {
+          socket.emit('endTurn', {}, (res) => {
+            if (res && res.error) alert(res.error);
+          });
+        });
+        main.appendChild(endBtn);
+
+        // Upgrade respect button
+        if (me.money >= getNextRespectCost(me.respectLevel || 1)) {
+          const respBtn = document.createElement('button');
+          respBtn.className = 'phone-btn-action';
+          respBtn.innerHTML = `${ICON.crown} Підвищити повагу ($${getNextRespectCost(me.respectLevel || 1)})`;
+          respBtn.addEventListener('click', () => {
+            socket.emit('upgradeRespect', {}, (res) => {
+              if (res && res.error) alert(res.error);
+            });
+          });
+          main.appendChild(respBtn);
+        }
+      }
+    }
+  } else if (state.pendingAction && state.pendingAction.type === 'auction') {
+    // Auction — all players can participate
+    renderPhoneAuction(state, main);
+  } else if (state.pendingAction && state.pendingAction.type === 'attack_reaction' && state.pendingAction.targetId === myId) {
+    renderPhoneAttackReaction(state, main);
+  }
+
+  // Render tab content
+  renderPhoneTabContent(state);
+}
+
+function getNextRespectCost(level) {
+  const costs = { 1: 3000, 2: 6000, 3: 10000, 4: 15000 };
+  return costs[level] || 99999;
+}
+
+function renderPhonePendingAction(state, container) {
+  const action = state.pendingAction;
+  if (!action) return;
+
+  switch (action.type) {
+    case 'buy_business': {
+      container.innerHTML = `
+        <div class="phone-action-title">Купити бізнес?</div>
+        <div class="phone-action-desc">${action.businessName} — $${action.price}</div>
+        <div class="phone-action-btns">
+          <button class="phone-btn-action phone-btn-yes" id="pa-buy">Купити</button>
+          <button class="phone-btn-action phone-btn-no" id="pa-skip">Пропустити</button>
+        </div>
+      `;
+      document.getElementById('pa-buy')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'buy_business', data: { businessId: action.businessId, buy: true } }, handleResult);
+      });
+      document.getElementById('pa-skip')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'buy_business', data: { businessId: action.businessId, buy: false } }, handleResult);
+      });
+      break;
+    }
+    case 'pay_rent': {
+      const canRob = action.canRobbery;
+      container.innerHTML = `
+        <div class="phone-action-title">Оплата оренди</div>
+        <div class="phone-action-desc">${action.businessName} — $${action.amount} (${action.ownerName})</div>
+        <div class="phone-action-btns">
+          <button class="phone-btn-action phone-btn-yes" id="pa-pay">Заплатити</button>
+          ${canRob ? '<button class="phone-btn-action phone-btn-danger" id="pa-rob">Пограбувати</button>' : ''}
+        </div>
+      `;
+      document.getElementById('pa-pay')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'pay_rent', data: { useRobbery: false } }, handleResult);
+      });
+      document.getElementById('pa-rob')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'pay_rent', data: { useRobbery: true } }, handleResult);
+      });
+      break;
+    }
+    case 'casino': {
+      container.innerHTML = `
+        <div class="phone-action-title">${ICON.casino_chip} Казино</div>
+        <div class="phone-casino-bets">
+          <button class="phone-casino-bet" data-bet="red" style="background:#c0392b">ЧЕРВОНЕ</button>
+          <button class="phone-casino-bet" data-bet="black" style="background:#2c3e50">ЧОРНЕ</button>
+          <button class="phone-casino-bet" data-bet="green" style="background:#27ae60">ЗЕЛЕНЕ</button>
+        </div>
+        <div class="phone-casino-amounts">
+          <button class="phone-casino-amt" data-amt="500">$500</button>
+          <button class="phone-casino-amt" data-amt="1000">$1000</button>
+          <button class="phone-casino-amt" data-amt="2000">$2000</button>
+        </div>
+        <button class="phone-btn-action" id="pa-casino-spin" disabled>Крутити</button>
+        <button class="phone-btn-action phone-btn-no" id="pa-casino-skip">Пропустити</button>
+      `;
+      let selBet = null, selAmt = null;
+      container.querySelectorAll('.phone-casino-bet').forEach(btn => {
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('.phone-casino-bet').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selBet = btn.dataset.bet;
+          document.getElementById('pa-casino-spin').disabled = !(selBet && selAmt);
+        });
+      });
+      container.querySelectorAll('.phone-casino-amt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('.phone-casino-amt').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selAmt = parseInt(btn.dataset.amt);
+          document.getElementById('pa-casino-spin').disabled = !(selBet && selAmt);
+        });
+      });
+      document.getElementById('pa-casino-spin')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'casino', data: { betType: selBet, betAmount: selAmt } }, handleResult);
+      });
+      document.getElementById('pa-casino-skip')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'casino', data: { betType: 'skip' } }, handleResult);
+      });
+      break;
+    }
+    case 'hire_helper':
+    case 'choose_hidden_helper': {
+      if (action.type === 'choose_hidden_helper' && action.cards) {
+        container.innerHTML = `<div class="phone-action-title">Оберіть помічника</div><div class="phone-helper-cards" id="pa-helper-cards"></div>`;
+        const cardsEl = document.getElementById('pa-helper-cards');
+        action.cards.forEach((card, idx) => {
+          const c = document.createElement('div');
+          c.className = 'phone-helper-card';
+          c.innerHTML = `<div class="phone-helper-name">${card.name}</div><div class="phone-helper-desc">${card.ability || ''}</div>`;
+          c.addEventListener('click', () => {
+            socket.emit('resolveAction', { actionType: 'choose_hidden_helper', data: { cardIndex: idx } }, handleResult);
+          });
+          cardsEl.appendChild(c);
+        });
+      } else {
+        container.innerHTML = `
+          <div class="phone-action-title">Найняти помічника?</div>
+          <div class="phone-action-desc">Вартість: $${action.cost || 0}</div>
+          <div class="phone-action-btns">
+            <button class="phone-btn-action phone-btn-yes" id="pa-hire">Найняти</button>
+            <button class="phone-btn-action phone-btn-no" id="pa-decline">Відмовитись</button>
+          </div>
+        `;
+        document.getElementById('pa-hire')?.addEventListener('click', () => {
+          socket.emit('resolveAction', { actionType: 'hire_helper', data: {} }, handleResult);
+        });
+        document.getElementById('pa-decline')?.addEventListener('click', () => {
+          socket.emit('resolveAction', { actionType: 'decline_hire', data: {} }, handleResult);
+        });
+      }
+      break;
+    }
+    case 'event_confirm': {
+      container.innerHTML = `
+        <div class="phone-action-title">Подія</div>
+        <div class="phone-action-desc">${action.description || action.eventName || 'Подія'}</div>
+        <button class="phone-btn-action phone-btn-yes" id="pa-event-ok">OK</button>
+      `;
+      document.getElementById('pa-event-ok')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'event_confirm', data: {} }, handleResult);
+      });
+      break;
+    }
+    case 'mafia_confirm': {
+      container.innerHTML = `
+        <div class="phone-action-title">Карта мафії</div>
+        <div class="phone-action-desc">${action.description || 'Ви отримали карту мафії'}</div>
+        <button class="phone-btn-action phone-btn-yes" id="pa-mafia-ok">OK</button>
+      `;
+      document.getElementById('pa-mafia-ok')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'mafia_confirm', data: {} }, handleResult);
+      });
+      break;
+    }
+    case 'police_landing_choice': {
+      container.innerHTML = `
+        <div class="phone-action-title">${ICON.police} Поліція</div>
+        <div class="phone-action-desc">Оберіть дію:</div>
+        <div class="phone-action-btns" id="pa-police-btns"></div>
+      `;
+      const btnsEl = document.getElementById('pa-police-btns');
+      if (action.choices) {
+        action.choices.forEach(ch => {
+          const btn = document.createElement('button');
+          btn.className = 'phone-btn-action';
+          btn.textContent = ch.label || ch.id;
+          btn.addEventListener('click', () => {
+            socket.emit('resolveAction', { actionType: 'police_choice', data: { choiceId: ch.id } }, handleResult);
+          });
+          btnsEl.appendChild(btn);
+        });
+      }
+      break;
+    }
+    case 'upgrade_influence_on_own': {
+      container.innerHTML = `
+        <div class="phone-action-title">Підвищити вплив?</div>
+        <div class="phone-action-desc">${action.businessName || ''} — $${action.cost || 0}</div>
+        <div class="phone-action-btns">
+          <button class="phone-btn-action phone-btn-yes" id="pa-inf-yes">Підвищити</button>
+          <button class="phone-btn-action phone-btn-no" id="pa-inf-no">Пропустити</button>
+        </div>
+      `;
+      document.getElementById('pa-inf-yes')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'upgrade_influence', data: { upgrade: true } }, handleResult);
+      });
+      document.getElementById('pa-inf-no')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'upgrade_influence', data: { upgrade: false } }, handleResult);
+      });
+      break;
+    }
+    case 'seize_prison_business': {
+      container.innerHTML = `
+        <div class="phone-action-title">Вилучити бізнес?</div>
+        <div class="phone-action-desc">${action.businessName} — $${action.price}</div>
+        <div class="phone-action-btns">
+          <button class="phone-btn-action phone-btn-yes" id="pa-seize-yes">Купити</button>
+          <button class="phone-btn-action phone-btn-no" id="pa-seize-no">Пропустити</button>
+        </div>
+      `;
+      document.getElementById('pa-seize-yes')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'seize_prison_business', data: { businessId: action.businessId, buy: true } }, handleResult);
+      });
+      document.getElementById('pa-seize-no')?.addEventListener('click', () => {
+        socket.emit('resolveAction', { actionType: 'seize_prison_business', data: { businessId: action.businessId, buy: false } }, handleResult);
+      });
+      break;
+    }
+    case 'start_bonus': {
+      container.innerHTML = `
+        <div class="phone-action-title">Бонус старту!</div>
+        <div class="phone-action-desc">Оберіть бонус:</div>
+        <div class="phone-action-btns" id="pa-bonus-btns"></div>
+      `;
+      const bonusBtns = document.getElementById('pa-bonus-btns');
+      if (action.choices) {
+        action.choices.forEach(ch => {
+          const btn = document.createElement('button');
+          btn.className = 'phone-btn-action';
+          btn.textContent = ch.label || ch.id;
+          btn.addEventListener('click', () => {
+            socket.emit('resolveAction', { actionType: 'start_bonus', data: { choiceId: ch.id } }, handleResult);
+          });
+          bonusBtns.appendChild(btn);
+        });
+      }
+      break;
+    }
+    case 'bar_choice': {
+      container.innerHTML = `
+        <div class="phone-action-title">БАР</div>
+        <div class="phone-action-desc">Оберіть дію:</div>
+        <div class="phone-action-btns" id="pa-bar-btns"></div>
+      `;
+      const barBtns = document.getElementById('pa-bar-btns');
+      if (action.choices) {
+        action.choices.forEach(ch => {
+          const btn = document.createElement('button');
+          btn.className = 'phone-btn-action';
+          btn.textContent = ch.label || ch.id;
+          btn.addEventListener('click', () => {
+            socket.emit('resolveAction', { actionType: 'bar_choice', data: { choiceId: ch.id } }, handleResult);
+          });
+          barBtns.appendChild(btn);
+        });
+      }
+      break;
+    }
+    default: {
+      container.innerHTML = `
+        <div class="phone-action-title">Дія: ${action.type}</div>
+        <div class="phone-action-desc">${action.description || ''}</div>
+      `;
+    }
+  }
+}
+
+function renderPhoneAuction(state, container) {
+  const action = state.pendingAction;
+  if (!action) return;
+  const me = state.players.find(p => p.id === myId);
+  if (!me || !me.alive) return;
+  const hasPassed = action.passed && action.passed.includes(myId);
+  const isLeader = action.currentBidderId === myId;
+
+  container.innerHTML = `
+    <div class="phone-action-title">${ICON.money} Аукціон</div>
+    <div class="phone-action-desc">${action.businessName} — поточна ставка: $${action.currentBid || 0}${action.currentBidderName ? ' (' + action.currentBidderName + ')' : ''}</div>
+    ${hasPassed ? '<div class="phone-auction-passed">Ви спасували</div>' : isLeader ? '<div class="phone-auction-leader">Ви лідер ставки!</div>' : `
+    <div class="phone-action-btns">
+      <button class="phone-btn-action phone-btn-yes" id="pa-auction-raise">Підвищити</button>
+      <button class="phone-btn-action phone-btn-no" id="pa-auction-pass">Пас</button>
+    </div>`}
+  `;
+  document.getElementById('pa-auction-raise')?.addEventListener('click', () => {
+    socket.emit('auctionRaise', {}, (res) => { if (res.error) alert(res.error); });
+  });
+  document.getElementById('pa-auction-pass')?.addEventListener('click', () => {
+    socket.emit('auctionPass', {}, (res) => { if (res.error) alert(res.error); });
+  });
+}
+
+function renderPhoneAttackReaction(state, container) {
+  const action = state.pendingAction;
+  if (!action) return;
+  container.innerHTML = `
+    <div class="phone-action-title">${ICON.swords} Вас атакують!</div>
+    <div class="phone-action-desc">${action.attackerName || 'Хтось'} атакує вас картою ${action.card?.name || ''}</div>
+    <div class="phone-action-btns">
+      ${action.canVest ? '<button class="phone-btn-action" id="pa-react-vest">Бронежилет</button>' : ''}
+      ${action.canPolice ? '<button class="phone-btn-action" id="pa-react-police">Поліція</button>' : ''}
+      ${action.canBuyOff ? `<button class="phone-btn-action" id="pa-react-buyoff">Відкупитися ($${action.buyOffCost})</button>` : ''}
+      <button class="phone-btn-action phone-btn-danger" id="pa-react-nothing">Нічого</button>
+    </div>
+  `;
+  document.getElementById('pa-react-vest')?.addEventListener('click', () => {
+    socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'vest' } }, handleResult);
+  });
+  document.getElementById('pa-react-police')?.addEventListener('click', () => {
+    socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'police' } }, handleResult);
+  });
+  document.getElementById('pa-react-buyoff')?.addEventListener('click', () => {
+    socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'buyoff' } }, handleResult);
+  });
+  document.getElementById('pa-react-nothing')?.addEventListener('click', () => {
+    socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'nothing' } }, handleResult);
+  });
+}
+
+function renderPhoneTabContent(state) {
+  const tabContent = $('#phone-tab-content');
+  if (!tabContent) return;
+  const me = state.players.find(p => p.id === myId);
+  if (!me) { tabContent.innerHTML = ''; return; }
+
+  switch (phoneActiveTab) {
+    case 'actions': {
+      // Show mafia card quick-use if it's my turn and action phase
+      const isMyTurn = state.players[state.currentPlayerIndex]?.id === myId;
+      if (isMyTurn && state.turnPhase === 'action' && me.mafiaCards && me.mafiaCards.length > 0 && !state.pendingAction) {
+        tabContent.innerHTML = '<div class="phone-section-title">Карти мафії (натисніть щоб використати)</div>';
+        me.mafiaCards.forEach((card, idx) => {
+          const el = document.createElement('div');
+          el.className = 'phone-mafia-card-item';
+          el.innerHTML = `<span class="phone-mc-name">${card.name}</span><span class="phone-mc-desc">${card.description || ''}</span>`;
+          el.addEventListener('click', () => {
+            if (card.type === 'attack' && state.currentRound < state.mafiaCardMinRound) {
+              alert(`Карти атаки доступні з ${state.mafiaCardMinRound}-го кола!`);
+              return;
+            }
+            socket.emit('playMafiaCard', { cardId: card.id, cardIndex: idx }, handleResult);
+          });
+          tabContent.appendChild(el);
+        });
+      } else {
+        tabContent.innerHTML = '<div class="phone-section-empty">Немає доступних дій</div>';
+      }
+      break;
+    }
+    case 'cards': {
+      if (me.mafiaCards && me.mafiaCards.length > 0) {
+        tabContent.innerHTML = '<div class="phone-section-title">Карти мафії</div>';
+        me.mafiaCards.forEach(card => {
+          const el = document.createElement('div');
+          el.className = 'phone-mafia-card-item';
+          el.innerHTML = `<span class="phone-mc-name">${card.name}</span><span class="phone-mc-desc">${card.description || ''}</span>`;
+          tabContent.appendChild(el);
+        });
+      } else {
+        tabContent.innerHTML = '<div class="phone-section-empty">Немає карт</div>';
+      }
+      break;
+    }
+    case 'businesses': {
+      if (me.businesses && me.businesses.length > 0) {
+        tabContent.innerHTML = '<div class="phone-section-title">Мої бізнеси</div>';
+        me.businesses.forEach(bizId => {
+          const bs = state.businesses[bizId];
+          if (!bs) return;
+          // Find business data from districts
+          let bizName = bizId;
+          if (state.districts) {
+            for (const d of state.districts) {
+              const found = d.businesses.find(b => b.id === bizId);
+              if (found) { bizName = found.name; break; }
+            }
+          }
+          const el = document.createElement('div');
+          el.className = 'phone-biz-item';
+          el.innerHTML = `<span class="phone-biz-name">${bizName}</span><span class="phone-biz-inf">${ICON.crown} ${bs.influenceLevel || 0}</span>`;
+          tabContent.appendChild(el);
+        });
+      } else {
+        tabContent.innerHTML = '<div class="phone-section-empty">Немає бізнесів</div>';
+      }
+      break;
+    }
+    case 'helpers': {
+      if (me.helpers && me.helpers.length > 0) {
+        tabContent.innerHTML = '<div class="phone-section-title">Мої помічники</div>';
+        me.helpers.forEach(h => {
+          const el = document.createElement('div');
+          el.className = 'phone-helper-item';
+          const portrait = HELPER_PORTRAITS[h.id] || '';
+          el.innerHTML = `<div class="phone-helper-portrait">${portrait}</div><div><div class="phone-helper-name">${h.name}</div><div class="phone-helper-desc">${h.ability || ''}</div></div>`;
+          tabContent.appendChild(el);
+        });
+      } else {
+        tabContent.innerHTML = '<div class="phone-section-empty">Немає помічників</div>';
+      }
+      break;
+    }
+  }
+}
+
+// TV mode event handlers
+if (isTVMode) {
+  socket.on('cardDrawn', (data) => {
+    if (!data || !data.playerName) return;
+    showCardDrawnEffect(data); // reuse existing function
+  });
+  socket.on('attackOutcome', (data) => {
+    // Show attack result on TV
+    if (data && data.type) {
+      const msg = data.killed ? `${data.attackerName} вбив ${data.targetName}!` :
+        data.type === 'vest' ? `${data.targetName} використав бронежилет!` :
+        data.type === 'police' ? `${data.targetName} викликав поліцію!` :
+        data.type === 'buyoff' ? `${data.targetName} відкупився!` :
+        `Атака: ${data.attackerName} → ${data.targetName}`;
+      showTVOverlayMessage(msg, 3000);
+    }
+  });
+  socket.on('rentPaid', (data) => {
+    if (data) showTVOverlayMessage(`${data.payerName} заплатив $${data.amount} оренди (${data.businessName})`, 2500);
+  });
+  socket.on('auctionResult', (data) => {
+    if (data && data.winnerName) showTVOverlayMessage(`${data.winnerName} виграв аукціон за ${data.businessName}: $${data.amount}!`, 3000);
+  });
+}
+
+function showTVOverlayMessage(msg, duration = 3000) {
+  const existing = document.querySelector('.tv-overlay-msg');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'tv-overlay-msg';
+  el.textContent = msg;
+  document.getElementById('tv-game')?.appendChild(el);
+  setTimeout(() => el.classList.add('tv-overlay-msg-show'), 10);
+  setTimeout(() => {
+    el.classList.remove('tv-overlay-msg-show');
+    setTimeout(() => el.remove(), 400);
+  }, duration);
 }

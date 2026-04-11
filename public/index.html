@@ -1039,6 +1039,125 @@
     </div>
   </div>
 
+  <!-- ===== TV MODE SCREEN ===== -->
+  <div id="tv-screen" class="screen">
+    <!-- TV Waiting (room code + player list) -->
+    <div id="tv-waiting" class="tv-waiting">
+      <div class="tv-waiting-header">
+        <div class="tv-logo">MAFIA<br><span>BUSINESS</span></div>
+        <div class="tv-mode-badge">TV MODE</div>
+      </div>
+      <div class="tv-room-code-wrap">
+        <div class="tv-room-label">КОД КІМНАТИ</div>
+        <div class="tv-room-code" id="tv-room-code"></div>
+        <div class="tv-join-hint" id="tv-join-hint"></div>
+      </div>
+      <div class="tv-players-area">
+        <div class="tv-players-label">ГРАВЦІ</div>
+        <div class="tv-players-list" id="tv-players-list"></div>
+      </div>
+      <div class="tv-waiting-controls">
+        <button id="tv-btn-add-bot" class="btn btn-secondary">Додати бота</button>
+        <button id="tv-btn-start" class="btn btn-primary">Почати гру</button>
+      </div>
+    </div>
+
+    <!-- TV Game View -->
+    <div id="tv-game" class="tv-game" style="display:none;">
+      <div class="tv-topbar">
+        <div class="tv-topbar-left">
+          <span class="tv-title">MAFIA BUSINESS</span>
+          <span class="tv-room-badge" id="tv-room-badge"></span>
+        </div>
+        <div class="tv-topbar-center" id="tv-turn-info"></div>
+        <div class="tv-topbar-right">
+          <span id="tv-round-info"></span>
+          <button id="tv-btn-restart" class="btn-topbar btn-restart-topbar" title="Перезапустити" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button id="tv-btn-fullscreen" class="btn-topbar" title="Повноекранний режим">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="tv-layout">
+        <div class="tv-board-area">
+          <div id="tv-game-board" class="game-board"></div>
+          <div class="board-center" id="tv-board-center"></div>
+        </div>
+        <div class="tv-sidebar">
+          <div id="tv-player-panels" class="tv-player-panels"></div>
+          <div class="tv-log-section">
+            <div class="tv-log-title">ХРОНІКА</div>
+            <div id="tv-game-log" class="tv-game-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TV Victory -->
+    <div id="tv-victory" class="tv-victory" style="display:none;">
+      <div class="tv-victory-content" id="tv-victory-content"></div>
+    </div>
+
+    <!-- TV Roll Order -->
+    <div id="tv-roll-order" class="tv-roll-order" style="display:none;">
+      <div class="tv-ro-title">ВИЗНАЧЕННЯ ПОРЯДКУ ХОДІВ</div>
+      <div class="tv-ro-players" id="tv-ro-players"></div>
+    </div>
+  </div>
+
+  <!-- ===== PHONE CONTROLLER SCREEN ===== -->
+  <div id="phone-screen" class="screen">
+    <!-- Phone Lobby (join only) -->
+    <div id="phone-lobby" class="phone-lobby">
+      <div class="phone-lobby-logo">MAFIA<br><span>BUSINESS</span></div>
+      <div class="phone-lobby-badge">CONTROLLER</div>
+      <div class="phone-lobby-form">
+        <div class="input-group">
+          <label class="input-label" for="phone-player-name">ІМ'Я ГРАВЦЯ</label>
+          <input type="text" id="phone-player-name" placeholder="Введіть ваше ім'я" maxlength="16" />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="phone-room-code">КОД КІМНАТИ</label>
+          <input type="text" id="phone-room-code" placeholder="XXXXX" maxlength="5" />
+        </div>
+        <div class="character-select-section">
+          <label class="input-label">ОБЕРИ ПЕРСОНАЖА</label>
+          <div class="character-select" id="phone-character-select"></div>
+        </div>
+        <button id="phone-btn-join" class="btn btn-primary" style="width:100%;">Приєднатися</button>
+        <div id="phone-lobby-error" class="error-msg"></div>
+      </div>
+    </div>
+
+    <!-- Phone Waiting -->
+    <div id="phone-waiting" class="phone-waiting" style="display:none;">
+      <div class="phone-waiting-info">
+        <div class="phone-waiting-code">Кімната: <span id="phone-room-display"></span></div>
+        <div class="phone-waiting-msg">Очікуємо початку гри...</div>
+        <div id="phone-players-count"></div>
+      </div>
+    </div>
+
+    <!-- Phone Game Controller -->
+    <div id="phone-game" class="phone-game" style="display:none;">
+      <div class="phone-header">
+        <div class="phone-player-info" id="phone-player-info"></div>
+        <div class="phone-turn-indicator" id="phone-turn-indicator"></div>
+      </div>
+      <div class="phone-status" id="phone-status"></div>
+      <div class="phone-main" id="phone-main"></div>
+      <div class="phone-tabs">
+        <button class="phone-tab active" data-tab="actions">Дії</button>
+        <button class="phone-tab" data-tab="cards">Карти</button>
+        <button class="phone-tab" data-tab="businesses">Бізнес</button>
+        <button class="phone-tab" data-tab="helpers">Помічники</button>
+      </div>
+      <div class="phone-tab-content" id="phone-tab-content"></div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/client.js"></script>
 </body>

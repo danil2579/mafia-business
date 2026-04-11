@@ -45,6 +45,7 @@ const turnTimers = new Map(); // roomId -> { timer, remaining }
 const disconnectedPlayers = new Map(); // `${roomId}:${playerId}` -> { socketId, name, timer }
 const chatHistory = new Map(); // roomId -> [messages]
 const auctionTimers = new Map(); // roomId -> timeout
+const tvSockets = new Map(); // roomId -> Set<socketId> (TV mode displays)
 const BOT_NAMES = ['Бот Вінні', 'Бот Тоні', 'Бот Сальваторе', 'Бот Луїджі', 'Бот Марко', 'Бот Ніко', 'Бот Анджело', 'Бот Ренцо'];
 const TURN_TIME_LIMIT = 60; // seconds
 const RECONNECT_GRACE = 120; // seconds
@@ -86,10 +87,14 @@ function broadcastState(roomId) {
   try {
     const sockets = io.sockets.adapter.rooms.get(roomId);
     if (sockets) {
+      const tvSet = tvSockets.get(roomId);
       for (const sid of sockets) {
         const socket = io.sockets.sockets.get(sid);
         if (socket) {
-          socket.emit('gameState', game.getState(socket.id));
+          const isTV = tvSet && tvSet.has(sid);
+          const state = game.getState(isTV ? null : sid);
+          if (isTV) state._tvMode = true;
+          socket.emit('gameState', state);
         }
       }
     }
@@ -799,6 +804,32 @@ io.on('connection', (socket) => {
     broadcastState(roomId);
   });
 
+  // CREATE ROOM TV (TV mode — display only, not a player)
+  socket.on('createRoomTV', (_, cb) => {
+    const roomId = generateRoomId();
+    const game = new GameEngine(roomId);
+    rooms.set(roomId, game);
+    playerRooms.set(socket.id, roomId);
+    socket.join(roomId);
+    // Track as TV socket
+    if (!tvSockets.has(roomId)) tvSockets.set(roomId, new Set());
+    tvSockets.get(roomId).add(socket.id);
+    cb({ roomId });
+    broadcastState(roomId);
+  });
+
+  // JOIN ROOM TV (join existing room as TV display)
+  socket.on('joinRoomTV', ({ roomId }, cb) => {
+    const game = rooms.get(roomId);
+    if (!game) return cb({ error: 'Кімнату не знайдено.' });
+    playerRooms.set(socket.id, roomId);
+    socket.join(roomId);
+    if (!tvSockets.has(roomId)) tvSockets.set(roomId, new Set());
+    tvSockets.get(roomId).add(socket.id);
+    cb({ roomId });
+    broadcastState(roomId);
+  });
+
   // JOIN ROOM
   socket.on('joinRoom', ({ roomId, playerName, characterId }, cb) => {
     const game = rooms.get(roomId);
@@ -821,7 +852,10 @@ io.on('connection', (socket) => {
     const roomId = playerRooms.get(socket.id);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
-    if (game.players[0].id !== socket.id) return cb({ error: 'Тільки хост може почати гру.' });
+    // Allow TV socket or first player (host) to start
+    const tvSet = tvSockets.get(roomId);
+    const isTVHost = tvSet && tvSet.has(socket.id);
+    if (!isTVHost && game.players[0]?.id !== socket.id) return cb({ error: 'Тільки хост може почати гру.' });
 
     // Apply game settings
     if (data && data.mafiaCardMinRound) {
@@ -862,7 +896,9 @@ io.on('connection', (socket) => {
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
     if (game.phase !== 'waiting') return cb({ error: 'Гра вже розпочалась.' });
-    if (game.players[0].id !== socket.id) return cb({ error: 'Тільки хост може додавати ботів.' });
+    const tvSet = tvSockets.get(roomId);
+    const isTVHost = tvSet && tvSet.has(socket.id);
+    if (!isTVHost && game.players[0]?.id !== socket.id) return cb({ error: 'Тільки хост може додавати ботів.' });
     if (game.players.length >= 8) return cb({ error: 'Кімната повна.' });
 
     const count = (botCounters.get(roomId) || 0) + 1;
@@ -1362,8 +1398,10 @@ io.on('connection', (socket) => {
     const roomId = playerRooms.get(socket.id);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
-    // Only host can restart
-    if (game.hostId !== socket.id) return cb({ error: 'Тільки хост може перезапустити гру.' });
+    // Only host or TV can restart
+    const tvSetR = tvSockets.get(roomId);
+    const isTVHostR = tvSetR && tvSetR.has(socket.id);
+    if (!isTVHostR && game.hostId !== socket.id) return cb({ error: 'Тільки хост може перезапустити гру.' });
 
     // Notify all clients to reload
     io.to(roomId).emit('gameRestarted');
@@ -1610,6 +1648,15 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const roomId = playerRooms.get(socket.id);
     if (roomId) {
+      // Check if this is a TV socket — just remove from tracking, don't affect game
+      const tvSet = tvSockets.get(roomId);
+      if (tvSet && tvSet.has(socket.id)) {
+        tvSet.delete(socket.id);
+        if (tvSet.size === 0) tvSockets.delete(roomId);
+        playerRooms.delete(socket.id);
+        console.log(`TV Disconnected: ${socket.id}`);
+        return;
+      }
       const game = rooms.get(roomId);
       if (game) {
         const player = game.getPlayer(socket.id);

@@ -3753,3 +3753,365 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   .btn-roll { font-size: 9px; padding: 6px 16px; min-height: 30px; }
   .turn-timer { width: 30px; height: 30px; font-size: 10px; top: 30px; }
 }
+
+/* ============================================================
+   TV MODE STYLES
+   ============================================================ */
+
+/* TV Waiting Screen */
+.tv-waiting {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 40px; text-align: center;
+  background: radial-gradient(ellipse at center, rgba(201,168,76,0.05) 0%, var(--bg) 70%);
+}
+.tv-waiting-header { margin-bottom: 30px; }
+.tv-logo {
+  font-family: 'Cinzel', serif; font-size: 48px; font-weight: 900;
+  color: var(--gold); line-height: 1.1; letter-spacing: 2px;
+}
+.tv-logo span { font-size: 64px; display: block; }
+.tv-mode-badge {
+  display: inline-block; margin-top: 10px; padding: 4px 16px;
+  background: rgba(201,168,76,0.15); border: 1px solid var(--gold-dim);
+  border-radius: 4px; font-size: 14px; letter-spacing: 3px; color: var(--gold);
+}
+.tv-room-code-wrap { margin: 30px 0; }
+.tv-room-label {
+  font-size: 16px; letter-spacing: 4px; color: var(--text-dim);
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.tv-room-code {
+  font-family: 'Cinzel', serif; font-size: 140px; font-weight: 900;
+  color: var(--gold); letter-spacing: 20px; line-height: 1;
+  text-shadow: 0 0 40px rgba(201,168,76,0.3);
+}
+.tv-join-hint {
+  margin-top: 15px; font-size: 18px; color: var(--text-dim);
+  font-family: 'Inter', sans-serif; word-break: break-all;
+}
+.tv-players-area { margin: 30px 0; width: 100%; max-width: 900px; }
+.tv-players-label {
+  font-size: 14px; letter-spacing: 3px; color: var(--text-dim);
+  margin-bottom: 15px;
+}
+.tv-players-list { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.tv-player-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 15px 20px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 10px; min-width: 100px;
+}
+.tv-player-portrait { width: 60px; height: 60px; }
+.tv-player-portrait svg { width: 100%; height: 100%; }
+.tv-player-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.tv-player-bot { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; }
+.tv-waiting-controls { display: flex; gap: 15px; margin-top: 20px; }
+
+/* TV Game Layout */
+.tv-game { display: flex; flex-direction: column; height: 100vh; overflow: hidden; position: relative; }
+.tv-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; background: var(--card-bg); border-bottom: 1px solid var(--border);
+  min-height: 48px; flex-shrink: 0;
+}
+.tv-topbar-left { display: flex; align-items: center; gap: 12px; }
+.tv-title { font-family: 'Cinzel', serif; font-size: 18px; color: var(--gold); font-weight: 700; }
+.tv-room-badge {
+  padding: 2px 10px; background: rgba(201,168,76,0.1); border: 1px solid var(--gold-dim);
+  border-radius: 4px; font-size: 12px; color: var(--gold); letter-spacing: 2px;
+}
+.tv-topbar-center { font-size: 18px; color: var(--text); font-weight: 600; }
+.tv-topbar-right { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-dim); }
+
+.tv-layout { display: flex; flex: 1; overflow: hidden; }
+.tv-board-area {
+  flex: 1; position: relative; display: flex; align-items: center; justify-content: center;
+  padding: 10px;
+}
+.tv-board-area .game-board {
+  width: 100%; height: 100%; max-width: none; max-height: none;
+}
+.tv-sidebar {
+  width: 280px; flex-shrink: 0; display: flex; flex-direction: column;
+  border-left: 1px solid var(--border); background: var(--card-bg);
+  overflow: hidden;
+}
+
+/* TV Player Panels */
+.tv-player-panels { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tv-pp {
+  padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border); transition: all 0.3s;
+}
+.tv-pp-active { background: rgba(201,168,76,0.08); border-color: var(--gold-dim); }
+.tv-pp-dead { opacity: 0.4; }
+.tv-pp-prison { border-color: rgba(231,76,60,0.3); }
+.tv-pp-header { display: flex; align-items: center; gap: 10px; border-left: 3px solid; padding-left: 8px; }
+.tv-pp-portrait { width: 36px; height: 36px; flex-shrink: 0; }
+.tv-pp-portrait svg { width: 100%; height: 100%; }
+.tv-pp-info { flex: 1; }
+.tv-pp-name { font-size: 14px; font-weight: 700; }
+.tv-pp-money { font-size: 13px; color: var(--green-light); }
+.tv-pp-stats {
+  display: flex; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.tv-pp-stats span { display: flex; align-items: center; gap: 3px; }
+.tv-pp-stats .icon { width: 12px; height: 12px; }
+.tv-pp-prison-badge { color: #e74c3c; }
+.tv-pp-dead-badge { color: #e74c3c; font-weight: 700; letter-spacing: 1px; }
+
+/* TV Log */
+.tv-log-section {
+  flex-shrink: 0; max-height: 200px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.tv-log-title {
+  padding: 8px 12px; font-size: 11px; letter-spacing: 2px; color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.tv-game-log { flex: 1; overflow-y: auto; padding: 8px 12px; font-size: 12px; }
+.tv-log-entry { padding: 3px 0; color: var(--text-dim); border-bottom: 1px solid rgba(255,255,255,0.03); }
+.tv-log-entry:last-child { color: var(--text); }
+
+/* TV Roll Order */
+.tv-roll-order {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 40px;
+}
+.tv-ro-title {
+  font-family: 'Cinzel', serif; font-size: 32px; color: var(--gold);
+  margin-bottom: 40px; letter-spacing: 4px;
+}
+.tv-ro-players { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.tv-ro-player {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 20px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 12px; min-width: 120px; transition: all 0.3s;
+}
+.tv-ro-current { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+.tv-ro-portrait { width: 64px; height: 64px; }
+.tv-ro-portrait svg { width: 100%; height: 100%; }
+.tv-ro-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.tv-ro-roll { font-size: 24px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 6px; }
+.tv-ro-roll .icon { width: 20px; height: 20px; }
+
+/* TV Victory */
+.tv-victory {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,10,15,0.95); animation: fadeIn 0.5s;
+}
+.tv-victory-content { text-align: center; }
+.tv-victory-crown { margin-bottom: 20px; }
+.tv-victory-crown .icon { width: 80px; height: 80px; color: var(--gold); }
+.tv-victory-portrait {
+  width: 120px; height: 120px; margin: 0 auto 20px;
+  border: 3px solid; border-radius: 50%; padding: 10px;
+  background: rgba(201,168,76,0.05);
+}
+.tv-victory-portrait svg { width: 100%; height: 100%; }
+.tv-victory-title {
+  font-family: 'Cinzel', serif; font-size: 48px; font-weight: 900;
+  letter-spacing: 4px;
+}
+.tv-victory-subtitle {
+  font-size: 24px; color: var(--gold); letter-spacing: 6px; margin-top: 10px;
+}
+.tv-victory-stats {
+  margin-top: 30px; font-size: 20px; color: var(--text-dim);
+  display: flex; gap: 30px; justify-content: center;
+}
+.tv-victory-stats .icon { width: 20px; height: 20px; }
+
+/* TV Overlay Messages */
+.tv-overlay-msg {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+  padding: 12px 30px; background: rgba(10,10,15,0.9); border: 1px solid var(--gold-dim);
+  border-radius: 8px; font-size: 18px; color: var(--text); z-index: 100;
+  opacity: 0; transition: opacity 0.4s; pointer-events: none;
+}
+.tv-overlay-msg-show { opacity: 1; }
+
+/* ============================================================
+   PHONE CONTROLLER STYLES
+   ============================================================ */
+
+/* Phone Lobby */
+.phone-lobby {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 30px 20px; min-height: 100vh;
+  background: radial-gradient(ellipse at center, rgba(201,168,76,0.05) 0%, var(--bg) 70%);
+}
+.phone-lobby-logo {
+  font-family: 'Cinzel', serif; font-size: 28px; font-weight: 900;
+  color: var(--gold); text-align: center; line-height: 1.1; margin-bottom: 5px;
+}
+.phone-lobby-logo span { font-size: 36px; display: block; }
+.phone-lobby-badge {
+  display: inline-block; padding: 3px 12px; margin-bottom: 20px;
+  background: rgba(201,168,76,0.15); border: 1px solid var(--gold-dim);
+  border-radius: 4px; font-size: 11px; letter-spacing: 3px; color: var(--gold);
+}
+.phone-lobby-form { width: 100%; max-width: 360px; }
+.phone-lobby-form .input-group { margin-bottom: 12px; }
+.phone-lobby-form .character-select-section { margin: 15px 0; }
+.phone-lobby-form .character-select { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+/* Phone Waiting */
+.phone-waiting {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; text-align: center; padding: 30px;
+}
+.phone-waiting-code { font-size: 20px; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+.phone-waiting-msg { font-size: 16px; color: var(--text-dim); }
+
+/* Phone Game Controller */
+.phone-game {
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  background: var(--bg);
+}
+.phone-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: var(--card-bg); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.phone-player-info {
+  display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600;
+}
+.phone-money { color: var(--green-light); font-size: 13px; }
+.phone-respect { font-size: 12px; color: var(--gold); display: flex; align-items: center; gap: 3px; }
+.phone-respect .icon { width: 14px; height: 14px; }
+.phone-turn-indicator { font-size: 13px; color: var(--text-dim); }
+.phone-your-turn {
+  color: var(--gold); font-weight: 700; letter-spacing: 1px;
+  animation: phonePulse 1.5s infinite;
+}
+@keyframes phonePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.phone-status {
+  padding: 6px 16px; font-size: 12px; color: var(--text-dim);
+  background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.phone-main {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+
+/* Phone Action Buttons */
+.phone-btn-roll {
+  width: 100%; max-width: 300px; padding: 18px 24px;
+  font-size: 18px; font-weight: 700; letter-spacing: 2px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1));
+  border: 2px solid var(--gold); color: var(--gold); border-radius: 12px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all 0.2s;
+}
+.phone-btn-roll:active { transform: scale(0.95); }
+.phone-btn-roll:disabled { opacity: 0.4; pointer-events: none; }
+.phone-btn-roll .icon { width: 24px; height: 24px; }
+
+.phone-btn-action {
+  width: 100%; max-width: 300px; padding: 12px 20px;
+  font-size: 14px; font-weight: 600;
+  background: var(--card-bg); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; cursor: pointer; transition: all 0.2s;
+}
+.phone-btn-action:active { transform: scale(0.97); }
+.phone-btn-end { border-color: var(--gold-dim); color: var(--gold); }
+.phone-btn-yes { border-color: rgba(46,204,113,0.4); color: #2ecc71; }
+.phone-btn-no { border-color: rgba(231,76,60,0.3); color: #e74c3c; }
+.phone-btn-danger { border-color: #e74c3c; color: #e74c3c; background: rgba(231,76,60,0.08); }
+
+.phone-action-title {
+  font-size: 18px; font-weight: 700; color: var(--text); text-align: center;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.phone-action-title .icon { width: 20px; height: 20px; }
+.phone-action-desc { font-size: 14px; color: var(--text-dim); text-align: center; }
+.phone-action-btns { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px; align-items: center; }
+
+/* Phone Casino */
+.phone-casino-bets { display: flex; gap: 8px; justify-content: center; margin: 8px 0; }
+.phone-casino-bet {
+  padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 700;
+  font-size: 14px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+}
+.phone-casino-bet.selected { border-color: var(--gold); transform: scale(1.05); }
+.phone-casino-amounts { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.phone-casino-amt {
+  padding: 8px 16px; border-radius: 6px; background: var(--card-bg);
+  border: 1px solid var(--border); color: var(--text); font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.phone-casino-amt.selected { border-color: var(--gold); color: var(--gold); }
+
+/* Phone Tabs */
+.phone-tabs {
+  display: flex; border-top: 1px solid var(--border);
+  background: var(--card-bg); flex-shrink: 0;
+}
+.phone-tab {
+  flex: 1; padding: 10px 4px; text-align: center; font-size: 12px;
+  font-weight: 600; color: var(--text-dim); background: none; border: none;
+  border-top: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+}
+.phone-tab.active { color: var(--gold); border-top-color: var(--gold); }
+
+.phone-tab-content {
+  max-height: 200px; overflow-y: auto; padding: 10px 16px;
+  background: rgba(255,255,255,0.01); flex-shrink: 0;
+}
+
+/* Phone Tab Items */
+.phone-section-title {
+  font-size: 12px; letter-spacing: 2px; color: var(--text-dim);
+  margin-bottom: 8px; text-transform: uppercase;
+}
+.phone-section-empty { font-size: 13px; color: var(--text-dim); text-align: center; padding: 20px; }
+.phone-mafia-card-item {
+  padding: 10px; margin-bottom: 6px; background: rgba(155,89,182,0.06);
+  border: 1px solid rgba(155,89,182,0.2); border-radius: 8px; cursor: pointer;
+}
+.phone-mc-name { font-size: 14px; font-weight: 600; color: #bb86fc; display: block; }
+.phone-mc-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.phone-biz-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 10px; margin-bottom: 4px; background: rgba(46,204,113,0.04);
+  border: 1px solid rgba(46,204,113,0.15); border-radius: 6px;
+}
+.phone-biz-name { font-size: 13px; color: var(--text); }
+.phone-biz-inf { font-size: 12px; color: var(--gold); display: flex; align-items: center; gap: 3px; }
+.phone-biz-inf .icon { width: 12px; height: 12px; }
+.phone-helper-item {
+  display: flex; gap: 10px; align-items: center; padding: 8px; margin-bottom: 6px;
+  background: rgba(52,152,219,0.04); border: 1px solid rgba(52,152,219,0.15); border-radius: 8px;
+}
+.phone-helper-portrait { width: 36px; height: 36px; flex-shrink: 0; }
+.phone-helper-portrait svg { width: 100%; height: 100%; }
+.phone-helper-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.phone-helper-desc { font-size: 11px; color: var(--text-dim); }
+
+/* Phone helper cards for choosing */
+.phone-helper-cards { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px; }
+.phone-helper-card {
+  padding: 12px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; transition: all 0.2s;
+}
+.phone-helper-card:active { border-color: var(--gold); }
+
+/* Phone misc states */
+.phone-victory { font-size: 20px; color: var(--gold); font-weight: 700; text-align: center; padding: 40px 20px; }
+.phone-victory .icon { width: 32px; height: 32px; }
+.phone-dead { font-size: 16px; color: #e74c3c; text-align: center; padding: 40px 20px; }
+.phone-prison { font-size: 14px; color: #e74c3c; text-align: center; padding: 10px; }
+.phone-prison .icon { width: 16px; height: 16px; }
+.phone-waiting-turn { font-size: 16px; color: var(--text-dim); text-align: center; padding: 30px; }
+.phone-roll-result { font-size: 20px; color: var(--gold); font-weight: 700; text-align: center; padding: 20px; }
+.phone-roll-result .icon { width: 24px; height: 24px; }
+.phone-auction-passed { font-size: 14px; color: var(--text-dim); text-align: center; padding: 10px; }
+.phone-auction-leader { font-size: 14px; color: var(--green-light); font-weight: 600; text-align: center; padding: 10px; }
