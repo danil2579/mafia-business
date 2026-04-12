@@ -1166,11 +1166,12 @@ function animateTokenMovement(playerId, fromPos, toPos) {
 }
 
 // ===== CENTER PANEL (replaces modal for basic game actions) =====
-function showCenterPanel(title, description, buttons) {
+function showCenterPanel(title, description, buttons, extraHtml) {
   const panel = $('#center-panel');
   let html = '';
   if (title) html += `<h3>${title}</h3>`;
   if (description) html += `<p>${description}</p>`;
+  if (extraHtml) html += extraHtml;
   html += '<div class="center-buttons">';
   // buttons rendered after innerHTML set
   panel.innerHTML = html + '</div>';
@@ -1410,6 +1411,60 @@ function showHiddenHelperChoice(cardCount) {
   }
 }
 
+// ===== KILL HELPER CARD SELECTION (BAR-style flip) =====
+function showKillHelperChoice(targetName, helpers, onChoose) {
+  hideCenterPanel();
+  const overlay = document.createElement('div');
+  overlay.className = 'hidden-helper-overlay active kill-helper-overlay';
+  overlay.innerHTML = `
+    <div class="hh-backdrop"></div>
+    <div class="hh-content">
+      <div class="hh-title" style="color:#e74c3c">ЗАМАХ</div>
+      <div class="hh-subtitle">Оберіть помічника ${targetName}, який загине</div>
+      <div class="hh-cards" id="kh-cards"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const cardsContainer = overlay.querySelector('#kh-cards');
+  helpers.forEach((h, i) => {
+    const card = document.createElement('div');
+    card.className = 'hh-card';
+    card.dataset.index = i;
+    const hasPortrait = h.id && HELPER_PORTRAITS[h.id];
+    card.innerHTML = `
+      <div class="hh-card-inner">
+        <div class="hh-card-back" style="border-color:rgba(231,76,60,0.4)">
+          <div class="hh-card-back-icon">${ICON.skull}</div>
+          <div class="hh-card-back-label">Помічник</div>
+        </div>
+        <div class="hh-card-front" style="border-color:rgba(231,76,60,0.6)">
+          <div class="hh-card-front-icon ${hasPortrait ? 'hh-has-portrait' : ''}">${hasPortrait ? HELPER_PORTRAITS[h.id] : '&#9733;'}</div>
+          <div class="hh-card-front-name">${h.name}</div>
+        </div>
+      </div>
+    `;
+    card.style.animationDelay = (i * 0.15) + 's';
+    card.addEventListener('click', () => {
+      if (card.classList.contains('hh-chosen') || card.classList.contains('hh-rejected')) return;
+      SFX.cardFlip();
+      // Flip all cards to reveal
+      cardsContainer.querySelectorAll('.hh-card').forEach(c => {
+        c.classList.add('hh-flipped');
+        if (c !== card) c.classList.add('hh-rejected');
+      });
+      card.classList.add('hh-chosen');
+      // After flip, close overlay and execute choice
+      setTimeout(() => {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.remove(), 400);
+        onChoose(i);
+      }, 1200);
+    });
+    cardsContainer.appendChild(card);
+  });
+}
+
 // ===== BOMB EXPLOSION ANIMATION =====
 function showExplosion(playerName) {
   const overlay = document.createElement('div');
@@ -1504,15 +1559,15 @@ function showPrisonEffect(playerName, turns) {
   const content = document.createElement('div');
   content.className = 'prison-effect-content';
   content.innerHTML = `
-    <div class="prison-effect-icon">⛓️</div>
+    <div class="prison-effect-icon"><svg viewBox="0 0 64 64" fill="none" stroke="#ff4444" stroke-width="2"><rect x="10" y="8" width="44" height="48" rx="4" stroke-width="2.5"/><line x1="20" y1="8" x2="20" y2="56"/><line x1="32" y1="8" x2="32" y2="56"/><line x1="44" y1="8" x2="44" y2="56"/><rect x="22" y="28" width="20" height="12" rx="3" fill="rgba(255,68,68,0.15)" stroke-width="2"/><circle cx="30" cy="34" r="3"/><path d="M33 34h6" stroke-linecap="round"/></svg></div>
     <div class="prison-effect-title">ЗА ҐРАТИ!</div>
     <div class="prison-effect-name">${playerName}</div>
     <div class="prison-effect-turns">${turns} ${turns === 1 ? 'хід' : 'ходи'} за ґратами</div>
   `;
   overlay.appendChild(content);
 
-  // Chain particles
-  const chainEmojis = ['⛓️', '🔒', '⛓️', '🔗', '🔒'];
+  // Chain/lock particles — SVG icons instead of emoji
+  const particleIcons = [ICON.chain, ICON.lock, ICON.chain, ICON.lock, ICON.chain];
   for (let i = 0; i < 12; i++) {
     const p = document.createElement('div');
     p.className = 'prison-chain-particle';
@@ -1522,7 +1577,7 @@ function showPrisonEffect(playerName, turns) {
     p.style.setProperty('--py', `${Math.sin(angle) * dist}px`);
     p.style.left = '50%';
     p.style.top = '50%';
-    p.textContent = chainEmojis[i % chainEmojis.length];
+    p.innerHTML = particleIcons[i % particleIcons.length];
     p.style.animationDelay = (Math.random() * 0.3) + 's';
     overlay.appendChild(p);
   }
@@ -1626,7 +1681,7 @@ function showCardDrawnEffect(data) {
     for (let i = 0; i < (data.cardCount || 1); i++) {
       cardsHtml += `<div class="cde-card cde-card-mafia" style="animation-delay:${i * 0.15}s">
         <div class="cde-card-back">
-          <div class="cde-card-back-pattern">&#9760;</div>
+          <div class="cde-card-back-pattern">${ICON.mask}</div>
           <div class="cde-card-back-label">MAFIA</div>
         </div>
       </div>`;
@@ -1639,7 +1694,7 @@ function showCardDrawnEffect(data) {
     cardContent = `
       <div class="cde-card cde-card-event">
         <div class="cde-card-front">
-          <div class="cde-card-icon">&#9733;</div>
+          <div class="cde-card-icon">${SECTOR_ICONS.EVENT}</div>
           <div class="cde-card-type">ПОДІЯ</div>
           <div class="cde-card-name">${data.cardName || ''}</div>
           <div class="cde-card-desc">${data.cardDescription || ''}</div>
@@ -2595,13 +2650,9 @@ function handlePendingAction(state) {
         const targetP = state.players.find(p => p.id === action.targetId);
         const helpersList = action.targetHelpers || [];
         if (helpersList.length === 0) break;
-        showCenterPanel('Оберіть ціль', `Який помічник ${targetP ? targetP.name : 'ворога'} загине?`, helpersList.map((h, i) => ({
-          text: h.name,
-          action: () => {
-            socket.emit('resolveAction', { actionType: 'choose_kill_helper', data: { attackerId: action.attackerId, targetId: action.targetId, helperIndex: i } }, handleResult);
-            hideCenterPanel();
-          }
-        })));
+        showKillHelperChoice(targetP ? targetP.name : 'ворога', helpersList, (idx) => {
+          socket.emit('resolveAction', { actionType: 'choose_kill_helper', data: { attackerId: action.attackerId, targetId: action.targetId, helperIndex: idx } }, handleResult);
+        });
       } else {
         // Attacker is another player/bot — show waiting
         const attackerP = state.players.find(p => p.id === action.attackerId);
@@ -2794,6 +2845,27 @@ function showTargetSelectionModal(card, state) {
             handleResult(res);
           } else {
             hideModal();
+            // Show informer/wiretap results
+            if (res && res.type === 'informer_used' && res.cards) {
+              const cardList = res.cards.length > 0
+                ? res.cards.map(c => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1)"><strong>${c.name}</strong> <span style="color:var(--text-secondary);font-size:12px">(${c.type})</span></div>`).join('')
+                : '<div style="color:var(--text-secondary)">Карт немає</div>';
+              showCenterPanel(`${ICON.eye} Інформатор`, `Карти MAFIA у ${p.name}:`, [{ text: 'OK', action: () => hideCenterPanel() }], `<div style="margin:10px 0;text-align:left">${cardList}</div>`);
+            }
+            if (res && res.type === 'wiretap_result') {
+              const cardList = res.cards && res.cards.length > 0
+                ? res.cards.map(c => `<strong>${c.name}</strong> (${c.type})`).join(', ')
+                : 'немає';
+              const helperList = res.helpers && res.helpers.length > 0
+                ? res.helpers.map(h => `<strong>${h.name}</strong>`).join(', ')
+                : 'немає';
+              const info = `<div style="margin:10px 0;text-align:left;line-height:1.8">
+                <div>${ICON.money} Гроші: <strong>${res.money}$</strong></div>
+                <div>${ICON.cards} Карти: ${cardList}</div>
+                <div>${ICON.shield} Помічники: ${helperList}</div>
+              </div>`;
+              showCenterPanel(`${ICON.eye} Прослуховування`, `Інформація про ${p.name}:`, [{ text: 'OK', action: () => hideCenterPanel() }], info);
+            }
           }
         });
       } : null,
@@ -3456,88 +3528,169 @@ let musicNodes = null;
 function startAmbientMusic() {
   if (musicPlaying || !audioCtx) return;
   ensureAudio();
+  const t = audioCtx.currentTime;
   const master = audioCtx.createGain();
-  master.gain.setValueAtTime(0, audioCtx.currentTime);
-  master.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 2);
+  master.gain.setValueAtTime(0, t);
+  master.gain.linearRampToValueAtTime(0.05, t + 3);
   master.connect(audioCtx.destination);
 
-  // Bass drone
+  // --- Deep bass with slow LFO vibrato ---
   const bass = audioCtx.createOscillator();
   bass.type = 'sine';
   bass.frequency.value = 55;
   const bassGain = audioCtx.createGain();
-  bassGain.gain.value = 0.5;
+  bassGain.gain.value = 0.4;
+  const bassLfo = audioCtx.createOscillator();
+  bassLfo.type = 'sine';
+  bassLfo.frequency.value = 0.15;
+  const bassLfoGain = audioCtx.createGain();
+  bassLfoGain.gain.value = 2;
+  bassLfo.connect(bassLfoGain);
+  bassLfoGain.connect(bass.frequency);
+  bassLfo.start();
+  // Sub-bass layer
+  const sub = audioCtx.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.value = 27.5;
+  const subGain = audioCtx.createGain();
+  subGain.gain.value = 0.25;
+  sub.connect(subGain);
+  subGain.connect(master);
+  sub.start();
   bass.connect(bassGain);
   bassGain.connect(master);
   bass.start();
 
-  // Pad chord (Am)
+  // --- String-like pad with filter sweep ---
   const chords = [
-    [220, 261.6, 329.6], // Am
-    [196, 246.9, 293.7], // Dm(ish)
-    [164.8, 196, 246.9], // Em(ish)
-    [220, 261.6, 329.6]  // Am
+    [220, 261.6, 329.6, 440],    // Am
+    [174.6, 220, 261.6, 349.2],  // Dm/F
+    [164.8, 207.7, 246.9, 329.6],// E7
+    [220, 261.6, 329.6, 440],    // Am
+    [196, 246.9, 293.7, 392],    // G
+    [174.6, 220, 261.6, 349.2],  // Dm/F
+    [164.8, 207.7, 311.1, 415.3],// E7(#5)
+    [220, 261.6, 329.6, 440]     // Am
   ];
   let chordIdx = 0;
   const padOscs = [];
-  for (let i = 0; i < 3; i++) {
-    const osc = audioCtx.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.value = chords[0][i];
+  const padFilters = [];
+  for (let i = 0; i < 4; i++) {
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.value = chords[0][i];
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.value = chords[0][i] * 1.003; // slight detune for warmth
     const g = audioCtx.createGain();
-    g.gain.value = 0.15;
+    g.gain.value = 0.03;
     const filt = audioCtx.createBiquadFilter();
     filt.type = 'lowpass';
-    filt.frequency.value = 400;
-    osc.connect(filt);
+    filt.frequency.value = 300;
+    filt.Q.value = 1.5;
+    osc1.connect(filt);
+    osc2.connect(filt);
     filt.connect(g);
     g.connect(master);
-    osc.start();
-    padOscs.push(osc);
+    osc1.start();
+    osc2.start();
+    padOscs.push(osc1, osc2);
+    padFilters.push(filt);
   }
 
-  // Chord progression interval
+  // Filter sweep LFO for pads
+  const padSweepLfo = audioCtx.createOscillator();
+  padSweepLfo.type = 'sine';
+  padSweepLfo.frequency.value = 0.08;
+  const padSweepGain = audioCtx.createGain();
+  padSweepGain.gain.value = 200;
+  padSweepLfo.connect(padSweepGain);
+  padFilters.forEach(f => padSweepGain.connect(f.frequency));
+  padSweepLfo.start();
+
+  // Chord progression — slower, cinematic
   const chordInterval = setInterval(() => {
     chordIdx = (chordIdx + 1) % chords.length;
-    padOscs.forEach((osc, i) => {
-      osc.frequency.linearRampToValueAtTime(chords[chordIdx][i], audioCtx.currentTime + 2);
-    });
-  }, 8000);
+    for (let i = 0; i < 4; i++) {
+      const freq = chords[chordIdx][i];
+      padOscs[i * 2].frequency.linearRampToValueAtTime(freq, audioCtx.currentTime + 3);
+      padOscs[i * 2 + 1].frequency.linearRampToValueAtTime(freq * 1.003, audioCtx.currentTime + 3);
+    }
+    // Bass follows root
+    bass.frequency.linearRampToValueAtTime(chords[chordIdx][0] / 4, audioCtx.currentTime + 2);
+  }, 6000);
 
-  // Heartbeat rhythm
-  const heartbeatInterval = setInterval(() => {
+  // --- Piano-like plucks (random arpeggiated notes) ---
+  const pianoNotes = [220, 261.6, 293.7, 329.6, 349.2, 392, 440, 523.3];
+  const pianoInterval = setInterval(() => {
     try {
-      const bufLen = audioCtx.sampleRate * 0.1;
+      if (Math.random() > 0.6) return; // skip some beats for breathing room
+      const freq = pianoNotes[Math.floor(Math.random() * pianoNotes.length)];
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      // Harmonic overtone
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.value = freq * 2;
+      const g = audioCtx.createGain();
+      const now = audioCtx.currentTime;
+      g.gain.setValueAtTime(0.06, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+      const g2 = audioCtx.createGain();
+      g2.gain.setValueAtTime(0.015, now);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      const filt = audioCtx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.setValueAtTime(2000, now);
+      filt.frequency.exponentialRampToValueAtTime(400, now + 2);
+      osc.connect(filt);
+      osc2.connect(g2);
+      filt.connect(g);
+      g.connect(master);
+      g2.connect(master);
+      osc.start(now);
+      osc2.start(now);
+      osc.stop(now + 3);
+      osc2.stop(now + 1.5);
+    } catch(e) {}
+  }, 2500);
+
+  // --- Soft tick rhythm (like a distant clock) ---
+  const tickInterval = setInterval(() => {
+    try {
+      const bufLen = audioCtx.sampleRate * 0.02;
       const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
       const d = buf.getChannelData(0);
-      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.004));
       const src = audioCtx.createBufferSource();
       src.buffer = buf;
       const g = audioCtx.createGain();
-      g.gain.value = 0.08;
+      g.gain.value = 0.015;
       const filt = audioCtx.createBiquadFilter();
-      filt.type = 'lowpass';
-      filt.frequency.value = 100;
+      filt.type = 'bandpass';
+      filt.frequency.value = 800;
+      filt.Q.value = 5;
       src.connect(filt);
       filt.connect(g);
       g.connect(master);
       src.start();
     } catch(e) {}
-  }, 2000);
+  }, 3000);
 
   musicPlaying = true;
-  musicNodes = { master, bass, bassGain, padOscs, chordInterval, heartbeatInterval };
+  musicNodes = { master, bass, bassGain, sub, subGain, bassLfo, padOscs, padFilters, padSweepLfo, chordInterval, pianoInterval, tickInterval };
 }
 
 function stopAmbientMusic() {
   if (!musicPlaying || !musicNodes) return;
-  const { master, bass, padOscs, chordInterval, heartbeatInterval } = musicNodes;
+  const { master, bass, sub, bassLfo, padOscs, padSweepLfo, chordInterval, pianoInterval, tickInterval } = musicNodes;
   master.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
   clearInterval(chordInterval);
-  clearInterval(heartbeatInterval);
+  clearInterval(pianoInterval);
+  clearInterval(tickInterval);
   setTimeout(() => {
-    try { bass.stop(); } catch(e) {}
-    padOscs.forEach(o => { try { o.stop(); } catch(e) {} });
+    [bass, sub, bassLfo, padSweepLfo, ...padOscs].forEach(o => { try { o.stop(); } catch(e) {} });
   }, 2500);
   musicPlaying = false;
   musicNodes = null;
@@ -3569,8 +3722,10 @@ function showEnhancedVictoryScreen(state) {
   const overlay = document.getElementById('victory-overlay');
   document.getElementById('victory-name').textContent = winner.name;
 
-  // Build stats for all players, ranked
+  // Build stats for all players, ranked — winner always first
   const ranked = [...state.players].sort((a, b) => {
+    if (a.id === winner.id) return -1;
+    if (b.id === winner.id) return 1;
     if (a.alive !== b.alive) return b.alive ? 1 : -1;
     let aWealth = a.money + (a.businesses || []).length * 2000;
     let bWealth = b.money + (b.businesses || []).length * 2000;
