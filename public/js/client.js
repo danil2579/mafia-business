@@ -1694,7 +1694,7 @@ function showCardDrawnEffect(data) {
     cardContent = `
       <div class="cde-card cde-card-event">
         <div class="cde-card-front">
-          <div class="cde-card-icon">${SECTOR_ICONS.EVENT}</div>
+          <div class="cde-card-icon">${ICON.explosion}</div>
           <div class="cde-card-type">ПОДІЯ</div>
           <div class="cde-card-name">${data.cardName || ''}</div>
           <div class="cde-card-desc">${data.cardDescription || ''}</div>
