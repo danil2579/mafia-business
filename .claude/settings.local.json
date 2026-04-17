@@ -3,7 +3,11 @@
     "allow": [
       "Bash(ngrok http:*)",
       "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); print\\(data['tunnels'][0]['public_url']\\)\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep -n *)",
+      "Bash(node -e \"require\\('./public/js/client.js'\\)\")",
+      "Bash(node -c server.js)",
+      "Bash(node -c game/GameEngine.js)"
     ]
   }
 }
