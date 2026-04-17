@@ -1093,12 +1093,24 @@ io.on('connection', (socket) => {
           broadcastEvent(roomId, 'attackOutcome', result);
         }
         break;
-      case 'choose_kill_helper':
-        result = game.executeChooseKillHelper(data.attackerId, data.targetId, data.helperIndex);
+      case 'choose_kill_helper': {
+        // Anti-cheat: take attacker/target from server state, not from client.
+        // Only the attacker is allowed to pick which helper to kill.
+        const action = game.pendingAction;
+        if (!action || action.type !== 'choose_kill_helper') {
+          result = { error: 'Немає активної атаки.' };
+          break;
+        }
+        if (action.attackerId !== socket.id) {
+          result = { error: 'Це не ваша атака.' };
+          break;
+        }
+        result = game.executeChooseKillHelper(action.attackerId, action.targetId, data.helperIndex);
         if (result && result.type) {
           broadcastEvent(roomId, 'attackOutcome', result);
         }
         break;
+      }
       case 'choose_lose_helper':
         if (game.pendingAction && game.pendingAction.type === 'choose_lose_helper') {
           const player = game.getPlayer(socket.id);
@@ -1449,7 +1461,14 @@ io.on('connection', (socket) => {
   });
 
   // ===== CHEAT/DEBUG HANDLERS =====
+  // All cheat_* handlers are gated behind the ENABLE_CHEATS env var.
+  // In production (Railway) this is unset, so these no-op.
+  // For local dev, run with: ENABLE_CHEATS=1 node server.js
+  const cheatsEnabled = process.env.ENABLE_CHEATS === '1';
+  const denyCheat = (cb) => cb && cb({ error: 'Cheats disabled on this server.' });
+
   socket.on('cheat_addCard', (data, cb) => {
+    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1469,6 +1488,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_addHelper', (data, cb) => {
+    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1488,6 +1508,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_setMoney', (data, cb) => {
+    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1502,6 +1523,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_teleport', (data, cb) => {
+    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1515,6 +1537,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_addHelperToPlayer', (data, cb) => {
+    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1532,6 +1555,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_placeBomb', (data, cb) => {
+    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1542,7 +1566,9 @@ io.on('connection', (socket) => {
     } catch(e) { cb({ error: e.message }); }
   });
 
-  // CHAT MESSAGE
+  // CHAT MESSAGE — rate-limited to prevent spam / flood abuse
+  // Per-socket sliding window: at most 3 messages per 2 seconds.
+  const chatRateWindow = [];
   socket.on('chatMessage', ({ message }, cb) => {
     const roomId = playerRooms.get(socket.id);
     const game = rooms.get(roomId);
@@ -1551,6 +1577,13 @@ io.on('connection', (socket) => {
     if (!player) return;
     const trimmed = message.trim().slice(0, 200);
     if (!trimmed) return;
+    const now = Date.now();
+    while (chatRateWindow.length && now - chatRateWindow[0] > 2000) chatRateWindow.shift();
+    if (chatRateWindow.length >= 3) {
+      if (cb) cb({ error: 'Занадто швидко, зачекайте.' });
+      return;
+    }
+    chatRateWindow.push(now);
     const idx = game.players.indexOf(player);
     const msg = {
       playerId: socket.id,
@@ -1558,7 +1591,7 @@ io.on('connection', (socket) => {
       playerColor: player.character?.color || '#888',
       playerIndex: idx,
       message: trimmed,
-      timestamp: Date.now()
+      timestamp: now
     };
     if (!chatHistory.has(roomId)) chatHistory.set(roomId, []);
     const history = chatHistory.get(roomId);
