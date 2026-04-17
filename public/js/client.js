@@ -4054,6 +4054,11 @@ async function loadPublicRooms() {
 }
 
 // ===== CHEAT/DEBUG PANEL =====
+// Server tells us whether cheats are enabled. On production this is false,
+// so we never bind the backtick shortcut and the panel is unreachable.
+let _cheatsEnabled = false;
+socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnabled); });
+
 (function initCheatPanel() {
   const CHEAT_CARDS = [
     { id: 'sniper', name: 'Снайпер', type: 'attack' },
@@ -4272,8 +4277,9 @@ async function loadPublicRooms() {
     });
   };
 
-  // Keyboard shortcut: backtick toggles cheat panel
+  // Keyboard shortcut: backtick toggles cheat panel (only if server allows cheats)
   document.addEventListener('keydown', (e) => {
+    if (!_cheatsEnabled) return;
     if (e.key === '`' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       // Don't toggle if typing in an input
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;

@@ -825,6 +825,12 @@ function resetTurnTimer(roomId) {
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
+  // Tell the client whether cheat handlers are enabled on this server.
+  // Client uses this to hide the cheat panel trigger in production.
+  socket.emit('serverConfig', {
+    cheatsEnabled: process.env.ENABLE_CHEATS === '1'
+  });
+
   // CREATE ROOM
   socket.on('createRoom', ({ playerName, characterId }, cb) => {
     const roomId = generateRoomId();
