@@ -1353,6 +1353,39 @@ class GameEngine {
     return { type: 'choose_hidden_helper', cardCount: drawnHelpers.length };
   }
 
+  // Resolves the double_agent blind pick: player picks one of the target's
+  // helpers face-down. If the player already had max helpers, the card
+  // becomes a swap — their first (oldest) helper is released to the deck.
+  executeChooseStolenHelper(playerId, helperIndex) {
+    const action = this.pendingAction;
+    if (!action || action.type !== 'choose_stolen_helper') {
+      return { error: 'Немає активного вибору.' };
+    }
+    if (action.playerId !== playerId) return { error: 'Не ваш вибір.' };
+    const player = this.getPlayer(playerId);
+    const target = this.getPlayer(action.targetId);
+    if (!player || !target) return { error: 'Гравця не знайдено.' };
+    if (helperIndex < 0 || helperIndex >= target.helpers.length) {
+      return { error: 'Невірний вибір.' };
+    }
+
+    const stolen = target.helpers.splice(helperIndex, 1)[0];
+    let released = null;
+    if (action.isSwap && player.helpers.length > 0) {
+      released = player.helpers.shift();
+      this.returnHelperToDeck(released);
+    }
+    player.helpers.push(stolen);
+    this.pendingAction = null;
+
+    if (released) {
+      this.addLog(`${player.name} віддав ${released.name} і переманив ${stolen.name} від ${target.name}!`);
+      return { type: 'double_agent_swap', stolen: stolen.name, released: released.name, helperId: stolen.id };
+    }
+    this.addLog(`${player.name} переманив ${stolen.name} від ${target.name}!`);
+    return { type: 'double_agent_used', helper: stolen.name, helperId: stolen.id };
+  }
+
   executeChooseHiddenHelper(playerId, cardIndex) {
     const player = this.getPlayer(playerId);
     if (!this.pendingAction || this.pendingAction.type !== 'choose_hidden_helper') {
@@ -1632,15 +1665,23 @@ class GameEngine {
         this.addLog(`${player.name} під захистом свідків на 2 ходи!`);
         return { type: 'witness_protection_active' };
 
-      case 'double_agent':
+      case 'double_agent': {
         if (!target) return { error: 'Оберіть ціль.' };
         if (target.helpers.length === 0) return { error: 'У гравця немає помічників.' };
-        const respect = this.getRespectData(player.respectLevel);
-        if (player.helpers.length >= respect.maxHelpers) return { error: 'У вас максимум помічників.' };
-        const stolenHelper = target.helpers.pop();
-        player.helpers.push(stolenHelper);
-        this.addLog(`${player.name} переманив ${stolenHelper.name} від ${target.name}!`);
-        return { type: 'double_agent_used', helper: stolenHelper.name };
+        const daRespect = this.getRespectData(player.respectLevel);
+        // If player already has max helpers, the steal turns into a swap:
+        // they will release their first (oldest) helper to make room.
+        const isSwap = player.helpers.length >= daRespect.maxHelpers;
+        this.pendingAction = {
+          type: 'choose_stolen_helper',
+          playerId: player.id,
+          targetId: target.id,
+          helperCount: target.helpers.length,
+          isSwap
+        };
+        this.addLog(`${player.name} закидає подвійного агента до ${target.name}!`);
+        return { type: 'choose_stolen_helper', helperCount: target.helpers.length, isSwap };
+      }
 
       case 'insurance':
         // Refund half of last rent paid this turn

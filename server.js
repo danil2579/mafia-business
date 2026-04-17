@@ -721,6 +721,31 @@ function armHumanPendingActionTimeout(roomId, game) {
     return;
   }
 
+  // choose_stolen_helper: human double_agent player has limited time to pick
+  if (action.type === 'choose_stolen_helper' && action.playerId) {
+    const picker = game.getPlayer(action.playerId);
+    if (!picker || picker.isBot) return;
+    const ms = picker.disconnected ? 2500 : 20000;
+    const timer = setTimeout(() => {
+      pendingActionTimers.delete(roomId);
+      if (!game.pendingAction || game.pendingAction !== action) return;
+      try {
+        const target = game.getPlayer(action.targetId);
+        if (target && target.helpers.length > 0) {
+          game.addLog(`${picker.name} не обрав — агент повернувся ні з чим.`);
+          game.executeChooseStolenHelper(action.playerId, 0);
+        } else {
+          game.pendingAction = null;
+        }
+        broadcastState(roomId);
+      } catch (err) {
+        console.error('choose_stolen_helper timeout error:', err.message, err.stack);
+      }
+    }, ms);
+    pendingActionTimers.set(roomId, { timer, action });
+    return;
+  }
+
   // choose_kill_helper: human attacker has limited time to pick a helper
   if (action.type === 'choose_kill_helper' && action.attackerId) {
     const attacker = game.getPlayer(action.attackerId);
@@ -823,6 +848,25 @@ function handleBotPendingParticipation(roomId, game) {
         game.executeAllianceOffer(action.toId, true); // Bots accept alliances
         broadcastState(roomId);
       }, 2000);
+    }
+  }
+
+  // Bot auto-picks a stolen helper when it played double_agent
+  if (action.type === 'choose_stolen_helper' && action.playerId) {
+    const picker = game.getPlayer(action.playerId);
+    if (picker && picker.isBot) {
+      setTimeout(() => {
+        if (!game.pendingAction || game.pendingAction.type !== 'choose_stolen_helper') return;
+        const target = game.getPlayer(action.targetId);
+        const count = target ? target.helpers.length : 0;
+        if (count > 0) {
+          const idx = Math.floor(Math.random() * count);
+          game.executeChooseStolenHelper(action.playerId, idx);
+        } else {
+          game.pendingAction = null;
+        }
+        broadcastState(roomId);
+      }, 1200);
     }
   }
 
@@ -1185,6 +1229,9 @@ io.on('connection', (socket) => {
         break;
       case 'choose_hidden_helper':
         result = game.executeChooseHiddenHelper(socket.id, data.cardIndex);
+        break;
+      case 'choose_stolen_helper':
+        result = game.executeChooseStolenHelper(socket.id, data.helperIndex);
         break;
       case 'decline_hire':
         game.pendingAction = null;

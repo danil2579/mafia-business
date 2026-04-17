@@ -1637,6 +1637,88 @@ function showHiddenHelperChoice(cardCount) {
   }
 }
 
+// ===== DOUBLE AGENT: blind pick of a helper to steal =====
+function showStolenHelperChoice(helperCount, isSwap, targetName) {
+  hideCenterPanel();
+  const overlay = document.createElement('div');
+  overlay.className = 'hidden-helper-overlay active';
+  overlay.innerHTML = `
+    <div class="hh-backdrop"></div>
+    <div class="hh-content">
+      <div class="hh-title" style="color:#b59c4e">ПОДВІЙНИЙ АГЕНТ</div>
+      <div class="hh-subtitle">${isSwap ? 'Ваш перший помічник піде у відставку. ' : ''}Оберіть помічника ${targetName || 'цілі'} наосліп</div>
+      <div class="hh-cards" id="sh-cards"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const cardsContainer = overlay.querySelector('#sh-cards');
+  for (let i = 0; i < helperCount; i++) {
+    const card = document.createElement('div');
+    card.className = 'hh-card';
+    card.dataset.index = i;
+    card.innerHTML = `
+      <div class="hh-card-inner">
+        <div class="hh-card-back">
+          <div class="hh-card-back-icon">?</div>
+          <div class="hh-card-back-label">Агент</div>
+        </div>
+        <div class="hh-card-front">
+          <div class="hh-card-front-icon">&#9733;</div>
+          <div class="hh-card-front-name"></div>
+          <div class="hh-card-front-desc"></div>
+        </div>
+      </div>
+    `;
+    card.style.animationDelay = (i * 0.15) + 's';
+    card.addEventListener('click', () => {
+      if (card.classList.contains('hh-chosen') || card.classList.contains('hh-rejected')) return;
+      SFX.cardFlip();
+      cardRevealActive = true;
+      cardsContainer.querySelectorAll('.hh-card').forEach(c => {
+        if (c !== card) c.classList.add('hh-rejected');
+      });
+      card.classList.add('hh-chosen');
+      socket.emit('resolveAction', { actionType: 'choose_stolen_helper', data: { helperIndex: i } }, (res) => {
+        if (res && res.error) {
+          cardRevealActive = false;
+          handleResult(res);
+          overlay.classList.remove('active');
+          setTimeout(() => overlay.remove(), 400);
+          return;
+        }
+        const helperName = res && (res.helper || res.stolen);
+        const helperId = res && res.helperId;
+        if (helperName) {
+          const iconEl = card.querySelector('.hh-card-front-icon');
+          const front = card.querySelector('.hh-card-front-name');
+          const desc = card.querySelector('.hh-card-front-desc');
+          if (helperId && HELPER_PORTRAITS[helperId]) {
+            iconEl.innerHTML = HELPER_PORTRAITS[helperId];
+            iconEl.classList.add('hh-has-portrait');
+          }
+          front.textContent = helperName;
+          desc.textContent = res.released ? `Ви відпустили: ${res.released}` : 'Перейшов до вас';
+          card.classList.add('hh-flipped');
+          SFX.helperReveal();
+          setTimeout(() => {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.remove(), 400);
+            cardRevealActive = false;
+            showCardReveal('event', 'ПЕРЕМАНЕНО АГЕНТА', helperName,
+              res.released ? `В обмін на ${res.released}` : 'Агент працює на вас', null);
+          }, 1200);
+        } else {
+          cardRevealActive = false;
+          overlay.classList.remove('active');
+          setTimeout(() => overlay.remove(), 400);
+        }
+      });
+    });
+    cardsContainer.appendChild(card);
+  }
+}
+
 // ===== KILL HELPER CARD SELECTION (BAR-style flip) =====
 function showKillHelperChoice(targetName, helpers, onChoose) {
   hideCenterPanel();
@@ -2793,6 +2875,13 @@ function handlePendingAction(state) {
     case 'choose_hidden_helper':
       showHiddenHelperChoice(action.cardCount || 3);
       break;
+
+    case 'choose_stolen_helper': {
+      if (action.playerId !== myId) break; // only the card player sees the pick
+      const tgt = state.players.find(p => p.id === action.targetId);
+      showStolenHelperChoice(action.helperCount || 1, !!action.isSwap, tgt ? tgt.name : '');
+      break;
+    }
 
     case 'hire_another':
       showCenterPanel('Найняти ще?', 'Ви можете найняти ще одного помічника (1000$).', [
