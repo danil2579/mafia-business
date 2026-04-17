@@ -3879,15 +3879,6 @@ function showAllianceUI(targetPlayer) {
   });
 })();
 
-// ===== ADD INTERACTION BUTTONS TO PLAYER PANELS =====
-// Override renderPlayerPanels to add trade/alliance buttons
-const _origRenderPlayerPanels = renderPlayerPanels;
-// Note: We modify behavior in the existing function instead
-
-// ===== HANDLE TRADE/ALLIANCE PENDING ACTIONS =====
-// Add handler for trade_offer and alliance_offer in handlePendingAction
-const _origHandlePendingAction = handlePendingAction;
-
 // ===== INIT NEW FEATURES =====
 document.addEventListener('DOMContentLoaded', () => {
   // If TV or Phone mode, hide default lobby immediately
@@ -4295,7 +4286,6 @@ async function loadPublicRooms() {
 // ===== UTILITY =====
 function handleResult(res) {
   if (res && res.error) {
-    console.warn(res.error);
     showEventDisplay(`<p style="color:var(--red-light)">${res.error}</p>`, 2000);
   }
 }

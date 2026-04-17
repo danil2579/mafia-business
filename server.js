@@ -57,6 +57,39 @@ function generateRoomId() {
   return id;
 }
 
+// Centralized room cleanup — removes the room and all associated timers/state
+// Must be used instead of raw rooms.delete(roomId) to avoid memory leaks.
+function cleanupRoom(roomId) {
+  if (!roomId) return;
+  // Clear timers
+  if (turnTimers.has(roomId)) {
+    const t = turnTimers.get(roomId);
+    if (t && t.timer) clearInterval(t.timer);
+    turnTimers.delete(roomId);
+  }
+  if (botTurnTimers.has(roomId)) {
+    clearTimeout(botTurnTimers.get(roomId));
+    botTurnTimers.delete(roomId);
+  }
+  if (auctionTimers.has(roomId)) {
+    clearTimeout(auctionTimers.get(roomId));
+    auctionTimers.delete(roomId);
+  }
+  // Clear disconnect grace-period timers scoped to this room
+  for (const [key, dc] of disconnectedPlayers.entries()) {
+    if (key.startsWith(roomId + ':')) {
+      if (dc && dc.timer) clearTimeout(dc.timer);
+      disconnectedPlayers.delete(key);
+    }
+  }
+  // Drop per-room state maps
+  chatHistory.delete(roomId);
+  botCounters.delete(roomId);
+  tvSockets.delete(roomId);
+  // Finally remove the game itself
+  rooms.delete(roomId);
+}
+
 function scheduleOrderRolls(roomId) {
   const game = rooms.get(roomId);
   if (!game || game.phase !== 'rolling_order') return;
@@ -1386,7 +1419,7 @@ io.on('connection', (socket) => {
         game.winner = alive[0];
         game.addLog(`${alive[0].name} переміг!`);
       }
-      if (alive.length === 0) rooms.delete(roomId);
+      if (alive.length === 0) cleanupRoom(roomId);
     }
     playerRooms.delete(socket.id);
     socket.leave(roomId);
@@ -1407,8 +1440,7 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('gameRestarted');
 
     // Clean up the room — players will rejoin via reload
-    clearTurnTimer(roomId);
-    rooms.delete(roomId);
+    cleanupRoom(roomId);
     // Clear all player-room mappings for this room
     for (const [sid, rid] of playerRooms.entries()) {
       if (rid === roomId) playerRooms.delete(sid);
@@ -1677,7 +1709,10 @@ io.on('connection', (socket) => {
                 game.winner = alive[0];
                 game.addLog(`${alive[0].name} переміг!`);
               }
-              if (alive.length === 0) rooms.delete(roomId);
+              if (alive.length === 0) {
+                cleanupRoom(roomId);
+                return; // room gone, skip broadcast
+              }
               broadcastState(roomId);
             }
           }, RECONNECT_GRACE * 1000);
@@ -1704,8 +1739,9 @@ io.on('connection', (socket) => {
             game.phase = 'finished';
             game.winner = alive[0];
           }
-          if (alive.length === 0) rooms.delete(roomId);
+          if (alive.length === 0) cleanupRoom(roomId);
         }
+        // broadcastState is safe even if the room was just cleaned up
         broadcastState(roomId);
       }
       playerRooms.delete(socket.id);
