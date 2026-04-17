@@ -429,6 +429,90 @@ const FX = {
   }
 };
 
+// Dispatches visual feedback for a successfully played MAFIA card.
+// Called from the playMafiaCard callback on the client: if the server
+// returned an error we fall through to the existing handleResult,
+// otherwise we map the result.type → burst / toast / moneyFlow.
+function showCardPlayFX(cardId, res) {
+  if (!res || res.error) return;
+  const myPanel = () => document.querySelector(`[data-player-id="${myId}"]`) || document.querySelector('.player-panel.me');
+  switch (cardId) {
+    case 'tax_collector':
+      FX.burst({ icon: '💰', title: 'ЗБИРАЧ ДАНИНИ',
+        subtitle: res.amount ? `Зібрано ${res.amount}$` : 'Усі платять',
+        color: '#f1c40f', duration: 2200, sound: () => SFX.payRent() });
+      break;
+    case 'sabotage':
+      FX.burst({ icon: '💥', title: 'САБОТАЖ',
+        subtitle: 'Вплив знищено', color: '#e67e22', duration: 2000,
+        sound: () => SFX.attack() });
+      break;
+    case 'blackmail':
+      FX.burst({ icon: '✉', title: 'ШАНТАЖ',
+        subtitle: res.amount ? `Здобуто ${res.amount}$` : 'Жертва заплатила',
+        color: '#9b59b6', duration: 2200, sound: () => SFX.payRent() });
+      break;
+    case 'rumors':
+      FX.toast('🗣', 'Чутки поширено — -1 поваги цілі', '#b59c4e', 2400);
+      break;
+    case 'kompromat':
+      FX.burst({ icon: '📁', title: 'КОМПРОМАТ',
+        subtitle: "Ціль у в'язниці на 2 ходи",
+        color: '#c0392b', duration: 2200, sound: () => SFX.prisonDoor() });
+      break;
+    case 'bomb':
+      FX.toast('💣', 'Бомбу встановлено на поточному секторі', '#e74c3c', 2400);
+      break;
+    case 'lawyer':
+      FX.toast('⚖', "Адвокат — ви на волі!", '#c9a84c', 2200);
+      break;
+    case 'robbery':
+      FX.burst({ icon: '🎯', title: 'ПОГРАБУВАННЯ',
+        subtitle: 'Власник заплатив вам', color: '#e67e22', duration: 2000,
+        sound: () => SFX.payRent() });
+      break;
+    case 'raider':
+      FX.burst({ icon: '🏚', title: 'РЕЙДЕРСЬКЕ ЗАХОПЛЕННЯ',
+        subtitle: 'Бізнес ваш', color: '#d35400', duration: 2200 });
+      break;
+    case 'pogrom':
+      FX.burst({ icon: '🔥', title: 'ПОГРОМ',
+        subtitle: 'Бізнес повернувся на ринок', color: '#e74c3c', duration: 2200,
+        sound: () => SFX.attack() });
+      break;
+    case 'corruption':
+      FX.shimmer(myPanel(), '#f1c40f', 1400);
+      FX.toast('🤝', 'Корупція активна на 3 ходи', '#f1c40f', 2400);
+      break;
+    case 'money_laundering':
+      FX.shimmer(myPanel(), '#2ecc71', 1400);
+      FX.toast('💵', 'Подвійний дохід з бізнесів на 1 коло', '#2ecc71', 2400);
+      break;
+    case 'witness_protection':
+      FX.shimmer(myPanel(), '#3498db', 1400);
+      FX.toast('🛡', '2 ходи недоторканності', '#3498db', 2400);
+      break;
+    case 'insurance':
+      FX.toast('🧾', res.amount ? `Повернуто ${res.amount}$` : 'Страховка спрацювала', '#2ecc71', 2400);
+      break;
+    case 'hostile_takeover':
+      FX.burst({ icon: '🏢', title: 'ВОРОЖЕ ПОГЛИНАННЯ',
+        subtitle: res.cost ? `Сплачено ${res.cost}$` : 'Бізнес ваш',
+        color: '#c9a84c', duration: 2400, sound: () => SFX.buy() });
+      break;
+    case 'lucky_shirt':
+      FX.shimmer(myPanel(), '#f1c40f', 1400);
+      FX.toast('🍀', 'Народжений у сорочці — бомба не страшна', '#f1c40f', 2400);
+      break;
+  }
+}
+
+// Shortcut for card handlers: shows FX on success, or the error toast on failure.
+function handleCardResult(cardId, res) {
+  if (res && res.error) return handleResult(res);
+  showCardPlayFX(cardId, res);
+}
+
 // ===== SVG ICONS for businesses =====
 const BIZ_ICONS = {
   kiosk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h3M8 14h5"/><path d="M15 11h2v4h-2z"/></svg>`,
@@ -2501,11 +2585,11 @@ function onMafiaCardClick(card, state) {
   if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
     showTargetSelectionModal(card, state);
   } else if (card.id === 'bomb') {
-    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'bomb' }, (r) => handleCardResult('bomb', r));
   } else if (card.id === 'lawyer') {
-    socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'lawyer' }, (r) => handleCardResult('lawyer', r));
   } else if (card.id === 'raider' || card.id === 'pogrom') {
-    socket.emit('playMafiaCard', { cardId: card.id }, handleResult);
+    socket.emit('playMafiaCard', { cardId: card.id }, (r) => handleCardResult(card.id, r));
   }
 }
 
@@ -3071,6 +3155,7 @@ function showTargetSelectionModal(card, state) {
             handleResult(res);
           } else {
             hideModal();
+            showCardPlayFX(card.id, res);
           }
         });
       } : null,
@@ -4129,7 +4214,7 @@ function onMafiaCardClickExtended(card, state) {
     return;
   }
   if (card.id === 'tax_collector') {
-    socket.emit('playMafiaCard', { cardId: 'tax_collector' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'tax_collector' }, (r) => handleCardResult('tax_collector', r));
     return;
   }
   if (card.id === 'sabotage') {
@@ -4153,27 +4238,28 @@ function onMafiaCardClickExtended(card, state) {
     showCenterPanel('Саботаж', 'Оберіть бізнес для знищення впливу:', othersBiz.map(b => ({
       text: b.text,
       action: () => {
-        socket.emit('playMafiaCard', { cardId: 'sabotage', options: { businessId: b.bizId } }, handleResult);
+        socket.emit('playMafiaCard', { cardId: 'sabotage', options: { businessId: b.bizId } },
+          (r) => handleCardResult('sabotage', r));
         hideCenterPanel();
       }
     })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
     return;
   }
   if (card.id === 'witness_protection') {
-    socket.emit('playMafiaCard', { cardId: 'witness_protection' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'witness_protection' }, (r) => handleCardResult('witness_protection', r));
     return;
   }
   if (card.id === 'insurance') {
-    socket.emit('playMafiaCard', { cardId: 'insurance' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'insurance' }, (r) => handleCardResult('insurance', r));
     return;
   }
   // --- Wave 2 cards ---
   if (card.id === 'corruption') {
-    socket.emit('playMafiaCard', { cardId: 'corruption' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'corruption' }, (r) => handleCardResult('corruption', r));
     return;
   }
   if (card.id === 'money_laundering') {
-    socket.emit('playMafiaCard', { cardId: 'money_laundering' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'money_laundering' }, (r) => handleCardResult('money_laundering', r));
     return;
   }
   if (card.id === 'hostile_takeover') {
@@ -4196,7 +4282,8 @@ function onMafiaCardClickExtended(card, state) {
     showCenterPanel(`${ICON.building} Вороже поглинання`, 'Оберіть бізнес для примусової покупки:', htBiz.map(b => ({
       text: b.text,
       action: () => {
-        socket.emit('playMafiaCard', { cardId: 'hostile_takeover', options: { businessId: b.bizId } }, handleResult);
+        socket.emit('playMafiaCard', { cardId: 'hostile_takeover', options: { businessId: b.bizId } },
+          (r) => handleCardResult('hostile_takeover', r));
         hideCenterPanel();
       }
     })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
@@ -4207,11 +4294,11 @@ function onMafiaCardClickExtended(card, state) {
   if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
     showTargetSelectionModal(card, state);
   } else if (card.id === 'bomb') {
-    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'bomb' }, (r) => handleCardResult('bomb', r));
   } else if (card.id === 'lawyer') {
-    socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
+    socket.emit('playMafiaCard', { cardId: 'lawyer' }, (r) => handleCardResult('lawyer', r));
   } else if (card.id === 'raider' || card.id === 'pogrom') {
-    socket.emit('playMafiaCard', { cardId: card.id }, handleResult);
+    socket.emit('playMafiaCard', { cardId: card.id }, (r) => handleCardResult(card.id, r));
   }
 }
 
