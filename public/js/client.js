@@ -824,9 +824,6 @@ socket.on('attackOutcome', (result) => {
     case 'poison_failed':
       showAttackEffect('fail', 'ОТРУТА НЕ СПРАЦЮВАЛА!', `Кубик: ${result.dice}`, '#9b59b6');
       break;
-    case 'fake_death_triggered':
-      showAttackEffect('ghost', 'ФАЛЬШИВА СМЕРТЬ!', 'Замах провалився!', '#95a5a6');
-      break;
     case 'helper_killed':
       showAttackEffect('skull', `${result.helperName}`, 'Помічника вбито!', '#e74c3c');
       break;
@@ -2567,11 +2564,6 @@ function onMafiaCardClick(card, state) {
     showBombSectorPicker();
   } else if (card.id === 'lawyer') {
     socket.emit('playMafiaCard', { cardId: 'lawyer' }, (r) => handleCardResult('lawyer', r));
-  } else if (card.id === 'confession') {
-    showCenterPanel('Явка з повинною', "Вирушити у в'язницю на 1 хід?", [
-      { text: 'Так', action: () => { socket.emit('playMafiaCard', { cardId: 'confession' }, (r) => handleCardResult('confession', r)); hideCenterPanel(); } },
-      { text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }
-    ]);
   } else if (card.id === 'raider' || card.id === 'pogrom') {
     socket.emit('playMafiaCard', { cardId: card.id }, (r) => handleCardResult(card.id, r));
   }
@@ -3132,28 +3124,7 @@ function showTargetSelectionModal(card, state) {
             handleResult(res);
           } else {
             hideModal();
-            // Show informer/wiretap results
-            if (res && res.type === 'informer_used' && res.cards) {
-              const cardList = res.cards.length > 0
-                ? res.cards.map(c => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1)"><strong>${c.name}</strong> <span style="color:var(--text-secondary);font-size:12px">(${c.type})</span></div>`).join('')
-                : '<div style="color:var(--text-secondary)">Карт немає</div>';
-              showCenterPanel(`${ICON.eye} Інформатор`, `Карти MAFIA у ${p.name}:`, [{ text: 'OK', action: () => hideCenterPanel() }], `<div style="margin:10px 0;text-align:left">${cardList}</div>`);
-            } else if (res && res.type === 'wiretap_result') {
-              const cardList = res.cards && res.cards.length > 0
-                ? res.cards.map(c => `<strong>${c.name}</strong> (${c.type})`).join(', ')
-                : 'немає';
-              const helperList = res.helpers && res.helpers.length > 0
-                ? res.helpers.map(h => `<strong>${h.name}</strong>`).join(', ')
-                : 'немає';
-              const info = `<div style="margin:10px 0;text-align:left;line-height:1.8">
-                <div>${ICON.money} Гроші: <strong>${res.money}$</strong></div>
-                <div>${ICON.cards} Карти: ${cardList}</div>
-                <div>${ICON.shield} Помічники: ${helperList}</div>
-              </div>`;
-              showCenterPanel(`${ICON.eye} Прослуховування`, `Інформація про ${p.name}:`, [{ text: 'OK', action: () => hideCenterPanel() }], info);
-            } else {
-              showCardPlayFX(card.id, res);
-            }
+            showCardPlayFX(card.id, res);
           }
         });
       } : null,
@@ -4218,7 +4189,7 @@ function onMafiaCardClickExtended(card, state) {
   SFX.mafia();
 
   // New cards
-  if (card.id === 'informer' || card.id === 'double_agent' || card.id === 'blackmail') {
+  if (card.id === 'double_agent' || card.id === 'blackmail') {
     showTargetSelectionModal(card, state);
     return;
   }
@@ -4263,14 +4234,6 @@ function onMafiaCardClickExtended(card, state) {
     return;
   }
   // --- Wave 2 cards ---
-  if (card.id === 'wiretap') {
-    showTargetSelectionModal(card, state);
-    return;
-  }
-  if (card.id === 'forgery') {
-    socket.emit('playMafiaCard', { cardId: 'forgery' }, handleResult);
-    return;
-  }
   if (card.id === 'corruption') {
     socket.emit('playMafiaCard', { cardId: 'corruption' }, (r) => handleCardResult('corruption', r));
     return;
@@ -4279,12 +4242,8 @@ function onMafiaCardClickExtended(card, state) {
     socket.emit('playMafiaCard', { cardId: 'money_laundering' }, (r) => handleCardResult('money_laundering', r));
     return;
   }
-  if (card.id === 'fake_death') {
-    socket.emit('playMafiaCard', { cardId: 'fake_death' }, handleResult);
-    return;
-  }
   if (card.id === 'hostile_takeover') {
-    // Show business selection for hostile takeover
+    // Show business selection for hostile takeover (1.5x biz price)
     const htBiz = [];
     for (const p of state.players) {
       if (p.id === myId || !p.alive) continue;
@@ -4292,7 +4251,7 @@ function onMafiaCardClickExtended(card, state) {
         const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
         const biz = dist?.businesses.find(b => b.id === bizId);
         if (biz) {
-          htBiz.push({ text: `${biz.name} (${p.name}) — ${biz.price * 2}$`, bizId });
+          htBiz.push({ text: `${biz.name} (${p.name}) — ${Math.round(biz.price * 1.5)}$`, bizId });
         }
       }
     }
@@ -4318,11 +4277,6 @@ function onMafiaCardClickExtended(card, state) {
     showBombSectorPicker();
   } else if (card.id === 'lawyer') {
     socket.emit('playMafiaCard', { cardId: 'lawyer' }, (r) => handleCardResult('lawyer', r));
-  } else if (card.id === 'confession') {
-    showCenterPanel('Явка з повинною', "Вирушити у в'язницю на 1 хід?", [
-      { text: 'Так', action: () => { socket.emit('playMafiaCard', { cardId: 'confession' }, (r) => handleCardResult('confession', r)); hideCenterPanel(); } },
-      { text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }
-    ]);
   } else if (card.id === 'raider' || card.id === 'pogrom') {
     socket.emit('playMafiaCard', { cardId: card.id }, (r) => handleCardResult(card.id, r));
   }
@@ -4374,7 +4328,6 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'vest', name: 'Бронежилет', type: 'defense' },
     { id: 'killer', name: 'Кілер', type: 'attack' },
     { id: 'poison', name: 'Отрута', type: 'attack' },
-    { id: 'confession', name: 'Явка з повинною', type: 'utility' },
     { id: 'bribe_inmates', name: 'Підкуп співкамерників', type: 'attack' },
     { id: 'rumors', name: 'Розпустити чутки', type: 'utility' },
     { id: 'police_card', name: 'Поліція', type: 'defense' },
@@ -4382,7 +4335,6 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'bomb', name: 'Бомба', type: 'trap' },
     { id: 'lucky_shirt', name: 'Народжений у сорочці', type: 'defense' },
     { id: 'car_bomb', name: 'Авто-бомба', type: 'attack' },
-    { id: 'informer', name: 'Інформатор', type: 'utility' },
     { id: 'tax_collector', name: 'Збирач данини', type: 'economic' },
     { id: 'sabotage', name: 'Саботаж', type: 'economic' },
     { id: 'witness_protection', name: 'Захист свідків', type: 'defense' },
@@ -4390,12 +4342,8 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'insurance', name: 'Страховка', type: 'defense' },
     { id: 'blackmail', name: 'Шантаж', type: 'economic' },
     { id: 'arson', name: 'Підпал', type: 'attack' },
-    { id: 'forgery', name: 'Підробка документів', type: 'economic' },
     { id: 'corruption', name: 'Корупція', type: 'utility' },
-    { id: 'street_fight', name: 'Вулична бійка', type: 'attack' },
     { id: 'money_laundering', name: 'Відмивання грошей', type: 'economic' },
-    { id: 'fake_death', name: 'Інсценування смерті', type: 'defense' },
-    { id: 'wiretap', name: 'Прослуховування', type: 'utility' },
     { id: 'hostile_takeover', name: 'Вороже поглинання', type: 'economic' }
   ];
 
