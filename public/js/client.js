@@ -321,6 +321,114 @@ const SFX = {
   }
 };
 
+// ===== FX: reusable visual effects engine =====
+// Shared helpers so every card play / event gets a polished effect
+// without each site reinventing particles, flying coins, shimmers, etc.
+// Note: .attack-effect-* classes in style.css are reused for burst.
+const FX = {
+  _safe(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s == null ? '' : s);
+    return d.innerHTML;
+  },
+
+  // Centered icon burst: big icon, title, subtitle, particles, shockwave ring.
+  // Great for "this happened!" moments (card played, protected, etc.)
+  burst({ icon = '★', title = '', subtitle = '', color = '#c9a84c', duration = 2400, sound = null } = {}) {
+    const overlay = document.createElement('div');
+    overlay.className = 'attack-effect-overlay fx-burst';
+    overlay.style.setProperty('--effect-color', color);
+    overlay.innerHTML = `
+      <div class="attack-effect-flash"></div>
+      <div class="attack-effect-ring"></div>
+      <div class="attack-effect-icon">${this._safe(icon)}</div>
+      <div class="attack-effect-title">${this._safe(title)}</div>
+      <div class="attack-effect-subtitle">${this._safe(subtitle)}</div>
+    `;
+    const palette = [color, '#ffffff', color + 'aa'];
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'attack-effect-particle';
+      const angle = (Math.PI * 2 * i) / 18 + Math.random() * 0.1;
+      const dist = 70 + Math.random() * 160;
+      p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
+      p.style.left = '50%';
+      p.style.top = '50%';
+      p.style.background = palette[Math.floor(Math.random() * palette.length)];
+      const size = 3 + Math.random() * 5;
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.animationDelay = (Math.random() * 0.3) + 's';
+      overlay.appendChild(p);
+    }
+    document.body.appendChild(overlay);
+    if (typeof sound === 'function') { try { sound(); } catch (e) {} }
+    setTimeout(() => overlay.remove(), duration);
+  },
+
+  // Coins fly between two DOM elements. Useful for rent, robbery, blackmail, tax.
+  moneyFlow(fromEl, toEl, label = '', color = '#2ecc71') {
+    if (!fromEl || !toEl) return;
+    const a = fromEl.getBoundingClientRect();
+    const b = toEl.getBoundingClientRect();
+    const ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+    const bx = b.left + b.width / 2, by = b.top + b.height / 2;
+    const layer = document.createElement('div');
+    layer.className = 'fx-money-layer';
+    for (let i = 0; i < 8; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'fx-coin';
+      coin.textContent = '$';
+      coin.style.left = ax + 'px';
+      coin.style.top = ay + 'px';
+      coin.style.color = color;
+      coin.style.setProperty('--tx', (bx - ax) + 'px');
+      coin.style.setProperty('--ty', (by - ay) + 'px');
+      coin.style.animationDelay = (i * 0.06) + 's';
+      layer.appendChild(coin);
+    }
+    if (label) {
+      const lbl = document.createElement('div');
+      lbl.className = 'fx-money-label';
+      lbl.textContent = label;
+      lbl.style.left = ((ax + bx) / 2) + 'px';
+      lbl.style.top = ((ay + by) / 2 - 24) + 'px';
+      lbl.style.color = color;
+      layer.appendChild(lbl);
+    }
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), 1800);
+    try { SFX.payRent(); } catch (e) {}
+  },
+
+  // Color shimmer sweep across an element — for defenses, buffs.
+  shimmer(el, color = '#f1c40f', duration = 1200) {
+    if (!el) return;
+    el.classList.add('fx-shimmer');
+    el.style.setProperty('--shimmer-color', color);
+    setTimeout(() => {
+      el.classList.remove('fx-shimmer');
+      el.style.removeProperty('--shimmer-color');
+    }, duration);
+  },
+
+  // Small bottom-center toast with icon — subtle announcements that
+  // don't deserve a full burst.
+  toast(icon, text, color = '#c9a84c', duration = 2400) {
+    const t = document.createElement('div');
+    t.className = 'fx-toast';
+    t.style.setProperty('--fx-color', color);
+    t.innerHTML = `<span class="fx-toast-icon">${this._safe(icon)}</span><span class="fx-toast-text">${this._safe(text)}</span>`;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('fx-toast-show'));
+    setTimeout(() => {
+      t.classList.remove('fx-toast-show');
+      setTimeout(() => t.remove(), 350);
+    }, duration);
+  }
+};
+
 // ===== SVG ICONS for businesses =====
 const BIZ_ICONS = {
   kiosk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h3M8 14h5"/><path d="M15 11h2v4h-2z"/></svg>`,

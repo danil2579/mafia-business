@@ -3237,6 +3237,109 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 
 /* ============================================================
+   FX MODULE — shared effect primitives used across card plays
+   (coins flying, shimmer buffs, bottom toasts, …)
+   ============================================================ */
+.fx-money-layer {
+  position: fixed; inset: 0; z-index: 9600; pointer-events: none;
+}
+.fx-coin {
+  position: absolute;
+  font-family: var(--font-display, serif); font-weight: 900; font-size: 28px;
+  text-shadow: 0 0 12px currentColor, 0 2px 4px rgba(0,0,0,0.9);
+  transform: translate(-50%, -50%);
+  animation: fxCoinFly 1.5s cubic-bezier(0.55, 0.1, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+.fx-money-label {
+  position: absolute;
+  font-family: var(--font-display, serif); font-weight: 900;
+  font-size: 24px; letter-spacing: 1px;
+  text-shadow: 0 0 16px currentColor, 0 2px 6px rgba(0,0,0,0.85);
+  transform: translate(-50%, 0);
+  animation: fxCoinLabel 1.6s ease-out forwards;
+}
+@keyframes fxCoinFly {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  85% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--tx) * 0.95), calc(-50% + var(--ty) * 0.95)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.6);
+  }
+}
+@keyframes fxCoinLabel {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
+  20%, 75% { opacity: 1; transform: translate(-50%, -8px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -20px) scale(1); }
+}
+
+/* Shimmer sweep — for defenses, buffs, immunity */
+.fx-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.fx-shimmer::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 35%,
+    var(--shimmer-color, #f1c40f) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  opacity: 0.65;
+  transform: translateX(-100%);
+  animation: fxShimmerSweep 1.2s ease-out forwards;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  border-radius: inherit;
+}
+@keyframes fxShimmerSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Bottom toast — subtle announcement */
+.fx-toast {
+  position: fixed;
+  left: 50%; bottom: 32px;
+  transform: translate(-50%, 16px);
+  padding: 12px 20px;
+  background: rgba(3,4,8,0.94);
+  border: 1px solid var(--fx-color, #c9a84c);
+  border-radius: 999px;
+  color: #fff;
+  font-family: var(--font-accent, sans-serif);
+  font-size: 14px; letter-spacing: 0.5px;
+  display: flex; align-items: center; gap: 10px;
+  opacity: 0;
+  z-index: 9700;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.65),
+              0 0 24px color-mix(in srgb, var(--fx-color, #c9a84c) 30%, transparent);
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fx-toast.fx-toast-show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.fx-toast-icon {
+  color: var(--fx-color, #c9a84c);
+  font-size: 18px; line-height: 1;
+  filter: drop-shadow(0 0 6px var(--fx-color, #c9a84c));
+}
+.fx-toast-text {
+  color: #f5eedb;
+}
+
+/* ============================================================
    ANIMATIONS
    ============================================================ */
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
