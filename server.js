@@ -3,9 +3,17 @@
 // ============================================================
 const express = require('express');
 const http = require('http');
+const crypto = require('crypto');
 const { Server } = require('socket.io');
 const path = require('path');
 const GameEngine = require('./game/GameEngine');
+
+// Generates a random 32-char hex token used to authorise a rejoin.
+// Prevents a bystander from typing someone else's nickname and stealing
+// their seat after they disconnect.
+function generateRejoinToken() {
+  return crypto.randomBytes(16).toString('hex');
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -852,10 +860,11 @@ io.on('connection', (socket) => {
     const roomId = generateRoomId();
     const game = new GameEngine(roomId);
     const player = game.addPlayer(socket.id, cleanName, false, characterId);
+    if (player) player.rejoinToken = generateRejoinToken();
     rooms.set(roomId, game);
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
-    cb({ roomId, playerId: socket.id, player });
+    cb({ roomId, playerId: socket.id, player, rejoinToken: player && player.rejoinToken });
     broadcastState(roomId);
   });
 
@@ -895,10 +904,11 @@ io.on('connection', (socket) => {
 
     const player = game.addPlayer(socket.id, cleanName, false, characterId);
     if (!player) return cb({ error: 'Не вдалося приєднатися.' });
+    player.rejoinToken = generateRejoinToken();
 
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
-    cb({ roomId, playerId: socket.id, player });
+    cb({ roomId, playerId: socket.id, player, rejoinToken: player.rejoinToken });
     broadcastState(roomId);
     broadcastEvent(roomId, 'playerJoined', { name: cleanName, count: game.players.length });
   });
@@ -1699,29 +1709,38 @@ io.on('connection', (socket) => {
   });
 
   // REJOIN ROOM (reconnection)
-  socket.on('rejoinRoom', ({ roomId, playerName }, cb) => {
-    const key = Array.from(disconnectedPlayers.keys()).find(k => {
-      const dc = disconnectedPlayers.get(k);
-      return k.startsWith(roomId + ':') && dc.name === playerName;
-    });
-    if (!key) return cb({ error: 'Не вдалося перепідключитися.' });
-    const dc = disconnectedPlayers.get(key);
+  // Requires a rejoinToken issued at createRoom/joinRoom time. Without a
+  // matching token you cannot take over someone else's seat by typing
+  // their nickname.
+  socket.on('rejoinRoom', ({ roomId, playerName, rejoinToken }, cb) => {
+    if (!rejoinToken || typeof rejoinToken !== 'string') {
+      return cb({ error: 'Немає токена для перепідключення.' });
+    }
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
 
     const player = game.players.find(p => p.name === playerName);
     if (!player) return cb({ error: 'Гравця не знайдено.' });
+    if (!player.rejoinToken || player.rejoinToken !== rejoinToken) {
+      return cb({ error: 'Невірний токен перепідключення.' });
+    }
+
+    // Find disconnect record to clear grace timer (if any)
+    const key = Array.from(disconnectedPlayers.keys()).find(k => {
+      const dc = disconnectedPlayers.get(k);
+      return k.startsWith(roomId + ':') && dc.name === playerName;
+    });
+    if (key) {
+      const dc = disconnectedPlayers.get(key);
+      playerRooms.delete(dc.socketId);
+      clearTimeout(dc.timer);
+      disconnectedPlayers.delete(key);
+    }
 
     // Reassign socket ID
-    const oldId = player.id;
     player.id = socket.id;
     player.alive = true;
     player.disconnected = false;
-
-    // Clean up old mappings
-    playerRooms.delete(dc.socketId);
-    clearTimeout(dc.timer);
-    disconnectedPlayers.delete(key);
 
     // Set up new mappings
     playerRooms.set(socket.id, roomId);

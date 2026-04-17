@@ -27,10 +27,10 @@ const socket = io();
     if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
   };
   socket.on('disconnect', (reason) => {
-    ensureBanner('⚠ З\'єднання втрачено, переподключаюсь…');
+    ensureBanner('⚠ З\'єднання втрачено, перепідключаюсь…');
   });
   socket.io.on('reconnect_attempt', () => {
-    ensureBanner('⚠ Переподключення…');
+    ensureBanner('⚠ Перепідключення…');
   });
   socket.on('connect', () => {
     // Give the server a moment to re-establish room state, then hide banner
@@ -415,6 +415,7 @@ $('#btn-create').addEventListener('click', () => {
     if (res.error) return showError(res.error);
     myId = res.playerId;
     myRoomId = res.roomId;
+    if (res.rejoinToken) sessionStorage.setItem('mafia_rejoinToken', res.rejoinToken);
     showWaiting(res.roomId);
   });
 });
@@ -429,6 +430,7 @@ $('#btn-join').addEventListener('click', () => {
     if (res.error) return showError(res.error);
     myId = res.playerId;
     myRoomId = res.roomId;
+    if (res.rejoinToken) sessionStorage.setItem('mafia_rejoinToken', res.rejoinToken);
     showWaiting(res.roomId);
   });
 });
@@ -3888,8 +3890,9 @@ function showAllianceUI(targetPlayer) {
   socket.on('connect', () => {
     const savedRoom = sessionStorage.getItem('mafia_roomId');
     const savedName = sessionStorage.getItem('mafia_playerName');
-    if (savedRoom && savedName && !myRoomId) {
-      socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName }, (res) => {
+    const savedToken = sessionStorage.getItem('mafia_rejoinToken');
+    if (savedRoom && savedName && savedToken && !myRoomId) {
+      socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName, rejoinToken: savedToken }, (res) => {
         if (res.success) {
           myId = res.playerId;
           myRoomId = res.roomId;
@@ -3897,6 +3900,7 @@ function showAllianceUI(targetPlayer) {
         } else {
           sessionStorage.removeItem('mafia_roomId');
           sessionStorage.removeItem('mafia_playerName');
+          sessionStorage.removeItem('mafia_rejoinToken');
         }
       });
     }
@@ -4697,6 +4701,7 @@ if (isPhoneMode) {
         myRoomId = res.roomId;
         sessionStorage.setItem('mafia_roomId', res.roomId);
         sessionStorage.setItem('mafia_playerName', name);
+        if (res.rejoinToken) sessionStorage.setItem('mafia_rejoinToken', res.rejoinToken);
         // Switch to waiting
         $('#phone-lobby').style.display = 'none';
         $('#phone-waiting').style.display = '';
@@ -4718,14 +4723,16 @@ if (isPhoneMode) {
     socket.on('connect', () => {
       const savedRoom = sessionStorage.getItem('mafia_roomId');
       const savedName = sessionStorage.getItem('mafia_playerName');
-      if (savedRoom && savedName && !myRoomId) {
-        socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName }, (res) => {
+      const savedToken = sessionStorage.getItem('mafia_rejoinToken');
+      if (savedRoom && savedName && savedToken && !myRoomId) {
+        socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName, rejoinToken: savedToken }, (res) => {
           if (res.success) {
             myId = res.playerId;
             myRoomId = res.roomId;
           } else {
             sessionStorage.removeItem('mafia_roomId');
             sessionStorage.removeItem('mafia_playerName');
+            sessionStorage.removeItem('mafia_rejoinToken');
           }
         });
       }
