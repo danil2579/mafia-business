@@ -1123,7 +1123,9 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
    ============================================================ */
 .board-center {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 62%; max-width: 500px; z-index: 20; pointer-events: none;
+  width: min(62%, 500px);
+  min-height: 240px; /* stable vertical size — prevents jumps when panels appear/disappear */
+  z-index: 20; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 
@@ -1134,10 +1136,13 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   border-radius: var(--radius-xl);
   padding: 20px 32px; text-align: center;
   pointer-events: none; margin-bottom: 10px; width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   display: none;
   box-shadow: 0 10px 50px rgba(0,0,0,0.7), 0 0 50px rgba(201,168,76,0.04), inset 0 0 40px rgba(201,168,76,0.01);
   backdrop-filter: blur(16px);
   position: relative; overflow: hidden;
+  transition: opacity 0.2s ease;
 }
 .center-info::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -1178,10 +1183,21 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   border-radius: 20px; padding: 28px;
   text-align: center;
   box-shadow: 0 16px 60px rgba(0,0,0,0.85), 0 0 60px rgba(201,168,76,0.05), inset 0 0 50px rgba(201,168,76,0.015);
-  pointer-events: auto; display: none;
-  animation: centerIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(20px);
-  position: relative; overflow: hidden;
+  /* Overlay-layered over the rest of .board-center so toggling doesn't
+     push sibling controls around. Visibility/opacity transitions replace
+     the old display:none toggle that caused the visible "jumping". */
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.94);
+  width: 100%;
+  max-height: 72vh;
+  overflow: auto;
+  opacity: 0; visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.28s ease,
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.3s;
 }
 .center-panel::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -1191,15 +1207,25 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent 15%, rgba(201,168,76,0.08) 50%, transparent 85%);
 }
-.center-panel.active { display: block; width: 100%; }
+.center-panel.active {
+  opacity: 1; visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
 
-/* Smart center: hide clutter when action panel or card reveal is active */
+/* Smart center: dim (not remove) background controls when a panel or
+   card reveal is active. Because the panel is absolutely positioned and
+   visually covers them, they just need to fade — no layout removal. */
 .board-center:has(.center-panel.active) .board-controls,
 .board-center:has(.center-panel.active) .center-info,
 .board-center:has(.center-panel.active) .event-display,
 .board-center.card-showing .board-controls,
 .board-center.card-showing .center-info,
-.board-center.card-showing .event-display { display: none !important; }
+.board-center.card-showing .event-display {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
 .center-panel h3 {
   color: var(--gold); font-size: 17px; margin-bottom: 12px; letter-spacing: 3px;
   text-shadow: 0 0 20px rgba(201,168,76,0.25);
@@ -1434,12 +1460,24 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .event-display {
   background: rgba(3,4,8,0.96); border: 1px solid rgba(201,168,76,0.12);
   border-radius: var(--radius-lg); padding: 16px 20px; text-align: center;
-  display: none; pointer-events: auto; margin-top: 10px; width: 100%;
-  animation: centerIn 0.3s ease-out;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(201,168,76,0.02);
   backdrop-filter: blur(12px);
+  /* Absolute so its show/hide doesn't shift the rest of .board-center. */
+  position: absolute;
+  left: 50%; top: calc(100% - 8px);
+  transform: translate(-50%, 0) scale(0.96);
+  width: min(100%, 420px);
+  opacity: 0; visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease,
+              transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.28s;
 }
-.event-display.visible { display: block; }
+.event-display.visible {
+  opacity: 1; visibility: visible;
+  transform: translate(-50%, 0) scale(1);
+  pointer-events: auto;
+}
 .event-display h3 { color: var(--gold); font-size: 14px; margin-bottom: 6px; font-family: var(--font-display); letter-spacing: 1.5px; }
 .event-display p { color: var(--text-dim); font-size: 11px; margin: 3px 0; }
 
