@@ -1813,6 +1813,9 @@ function showExplosion(playerName) {
   overlay.appendChild(text);
 
   document.body.appendChild(overlay);
+  // Harder screen shake for the explosion
+  document.body.classList.add('fx-screen-shake-hard');
+  setTimeout(() => document.body.classList.remove('fx-screen-shake-hard'), 520);
   SFX.attack();
   setTimeout(() => overlay.remove(), 3500);
 }
@@ -1826,17 +1829,42 @@ function showKillAnimation(playerName, reason) {
   drip.className = 'kill-blood-drip';
   overlay.appendChild(drip);
 
+  // Gunshot flash — bright white radial, decays fast
+  const flash = document.createElement('div');
+  flash.className = 'kill-gun-flash';
+  overlay.appendChild(flash);
+
   const content = document.createElement('div');
   content.className = 'kill-content';
   content.innerHTML = `
     <div class="kill-skull">☠</div>
     <div class="kill-title">Ліквідовано</div>
-    <div class="kill-name">${playerName}</div>
-    <div class="kill-reason">${reason || 'Вибув з гри'}</div>
+    <div class="kill-name">${escapeHtml(playerName)}</div>
+    <div class="kill-reason">${escapeHtml(reason || 'Вибув з гри')}</div>
   `;
   overlay.appendChild(content);
 
+  // Blood splatter particles — dark red, radiating outward
+  const bloodColors = ['#8a0e0e', '#c41e1e', '#6b0808', '#a51515'];
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement('div');
+    p.className = 'kill-splatter';
+    const angle = (Math.PI * 2 * i) / 22 + Math.random() * 0.15;
+    const dist = 120 + Math.random() * 220;
+    p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
+    p.style.background = bloodColors[Math.floor(Math.random() * bloodColors.length)];
+    const size = 5 + Math.random() * 9;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.animationDelay = (Math.random() * 0.25) + 's';
+    overlay.appendChild(p);
+  }
+
   document.body.appendChild(overlay);
+  // Screen shake: quick 300ms jolt on body
+  document.body.classList.add('fx-screen-shake');
+  setTimeout(() => document.body.classList.remove('fx-screen-shake'), 400);
   SFX.attack();
   setTimeout(() => overlay.remove(), 4500);
 }
@@ -1892,6 +1920,11 @@ function showPrisonEffect(playerName, turns) {
 
   document.body.appendChild(overlay);
   SFX.prisonDoor();
+  // Shake the screen when the bars land (bars drop lasts ~600ms)
+  setTimeout(() => {
+    document.body.classList.add('fx-screen-shake');
+    setTimeout(() => document.body.classList.remove('fx-screen-shake'), 400);
+  }, 550);
   setTimeout(() => overlay.remove(), 4000);
 }
 
