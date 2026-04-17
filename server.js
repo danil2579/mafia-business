@@ -53,6 +53,7 @@ const turnTimers = new Map(); // roomId -> { timer, remaining }
 const disconnectedPlayers = new Map(); // `${roomId}:${playerId}` -> { socketId, name, timer }
 const chatHistory = new Map(); // roomId -> [messages]
 const auctionTimers = new Map(); // roomId -> timeout
+const pendingActionTimers = new Map(); // roomId -> { timer, action }
 const tvSockets = new Map(); // roomId -> Set<socketId> (TV mode displays)
 const BOT_NAMES = ['Бот Вінні', 'Бот Тоні', 'Бот Сальваторе', 'Бот Луїджі', 'Бот Марко', 'Бот Ніко', 'Бот Анджело', 'Бот Ренцо'];
 const TURN_TIME_LIMIT = 60; // seconds
@@ -97,6 +98,11 @@ function cleanupRoom(roomId) {
   if (auctionTimers.has(roomId)) {
     clearTimeout(auctionTimers.get(roomId));
     auctionTimers.delete(roomId);
+  }
+  if (pendingActionTimers.has(roomId)) {
+    const pt = pendingActionTimers.get(roomId);
+    if (pt && pt.timer) clearTimeout(pt.timer);
+    pendingActionTimers.delete(roomId);
   }
   // Clear disconnect grace-period timers scoped to this room
   for (const [key, dc] of disconnectedPlayers.entries()) {
@@ -170,6 +176,9 @@ function broadcastState(roomId) {
       if (game.pendingAction) {
         handleBotPendingParticipation(roomId, game);
       }
+      // Arm timeouts for pending actions whose actor is a human (prevents
+      // the whole table hanging if someone goes AFK during an attack).
+      armHumanPendingActionTimeout(roomId, game);
     }
   } catch (err) {
     console.error('broadcastState error:', err.message, err.stack);
@@ -665,6 +674,76 @@ function resolveBotPendingAction(roomId, game, bot) {
       }
       scheduleBotTurn(roomId, 1000);
     }
+  }
+}
+
+// Auto-resolves attack_reaction / choose_kill_helper if the responsible
+// human player doesn't act in time (or has disconnected). Bots already
+// auto-resolve via handleBotPendingParticipation, so this helper only
+// arms a timer when the responsible actor is a human.
+function armHumanPendingActionTimeout(roomId, game) {
+  const action = game.pendingAction;
+  const existing = pendingActionTimers.get(roomId);
+
+  // No pending action — drop any stale timer
+  if (!action) {
+    if (existing) {
+      clearTimeout(existing.timer);
+      pendingActionTimers.delete(roomId);
+    }
+    return;
+  }
+  // Timer already armed for this exact pending action — leave it alone
+  if (existing && existing.action === action) return;
+  if (existing) clearTimeout(existing.timer);
+
+  // attack_reaction: human target has limited time to react
+  if (action.type === 'attack_reaction' && action.targetId) {
+    const target = game.getPlayer(action.targetId);
+    if (!target || target.isBot) return;
+    // Disconnected targets auto-resolve quickly so the table doesn't hang
+    const ms = target.disconnected
+      ? 2500
+      : (action.timeLimit && action.timeLimit > 1000 ? action.timeLimit : 15000);
+    const timer = setTimeout(() => {
+      pendingActionTimers.delete(roomId);
+      if (!game.pendingAction || game.pendingAction !== action) return;
+      try {
+        game.addLog(`${target.name} не встиг відреагувати — атака проходить.`);
+        const outcome = game.resolveAttackReaction(target.id, 'nothing');
+        if (outcome && outcome.type) broadcastEvent(roomId, 'attackOutcome', outcome);
+        broadcastState(roomId);
+      } catch (err) {
+        console.error('attack_reaction timeout error:', err.message, err.stack);
+      }
+    }, ms);
+    pendingActionTimers.set(roomId, { timer, action });
+    return;
+  }
+
+  // choose_kill_helper: human attacker has limited time to pick a helper
+  if (action.type === 'choose_kill_helper' && action.attackerId) {
+    const attacker = game.getPlayer(action.attackerId);
+    if (!attacker || attacker.isBot) return;
+    const ms = attacker.disconnected ? 2500 : 20000;
+    const timer = setTimeout(() => {
+      pendingActionTimers.delete(roomId);
+      if (!game.pendingAction || game.pendingAction !== action) return;
+      try {
+        const target = game.getPlayer(action.targetId);
+        if (target && target.helpers.length > 0) {
+          game.addLog(`${attacker.name} не вибрав помічника — вбито першого.`);
+          const result = game.executeChooseKillHelper(action.attackerId, action.targetId, 0);
+          if (result && result.type) broadcastEvent(roomId, 'attackOutcome', result);
+        } else {
+          game.pendingAction = null;
+        }
+        broadcastState(roomId);
+      } catch (err) {
+        console.error('choose_kill_helper timeout error:', err.message, err.stack);
+      }
+    }, ms);
+    pendingActionTimers.set(roomId, { timer, action });
   }
 }
 
