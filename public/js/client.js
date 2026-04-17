@@ -3,6 +3,41 @@
 // ============================================================
 const socket = io();
 
+// ===== CONNECTION STATUS INDICATOR =====
+// Shows a persistent banner when the socket drops, removes it on reconnect.
+(function initConnectionIndicator() {
+  let banner = null;
+  const ensureBanner = (text) => {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'connection-banner';
+      banner.style.cssText = [
+        'position:fixed','top:0','left:0','right:0','z-index:99999',
+        'background:#c0392b','color:#fff','text-align:center','padding:8px 12px',
+        'font:600 14px system-ui,sans-serif','letter-spacing:0.3px',
+        'box-shadow:0 2px 8px rgba(0,0,0,0.35)'
+      ].join(';');
+      document.body && document.body.appendChild(banner);
+    } else if (!banner.parentNode) {
+      document.body && document.body.appendChild(banner);
+    }
+    banner.textContent = text;
+  };
+  const removeBanner = () => {
+    if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+  };
+  socket.on('disconnect', (reason) => {
+    ensureBanner('⚠ З\'єднання втрачено, переподключаюсь…');
+  });
+  socket.io.on('reconnect_attempt', () => {
+    ensureBanner('⚠ Переподключення…');
+  });
+  socket.on('connect', () => {
+    // Give the server a moment to re-establish room state, then hide banner
+    setTimeout(removeBanner, 300);
+  });
+})();
+
 let myId = null;
 let myRoomId = null;
 let gameState = null;

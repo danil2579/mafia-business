@@ -57,6 +57,21 @@ function generateRoomId() {
   return id;
 }
 
+// Sanitize a display name coming from the client. Strips HTML-special
+// characters and control chars, collapses whitespace, and caps length so
+// names are always safe to interpolate into innerHTML on the client.
+function sanitizeName(raw) {
+  if (typeof raw !== 'string') return 'Player';
+  const cleaned = raw
+    .replace(/[<>&"'`]/g, '')   // HTML-dangerous chars
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1F\x7F]/g, '') // control chars
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 20);
+  return cleaned || 'Player';
+}
+
 // Centralized room cleanup — removes the room and all associated timers/state
 // Must be used instead of raw rooms.delete(roomId) to avoid memory leaks.
 function cleanupRoom(roomId) {
@@ -833,9 +848,10 @@ io.on('connection', (socket) => {
 
   // CREATE ROOM
   socket.on('createRoom', ({ playerName, characterId }, cb) => {
+    const cleanName = sanitizeName(playerName);
     const roomId = generateRoomId();
     const game = new GameEngine(roomId);
-    const player = game.addPlayer(socket.id, playerName, false, characterId);
+    const player = game.addPlayer(socket.id, cleanName, false, characterId);
     rooms.set(roomId, game);
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
@@ -871,19 +887,20 @@ io.on('connection', (socket) => {
 
   // JOIN ROOM
   socket.on('joinRoom', ({ roomId, playerName, characterId }, cb) => {
+    const cleanName = sanitizeName(playerName);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Кімнату не знайдено.' });
     if (game.phase !== 'waiting') return cb({ error: 'Гра вже розпочалась.' });
     if (game.players.length >= 8) return cb({ error: 'Кімната повна.' });
 
-    const player = game.addPlayer(socket.id, playerName, false, characterId);
+    const player = game.addPlayer(socket.id, cleanName, false, characterId);
     if (!player) return cb({ error: 'Не вдалося приєднатися.' });
 
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
     cb({ roomId, playerId: socket.id, player });
     broadcastState(roomId);
-    broadcastEvent(roomId, 'playerJoined', { name: playerName, count: game.players.length });
+    broadcastEvent(roomId, 'playerJoined', { name: cleanName, count: game.players.length });
   });
 
   // START GAME
