@@ -1639,10 +1639,19 @@ class GameEngine {
         this.addLog(`${player.name} використав компромат проти ${target.name}!`);
         return { type: 'kompromat_used', target: target.id };
 
-      case 'bomb':
-        this.bombs.push({ sector: player.position, placedBy: player.id });
-        this.addLog(`${player.name} встановив бомбу!`);
-        return { type: 'bomb_placed', sector: player.position };
+      case 'bomb': {
+        // Require sector choice
+        const sector = options && typeof options.sector === 'number' ? options.sector : null;
+        if (sector === null || sector < 0 || sector >= 36) {
+          // Put card back in hand — no sector chosen
+          player.mafiaCards.push(card);
+          this.mafiaDiscard.pop();
+          return { error: 'Оберіть сектор для бомби.', needSector: true };
+        }
+        this.bombs.push({ sector, placedBy: player.id });
+        this.addLog(`${player.name} встановив бомбу на секторі ${sector}!`);
+        return { type: 'bomb_placed', sector };
+      }
 
       case 'informer':
         if (!target) return { error: 'Оберіть ціль.' };

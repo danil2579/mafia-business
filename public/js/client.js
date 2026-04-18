@@ -1500,6 +1500,64 @@ function showKillHelperChoice(targetName, helpers, onChoose) {
   });
 }
 
+// ===== BOMB SECTOR PICKER =====
+function showBombSectorPicker() {
+  const state = gameState;
+  if (!state) return;
+  const me = state.players.find(p => p.id === myId);
+  if (!me) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'bomb-picker-overlay active';
+  overlay.innerHTML = `
+    <div class="bomb-picker-backdrop"></div>
+    <div class="bomb-picker-content">
+      <div class="bomb-picker-title">${ICON.bomb} ВСТАНОВИТИ БОМБУ</div>
+      <div class="bomb-picker-subtitle">Оберіть сектор, на якому встановити бомбу</div>
+      <div class="bomb-picker-grid" id="bomb-picker-grid"></div>
+      <button class="btn btn-secondary" id="bomb-picker-cancel">Скасувати</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const grid = overlay.querySelector('#bomb-picker-grid');
+  const board = state.board || [];
+  const businessById = state.businesses || {};
+
+  for (const sector of board) {
+    const i = sector.index;
+    const cell = document.createElement('button');
+    cell.className = 'bomb-picker-cell';
+    let label = `${i}`;
+    if (['START', 'BAR', 'POLICE', 'PRISON'].includes(sector.type)) {
+      label = sector.name;
+      cell.classList.add('bps-special');
+    } else if (sector.type === 'MAFIA') {
+      label = `${i}\nMAFIA`;
+      cell.classList.add('bps-mafia');
+    } else if (sector.type === 'EVENT') {
+      label = `${i}\nПОДІЯ`;
+      cell.classList.add('bps-event');
+    } else if (sector.type === 'business') {
+      const district = (state.districts || []).find(d => d.id === sector.districtId);
+      const biz = district && district.businesses ? district.businesses[sector.businessIndex] : null;
+      const bizName = biz ? biz.name : `Бізнес ${i}`;
+      label = `${i}\n${bizName}`;
+    }
+    if (i === me.position) cell.classList.add('bps-me');
+    cell.innerText = label;
+    cell.addEventListener('click', () => {
+      SFX.attack();
+      socket.emit('playMafiaCard', { cardId: 'bomb', options: { sector: i } }, (res) => {
+        handleResult(res);
+        overlay.remove();
+      });
+    });
+    grid.appendChild(cell);
+  }
+  overlay.querySelector('#bomb-picker-cancel').addEventListener('click', () => overlay.remove());
+}
+
 // ===== BOMB EXPLOSION ANIMATION =====
 function showExplosion(playerName) {
   const overlay = document.createElement('div');
@@ -2312,7 +2370,7 @@ function onMafiaCardClick(card, state) {
   if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
     showTargetSelectionModal(card, state);
   } else if (card.id === 'bomb') {
-    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
+    showBombSectorPicker();
   } else if (card.id === 'lawyer') {
     socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
   } else if (card.id === 'confession') {
@@ -4047,7 +4105,7 @@ function onMafiaCardClickExtended(card, state) {
   if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
     showTargetSelectionModal(card, state);
   } else if (card.id === 'bomb') {
-    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
+    showBombSectorPicker();
   } else if (card.id === 'lawyer') {
     socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
   } else if (card.id === 'confession') {
