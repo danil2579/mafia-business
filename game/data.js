@@ -274,6 +274,10 @@ const MAFIA_CARDS = [
     canDodge: false, canBuyOff: false, canPolice: false
   },
   {
+    id: 'confession', name: 'Явка з повинною', type: 'utility', cost: 0,
+    description: 'Вирушайте у в\'язницю на 1 хід.'
+  },
+  {
     id: 'bribe_inmates', name: 'Підкуп співкамерників', type: 'attack', cost: 1000,
     description: 'Вбивають, доки гравець у в\'язниці.',
     requirePrison: true, canDodge: false, canBuyOff: false, canPolice: false
@@ -309,6 +313,10 @@ const MAFIA_CARDS = [
     canDodge: true, canBuyOff: true, canPolice: true
   },
   {
+    id: 'informer', name: 'Інформатор', type: 'utility', cost: 0,
+    description: 'Подивитися всі карти MAFIA в руці обраного гравця.'
+  },
+  {
     id: 'tax_collector', name: 'Збирач данини', type: 'economic', cost: 0,
     description: 'Всі гравці платять вам 500$.'
   },
@@ -341,16 +349,36 @@ const MAFIA_CARDS = [
     destroysBusiness: true
   },
   {
+    id: 'forgery', name: 'Підробка документів', type: 'economic', cost: 0,
+    description: 'Перехопити наступну ренту: ви отримуєте ренту замість власника бізнесу.',
+    interceptRent: true
+  },
+  {
     id: 'corruption', name: 'Корупція', type: 'utility', cost: 0,
     description: 'На секторі Поліції наступні 3 ходи ви не платите хабар.'
+  },
+  {
+    id: 'street_fight', name: 'Вулична бійка', type: 'attack', cost: 500,
+    description: 'Обидва кидають кубик. Хто більше — забирає 1000$ у іншого. Потрібно бути поруч.',
+    requireSameDistrict: true, canDodge: false, canBuyOff: false, canPolice: true,
+    isDuel: true
   },
   {
     id: 'money_laundering', name: 'Відмивання грошей', type: 'economic', cost: 0,
     description: 'Подвоюєте дохід з усіх ваших бізнесів на 1 коло.'
   },
   {
-    id: 'hostile_takeover', name: 'Вороже поглинання', type: 'economic', cost: 0,
-    description: 'Купити чужий бізнес примусово за 1.5× ціни. Гроші йдуть власнику.',
+    id: 'fake_death', name: 'Інсценування смерті', type: 'defense', cost: 0,
+    description: 'Наступний успішний замах на вас анулюється і атакуючий втрачає карту.',
+    isReaction: false
+  },
+  {
+    id: 'wiretap', name: 'Прослуховування', type: 'utility', cost: 0,
+    description: 'Дізнайтесь усі карти та гроші обраного гравця. Показує також помічників.'
+  },
+  {
+    id: 'hostile_takeover', name: 'Вороже поглинання', type: 'economic', cost: 3000,
+    description: 'Купити чужий бізнес примусово за подвійну ціну. Гроші йдуть власнику.',
     canPolice: true
   }
 ];
@@ -360,12 +388,12 @@ function buildMafiaDeck() {
   const distribution = {
     sniper: 2, robbery: 2, raider: 1, massacre: 1, ambush: 3,
     pogrom: 1, lawyer: 2, vest: 3, killer: 1, poison: 2,
-    bribe_inmates: 1, rumors: 2, police_card: 2,
+    confession: 1, bribe_inmates: 1, rumors: 2, police_card: 2,
     kompromat: 1, bomb: 2, lucky_shirt: 1,
-    car_bomb: 1, tax_collector: 1, sabotage: 2,
+    car_bomb: 1, informer: 2, tax_collector: 1, sabotage: 2,
     witness_protection: 1, double_agent: 1, insurance: 2, blackmail: 1,
-    arson: 1, corruption: 1,
-    money_laundering: 1, hostile_takeover: 1
+    arson: 1, forgery: 1, corruption: 1, street_fight: 2,
+    money_laundering: 1, fake_death: 1, wiretap: 1, hostile_takeover: 1
   };
   for (const card of MAFIA_CARDS) {
     const count = distribution[card.id] || 1;

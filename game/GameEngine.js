@@ -971,9 +971,18 @@ class GameEngine {
       player.stats.totalRentPaid += action.amount;
       player._lastRentPaid = action.amount;
 
-      owner.money += action.amount;
-      owner.stats.moneyEarned += action.amount;
-      owner.stats.totalRentCollected += action.amount;
+      // Check if someone has forgery (intercepts rent)
+      const interceptor = this.getAlivePlayers().find(p => p._interceptRent && p.id !== player.id && p.id !== owner.id);
+      if (interceptor) {
+        interceptor._interceptRent = false;
+        interceptor.money += action.amount;
+        interceptor.stats.moneyEarned += action.amount;
+        this.addLog(`${interceptor.name} перехопив ренту ${action.amount}$ завдяки підробці документів!`);
+      } else {
+        owner.money += action.amount;
+        owner.stats.moneyEarned += action.amount;
+        owner.stats.totalRentCollected += action.amount;
+      }
       this.addLog(`${player.name} заплатив ${action.amount}$ за ${action.businessName}.`);
       this.pendingAction = null;
       return { success: true, paid: true };
@@ -1033,8 +1042,14 @@ class GameEngine {
     const cards = action.cards || [];
     const addedCards = [];
     for (const card of cards) {
-      player.mafiaCards.push(card);
-      addedCards.push(card);
+      if (card.id === 'confession') {
+        this.sendToPrison(player, 1);
+        this.addLog(`${player.name} витягнув "Явка з повинною" і вирушив до в'язниці!`);
+        this.mafiaDiscard.push(card);
+      } else {
+        player.mafiaCards.push(card);
+        addedCards.push(card);
+      }
     }
     this.addLog(`${player.name} отримав ${addedCards.length} карту(и) MAFIA.`);
     this.pendingAction = null;
@@ -1186,8 +1201,14 @@ class GameEngine {
         for (let i = 0; i < card.amount; i++) {
           const c = this.drawMafiaCard();
           if (c) {
-            player.mafiaCards.push(c);
-            dmCards.push(c);
+            if (c.id === 'confession') {
+              this.sendToPrison(player, 1);
+              this.addLog(`${player.name} витягнув "Явка з повинною" і вирушив до в'язниці!`);
+              this.mafiaDiscard.push(c);
+            } else {
+              player.mafiaCards.push(c);
+              dmCards.push(c);
+            }
           }
         }
         return { drewMafia: dmCards.length };
@@ -1350,39 +1371,6 @@ class GameEngine {
       drawnHelpers
     };
     return { type: 'choose_hidden_helper', cardCount: drawnHelpers.length };
-  }
-
-  // Resolves the double_agent blind pick: player picks one of the target's
-  // helpers face-down. If the player already had max helpers, the card
-  // becomes a swap — their first (oldest) helper is released to the deck.
-  executeChooseStolenHelper(playerId, helperIndex) {
-    const action = this.pendingAction;
-    if (!action || action.type !== 'choose_stolen_helper') {
-      return { error: 'Немає активного вибору.' };
-    }
-    if (action.playerId !== playerId) return { error: 'Не ваш вибір.' };
-    const player = this.getPlayer(playerId);
-    const target = this.getPlayer(action.targetId);
-    if (!player || !target) return { error: 'Гравця не знайдено.' };
-    if (helperIndex < 0 || helperIndex >= target.helpers.length) {
-      return { error: 'Невірний вибір.' };
-    }
-
-    const stolen = target.helpers.splice(helperIndex, 1)[0];
-    let released = null;
-    if (action.isSwap && player.helpers.length > 0) {
-      released = player.helpers.shift();
-      this.returnHelperToDeck(released);
-    }
-    player.helpers.push(stolen);
-    this.pendingAction = null;
-
-    if (released) {
-      this.addLog(`${player.name} віддав ${released.name} і переманив ${stolen.name} від ${target.name}!`);
-      return { type: 'double_agent_swap', stolen: stolen.name, released: released.name, helperId: stolen.id };
-    }
-    this.addLog(`${player.name} переманив ${stolen.name} від ${target.name}!`);
-    return { type: 'double_agent_used', helper: stolen.name, helperId: stolen.id };
   }
 
   executeChooseHiddenHelper(playerId, cardIndex) {
@@ -1559,6 +1547,32 @@ class GameEngine {
         return { type: 'arson_done', businessId: bizToDestroy };
       }
 
+      if (card.id === 'street_fight') {
+        // Duel: both roll a die, higher wins 1000$ from loser
+        const attackRoll = Math.floor(Math.random() * 6) + 1;
+        const defenseRoll = Math.floor(Math.random() * 6) + 1;
+        const prize = 1000;
+        if (attackRoll > defenseRoll) {
+          const take = Math.min(prize, target.money);
+          target.money -= take;
+          attacker.money += take;
+          this.addLog(`Бійка! ${attacker.name} (${attackRoll}) vs ${target.name} (${defenseRoll}) — ${attacker.name} виграє ${take}$!`);
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'street_fight_result', attackRoll, defenseRoll, winner: attacker.id, amount: take };
+        } else if (defenseRoll > attackRoll) {
+          const take = Math.min(prize, attacker.money);
+          attacker.money -= take;
+          target.money += take;
+          this.addLog(`Бійка! ${attacker.name} (${attackRoll}) vs ${target.name} (${defenseRoll}) — ${target.name} виграє ${take}$!`);
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'street_fight_result', attackRoll, defenseRoll, winner: target.id, amount: take };
+        } else {
+          this.addLog(`Бійка! ${attacker.name} (${attackRoll}) vs ${target.name} (${defenseRoll}) — Нічия!`);
+          attacker._mafiaCardPlayedThisTurn = (attacker._mafiaCardPlayedThisTurn || 0) + 1;
+          return { type: 'street_fight_result', attackRoll, defenseRoll, winner: null, amount: 0 };
+        }
+      }
+
       // Set up pending reaction for the target
       this.pendingAction = {
         type: 'attack_reaction',
@@ -1610,6 +1624,9 @@ class GameEngine {
         }
         return { error: "Ви не у в'язниці." };
 
+      case 'confession':
+        return { error: 'Ця карта грається автоматично при витягуванні.' };
+
       case 'rumors':
         if (!target) return { error: 'Оберіть ціль.' };
         this.loseRespect(target);
@@ -1626,6 +1643,12 @@ class GameEngine {
         this.bombs.push({ sector: player.position, placedBy: player.id });
         this.addLog(`${player.name} встановив бомбу!`);
         return { type: 'bomb_placed', sector: player.position };
+
+      case 'informer':
+        if (!target) return { error: 'Оберіть ціль.' };
+        // Return target's mafia cards to the requesting player
+        this.addLog(`${player.name} використав Інформатора проти ${target.name}!`);
+        return { type: 'informer_used', target: target.id, cards: target.mafiaCards.map(c => ({ id: c.id, name: c.name, type: c.type })) };
 
       case 'tax_collector':
         let totalCollected = 0;
@@ -1655,23 +1678,15 @@ class GameEngine {
         this.addLog(`${player.name} під захистом свідків на 2 ходи!`);
         return { type: 'witness_protection_active' };
 
-      case 'double_agent': {
+      case 'double_agent':
         if (!target) return { error: 'Оберіть ціль.' };
         if (target.helpers.length === 0) return { error: 'У гравця немає помічників.' };
-        const daRespect = this.getRespectData(player.respectLevel);
-        // If player already has max helpers, the steal turns into a swap:
-        // they will release their first (oldest) helper to make room.
-        const isSwap = player.helpers.length >= daRespect.maxHelpers;
-        this.pendingAction = {
-          type: 'choose_stolen_helper',
-          playerId: player.id,
-          targetId: target.id,
-          helperCount: target.helpers.length,
-          isSwap
-        };
-        this.addLog(`${player.name} закидає подвійного агента до ${target.name}!`);
-        return { type: 'choose_stolen_helper', helperCount: target.helpers.length, isSwap };
-      }
+        const respect = this.getRespectData(player.respectLevel);
+        if (player.helpers.length >= respect.maxHelpers) return { error: 'У вас максимум помічників.' };
+        const stolenHelper = target.helpers.pop();
+        player.helpers.push(stolenHelper);
+        this.addLog(`${player.name} переманив ${stolenHelper.name} від ${target.name}!`);
+        return { type: 'double_agent_used', helper: stolenHelper.name };
 
       case 'insurance':
         // Refund half of last rent paid this turn
@@ -1695,6 +1710,11 @@ class GameEngine {
         return { type: 'blackmail_done', amount: extortion };
 
       // --- WAVE 2 CARDS ---
+      case 'forgery':
+        player._interceptRent = true;
+        this.addLog(`${player.name} підробив документи — наступна рента йде йому!`);
+        return { type: 'forgery_active' };
+
       case 'corruption':
         player._corruptionTurns = 3;
         this.addLog(`${player.name} підкупив поліцію на 3 ходи!`);
@@ -1705,13 +1725,29 @@ class GameEngine {
         this.addLog(`${player.name} відмиває гроші — подвійний дохід з бізнесів на 1 коло!`);
         return { type: 'money_laundering_active' };
 
+      case 'fake_death':
+        player._fakeDeathActive = true;
+        this.addLog(`${player.name} підготував інсценування смерті!`);
+        return { type: 'fake_death_active' };
+
+      case 'wiretap':
+        if (!target) return { error: 'Оберіть ціль.' };
+        this.addLog(`${player.name} прослуховує ${target.name}!`);
+        return {
+          type: 'wiretap_result', target: target.id,
+          cards: target.mafiaCards.map(c => ({ id: c.id, name: c.name, type: c.type })),
+          money: target.money,
+          helpers: target.helpers.map(h => ({ name: h.name, ability: h.ability })),
+          businesses: target.businesses
+        };
+
       case 'hostile_takeover':
         if (!options.businessId) return { error: 'Оберіть бізнес для поглинання.' };
         const htBiz = this.businesses[options.businessId];
         if (!htBiz || !htBiz.owner || htBiz.owner === player.id) return { error: 'Невірний бізнес.' };
         const htBizData = this.getBusiness(options.businessId);
         if (!htBizData) return { error: 'Бізнес не знайдено.' };
-        const htCost = Math.round(htBizData.price * 1.5);
+        const htCost = htBizData.price * 2;
         if (player.money < htCost) return { error: `Потрібно ${htCost}$ для поглинання.` };
         const prevOwner = this.getPlayer(htBiz.owner);
         player.money -= htCost;
@@ -1776,6 +1812,14 @@ class GameEngine {
   }
 
   executeAttack(attacker, target, card) {
+    // Fake death: blocks attack and wastes attacker's card
+    if (target._fakeDeathActive) {
+      target._fakeDeathActive = false;
+      this.addLog(`${target.name} інсценував свою смерть! Замах ${attacker.name} провалився!`);
+      this.pendingAction = null;
+      return { type: 'fake_death_triggered' };
+    }
+
     // Arson resolve (after reaction passed): destroy business
     if (card.id === 'arson' && card.destroysBusiness) {
       const district = this.getDistrictOfSector(attacker.position);

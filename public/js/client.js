@@ -3,41 +3,6 @@
 // ============================================================
 const socket = io();
 
-// ===== CONNECTION STATUS INDICATOR =====
-// Shows a persistent banner when the socket drops, removes it on reconnect.
-(function initConnectionIndicator() {
-  let banner = null;
-  const ensureBanner = (text) => {
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'connection-banner';
-      banner.style.cssText = [
-        'position:fixed','top:0','left:0','right:0','z-index:99999',
-        'background:#c0392b','color:#fff','text-align:center','padding:8px 12px',
-        'font:600 14px system-ui,sans-serif','letter-spacing:0.3px',
-        'box-shadow:0 2px 8px rgba(0,0,0,0.35)'
-      ].join(';');
-      document.body && document.body.appendChild(banner);
-    } else if (!banner.parentNode) {
-      document.body && document.body.appendChild(banner);
-    }
-    banner.textContent = text;
-  };
-  const removeBanner = () => {
-    if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
-  };
-  socket.on('disconnect', (reason) => {
-    ensureBanner('⚠ З\'єднання втрачено, перепідключаюсь…');
-  });
-  socket.io.on('reconnect_attempt', () => {
-    ensureBanner('⚠ Перепідключення…');
-  });
-  socket.on('connect', () => {
-    // Give the server a moment to re-establish room state, then hide banner
-    setTimeout(removeBanner, 300);
-  });
-})();
-
 let myId = null;
 let myRoomId = null;
 let gameState = null;
@@ -321,198 +286,6 @@ const SFX = {
   }
 };
 
-// ===== FX: reusable visual effects engine =====
-// Shared helpers so every card play / event gets a polished effect
-// without each site reinventing particles, flying coins, shimmers, etc.
-// Note: .attack-effect-* classes in style.css are reused for burst.
-const FX = {
-  _safe(s) {
-    const d = document.createElement('div');
-    d.textContent = String(s == null ? '' : s);
-    return d.innerHTML;
-  },
-
-  // Centered icon burst: big icon, title, subtitle, particles, shockwave ring.
-  // Great for "this happened!" moments (card played, protected, etc.)
-  burst({ icon = '★', title = '', subtitle = '', color = '#c9a84c', duration = 2400, sound = null } = {}) {
-    const overlay = document.createElement('div');
-    overlay.className = 'attack-effect-overlay fx-burst';
-    overlay.style.setProperty('--effect-color', color);
-    overlay.innerHTML = `
-      <div class="attack-effect-flash"></div>
-      <div class="attack-effect-ring"></div>
-      <div class="attack-effect-icon">${this._safe(icon)}</div>
-      <div class="attack-effect-title">${this._safe(title)}</div>
-      <div class="attack-effect-subtitle">${this._safe(subtitle)}</div>
-    `;
-    const palette = [color, '#ffffff', color + 'aa'];
-    for (let i = 0; i < 18; i++) {
-      const p = document.createElement('div');
-      p.className = 'attack-effect-particle';
-      const angle = (Math.PI * 2 * i) / 18 + Math.random() * 0.1;
-      const dist = 70 + Math.random() * 160;
-      p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
-      p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
-      p.style.left = '50%';
-      p.style.top = '50%';
-      p.style.background = palette[Math.floor(Math.random() * palette.length)];
-      const size = 3 + Math.random() * 5;
-      p.style.width = size + 'px';
-      p.style.height = size + 'px';
-      p.style.animationDelay = (Math.random() * 0.3) + 's';
-      overlay.appendChild(p);
-    }
-    document.body.appendChild(overlay);
-    if (typeof sound === 'function') { try { sound(); } catch (e) {} }
-    setTimeout(() => overlay.remove(), duration);
-  },
-
-  // Coins fly between two DOM elements. Useful for rent, robbery, blackmail, tax.
-  moneyFlow(fromEl, toEl, label = '', color = '#2ecc71') {
-    if (!fromEl || !toEl) return;
-    const a = fromEl.getBoundingClientRect();
-    const b = toEl.getBoundingClientRect();
-    const ax = a.left + a.width / 2, ay = a.top + a.height / 2;
-    const bx = b.left + b.width / 2, by = b.top + b.height / 2;
-    const layer = document.createElement('div');
-    layer.className = 'fx-money-layer';
-    for (let i = 0; i < 8; i++) {
-      const coin = document.createElement('div');
-      coin.className = 'fx-coin';
-      coin.textContent = '$';
-      coin.style.left = ax + 'px';
-      coin.style.top = ay + 'px';
-      coin.style.color = color;
-      coin.style.setProperty('--tx', (bx - ax) + 'px');
-      coin.style.setProperty('--ty', (by - ay) + 'px');
-      coin.style.animationDelay = (i * 0.06) + 's';
-      layer.appendChild(coin);
-    }
-    if (label) {
-      const lbl = document.createElement('div');
-      lbl.className = 'fx-money-label';
-      lbl.textContent = label;
-      lbl.style.left = ((ax + bx) / 2) + 'px';
-      lbl.style.top = ((ay + by) / 2 - 24) + 'px';
-      lbl.style.color = color;
-      layer.appendChild(lbl);
-    }
-    document.body.appendChild(layer);
-    setTimeout(() => layer.remove(), 1800);
-    try { SFX.payRent(); } catch (e) {}
-  },
-
-  // Color shimmer sweep across an element — for defenses, buffs.
-  shimmer(el, color = '#f1c40f', duration = 1200) {
-    if (!el) return;
-    el.classList.add('fx-shimmer');
-    el.style.setProperty('--shimmer-color', color);
-    setTimeout(() => {
-      el.classList.remove('fx-shimmer');
-      el.style.removeProperty('--shimmer-color');
-    }, duration);
-  },
-
-  // Small bottom-center toast with icon — subtle announcements that
-  // don't deserve a full burst.
-  toast(icon, text, color = '#c9a84c', duration = 2400) {
-    const t = document.createElement('div');
-    t.className = 'fx-toast';
-    t.style.setProperty('--fx-color', color);
-    t.innerHTML = `<span class="fx-toast-icon">${this._safe(icon)}</span><span class="fx-toast-text">${this._safe(text)}</span>`;
-    document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add('fx-toast-show'));
-    setTimeout(() => {
-      t.classList.remove('fx-toast-show');
-      setTimeout(() => t.remove(), 350);
-    }, duration);
-  }
-};
-
-// Dispatches visual feedback for a successfully played MAFIA card.
-// Called from the playMafiaCard callback on the client: if the server
-// returned an error we fall through to the existing handleResult,
-// otherwise we map the result.type → burst / toast / moneyFlow.
-function showCardPlayFX(cardId, res) {
-  if (!res || res.error) return;
-  const myPanel = () => document.querySelector(`[data-player-id="${myId}"]`) || document.querySelector('.player-panel.me');
-  switch (cardId) {
-    case 'tax_collector':
-      FX.burst({ icon: '💰', title: 'ЗБИРАЧ ДАНИНИ',
-        subtitle: res.amount ? `Зібрано ${res.amount}$` : 'Усі платять',
-        color: '#f1c40f', duration: 2200, sound: () => SFX.payRent() });
-      break;
-    case 'sabotage':
-      FX.burst({ icon: '💥', title: 'САБОТАЖ',
-        subtitle: 'Вплив знищено', color: '#e67e22', duration: 2000,
-        sound: () => SFX.attack() });
-      break;
-    case 'blackmail':
-      FX.burst({ icon: '✉', title: 'ШАНТАЖ',
-        subtitle: res.amount ? `Здобуто ${res.amount}$` : 'Жертва заплатила',
-        color: '#9b59b6', duration: 2200, sound: () => SFX.payRent() });
-      break;
-    case 'rumors':
-      FX.toast('🗣', 'Чутки поширено — -1 поваги цілі', '#b59c4e', 2400);
-      break;
-    case 'kompromat':
-      FX.burst({ icon: '📁', title: 'КОМПРОМАТ',
-        subtitle: "Ціль у в'язниці на 2 ходи",
-        color: '#c0392b', duration: 2200, sound: () => SFX.prisonDoor() });
-      break;
-    case 'bomb':
-      FX.toast('💣', 'Бомбу встановлено на поточному секторі', '#e74c3c', 2400);
-      break;
-    case 'lawyer':
-      FX.toast('⚖', "Адвокат — ви на волі!", '#c9a84c', 2200);
-      break;
-    case 'robbery':
-      FX.burst({ icon: '🎯', title: 'ПОГРАБУВАННЯ',
-        subtitle: 'Власник заплатив вам', color: '#e67e22', duration: 2000,
-        sound: () => SFX.payRent() });
-      break;
-    case 'raider':
-      FX.burst({ icon: '🏚', title: 'РЕЙДЕРСЬКЕ ЗАХОПЛЕННЯ',
-        subtitle: 'Бізнес ваш', color: '#d35400', duration: 2200 });
-      break;
-    case 'pogrom':
-      FX.burst({ icon: '🔥', title: 'ПОГРОМ',
-        subtitle: 'Бізнес повернувся на ринок', color: '#e74c3c', duration: 2200,
-        sound: () => SFX.attack() });
-      break;
-    case 'corruption':
-      FX.shimmer(myPanel(), '#f1c40f', 1400);
-      FX.toast('🤝', 'Корупція активна на 3 ходи', '#f1c40f', 2400);
-      break;
-    case 'money_laundering':
-      FX.shimmer(myPanel(), '#2ecc71', 1400);
-      FX.toast('💵', 'Подвійний дохід з бізнесів на 1 коло', '#2ecc71', 2400);
-      break;
-    case 'witness_protection':
-      FX.shimmer(myPanel(), '#3498db', 1400);
-      FX.toast('🛡', '2 ходи недоторканності', '#3498db', 2400);
-      break;
-    case 'insurance':
-      FX.toast('🧾', res.amount ? `Повернуто ${res.amount}$` : 'Страховка спрацювала', '#2ecc71', 2400);
-      break;
-    case 'hostile_takeover':
-      FX.burst({ icon: '🏢', title: 'ВОРОЖЕ ПОГЛИНАННЯ',
-        subtitle: res.cost ? `Сплачено ${res.cost}$` : 'Бізнес ваш',
-        color: '#c9a84c', duration: 2400, sound: () => SFX.buy() });
-      break;
-    case 'lucky_shirt':
-      FX.shimmer(myPanel(), '#f1c40f', 1400);
-      FX.toast('🍀', 'Народжений у сорочці — бомба не страшна', '#f1c40f', 2400);
-      break;
-  }
-}
-
-// Shortcut for card handlers: shows FX on success, or the error toast on failure.
-function handleCardResult(cardId, res) {
-  if (res && res.error) return handleResult(res);
-  showCardPlayFX(cardId, res);
-}
-
 // ===== SVG ICONS for businesses =====
 const BIZ_ICONS = {
   kiosk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h3M8 14h5"/><path d="M15 11h2v4h-2z"/></svg>`,
@@ -607,7 +380,6 @@ $('#btn-create').addEventListener('click', () => {
     if (res.error) return showError(res.error);
     myId = res.playerId;
     myRoomId = res.roomId;
-    if (res.rejoinToken) sessionStorage.setItem('mafia_rejoinToken', res.rejoinToken);
     showWaiting(res.roomId);
   });
 });
@@ -622,7 +394,6 @@ $('#btn-join').addEventListener('click', () => {
     if (res.error) return showError(res.error);
     myId = res.playerId;
     myRoomId = res.roomId;
-    if (res.rejoinToken) sessionStorage.setItem('mafia_rejoinToken', res.rejoinToken);
     showWaiting(res.roomId);
   });
 });
@@ -823,6 +594,9 @@ socket.on('attackOutcome', (result) => {
       break;
     case 'poison_failed':
       showAttackEffect('fail', 'ОТРУТА НЕ СПРАЦЮВАЛА!', `Кубик: ${result.dice}`, '#9b59b6');
+      break;
+    case 'fake_death_triggered':
+      showAttackEffect('ghost', 'ФАЛЬШИВА СМЕРТЬ!', 'Замах провалився!', '#95a5a6');
       break;
     case 'helper_killed':
       showAttackEffect('skull', `${result.helperName}`, 'Помічника вбито!', '#e74c3c');
@@ -1637,88 +1411,6 @@ function showHiddenHelperChoice(cardCount) {
   }
 }
 
-// ===== DOUBLE AGENT: blind pick of a helper to steal =====
-function showStolenHelperChoice(helperCount, isSwap, targetName) {
-  hideCenterPanel();
-  const overlay = document.createElement('div');
-  overlay.className = 'hidden-helper-overlay active';
-  overlay.innerHTML = `
-    <div class="hh-backdrop"></div>
-    <div class="hh-content">
-      <div class="hh-title" style="color:#b59c4e">ПОДВІЙНИЙ АГЕНТ</div>
-      <div class="hh-subtitle">${isSwap ? 'Ваш перший помічник піде у відставку. ' : ''}Оберіть помічника ${targetName || 'цілі'} наосліп</div>
-      <div class="hh-cards" id="sh-cards"></div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  const cardsContainer = overlay.querySelector('#sh-cards');
-  for (let i = 0; i < helperCount; i++) {
-    const card = document.createElement('div');
-    card.className = 'hh-card';
-    card.dataset.index = i;
-    card.innerHTML = `
-      <div class="hh-card-inner">
-        <div class="hh-card-back">
-          <div class="hh-card-back-icon">?</div>
-          <div class="hh-card-back-label">Агент</div>
-        </div>
-        <div class="hh-card-front">
-          <div class="hh-card-front-icon">&#9733;</div>
-          <div class="hh-card-front-name"></div>
-          <div class="hh-card-front-desc"></div>
-        </div>
-      </div>
-    `;
-    card.style.animationDelay = (i * 0.15) + 's';
-    card.addEventListener('click', () => {
-      if (card.classList.contains('hh-chosen') || card.classList.contains('hh-rejected')) return;
-      SFX.cardFlip();
-      cardRevealActive = true;
-      cardsContainer.querySelectorAll('.hh-card').forEach(c => {
-        if (c !== card) c.classList.add('hh-rejected');
-      });
-      card.classList.add('hh-chosen');
-      socket.emit('resolveAction', { actionType: 'choose_stolen_helper', data: { helperIndex: i } }, (res) => {
-        if (res && res.error) {
-          cardRevealActive = false;
-          handleResult(res);
-          overlay.classList.remove('active');
-          setTimeout(() => overlay.remove(), 400);
-          return;
-        }
-        const helperName = res && (res.helper || res.stolen);
-        const helperId = res && res.helperId;
-        if (helperName) {
-          const iconEl = card.querySelector('.hh-card-front-icon');
-          const front = card.querySelector('.hh-card-front-name');
-          const desc = card.querySelector('.hh-card-front-desc');
-          if (helperId && HELPER_PORTRAITS[helperId]) {
-            iconEl.innerHTML = HELPER_PORTRAITS[helperId];
-            iconEl.classList.add('hh-has-portrait');
-          }
-          front.textContent = helperName;
-          desc.textContent = res.released ? `Ви відпустили: ${res.released}` : 'Перейшов до вас';
-          card.classList.add('hh-flipped');
-          SFX.helperReveal();
-          setTimeout(() => {
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.remove(), 400);
-            cardRevealActive = false;
-            showCardReveal('event', 'ПЕРЕМАНЕНО АГЕНТА', helperName,
-              res.released ? `В обмін на ${res.released}` : 'Агент працює на вас', null);
-          }, 1200);
-        } else {
-          cardRevealActive = false;
-          overlay.classList.remove('active');
-          setTimeout(() => overlay.remove(), 400);
-        }
-      });
-    });
-    cardsContainer.appendChild(card);
-  }
-}
-
 // ===== KILL HELPER CARD SELECTION (BAR-style flip) =====
 function showKillHelperChoice(targetName, helpers, onChoose) {
   hideCenterPanel();
@@ -1813,9 +1505,6 @@ function showExplosion(playerName) {
   overlay.appendChild(text);
 
   document.body.appendChild(overlay);
-  // Harder screen shake for the explosion
-  document.body.classList.add('fx-screen-shake-hard');
-  setTimeout(() => document.body.classList.remove('fx-screen-shake-hard'), 520);
   SFX.attack();
   setTimeout(() => overlay.remove(), 3500);
 }
@@ -1829,42 +1518,17 @@ function showKillAnimation(playerName, reason) {
   drip.className = 'kill-blood-drip';
   overlay.appendChild(drip);
 
-  // Gunshot flash — bright white radial, decays fast
-  const flash = document.createElement('div');
-  flash.className = 'kill-gun-flash';
-  overlay.appendChild(flash);
-
   const content = document.createElement('div');
   content.className = 'kill-content';
   content.innerHTML = `
     <div class="kill-skull">☠</div>
     <div class="kill-title">Ліквідовано</div>
-    <div class="kill-name">${escapeHtml(playerName)}</div>
-    <div class="kill-reason">${escapeHtml(reason || 'Вибув з гри')}</div>
+    <div class="kill-name">${playerName}</div>
+    <div class="kill-reason">${reason || 'Вибув з гри'}</div>
   `;
   overlay.appendChild(content);
 
-  // Blood splatter particles — dark red, radiating outward
-  const bloodColors = ['#8a0e0e', '#c41e1e', '#6b0808', '#a51515'];
-  for (let i = 0; i < 22; i++) {
-    const p = document.createElement('div');
-    p.className = 'kill-splatter';
-    const angle = (Math.PI * 2 * i) / 22 + Math.random() * 0.15;
-    const dist = 120 + Math.random() * 220;
-    p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
-    p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
-    p.style.background = bloodColors[Math.floor(Math.random() * bloodColors.length)];
-    const size = 5 + Math.random() * 9;
-    p.style.width = size + 'px';
-    p.style.height = size + 'px';
-    p.style.animationDelay = (Math.random() * 0.25) + 's';
-    overlay.appendChild(p);
-  }
-
   document.body.appendChild(overlay);
-  // Screen shake: quick 300ms jolt on body
-  document.body.classList.add('fx-screen-shake');
-  setTimeout(() => document.body.classList.remove('fx-screen-shake'), 400);
   SFX.attack();
   setTimeout(() => overlay.remove(), 4500);
 }
@@ -1920,11 +1584,6 @@ function showPrisonEffect(playerName, turns) {
 
   document.body.appendChild(overlay);
   SFX.prisonDoor();
-  // Shake the screen when the bars land (bars drop lasts ~600ms)
-  setTimeout(() => {
-    document.body.classList.add('fx-screen-shake');
-    setTimeout(() => document.body.classList.remove('fx-screen-shake'), 400);
-  }, 550);
   setTimeout(() => overlay.remove(), 4000);
 }
 
@@ -2618,11 +2277,16 @@ function onMafiaCardClick(card, state) {
   if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
     showTargetSelectionModal(card, state);
   } else if (card.id === 'bomb') {
-    socket.emit('playMafiaCard', { cardId: 'bomb' }, (r) => handleCardResult('bomb', r));
+    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
   } else if (card.id === 'lawyer') {
-    socket.emit('playMafiaCard', { cardId: 'lawyer' }, (r) => handleCardResult('lawyer', r));
+    socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
+  } else if (card.id === 'confession') {
+    showCenterPanel('Явка з повинною', "Вирушити у в'язницю на 1 хід?", [
+      { text: 'Так', action: () => { socket.emit('playMafiaCard', { cardId: 'confession' }, handleResult); hideCenterPanel(); } },
+      { text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }
+    ]);
   } else if (card.id === 'raider' || card.id === 'pogrom') {
-    socket.emit('playMafiaCard', { cardId: card.id }, (r) => handleCardResult(card.id, r));
+    socket.emit('playMafiaCard', { cardId: card.id }, handleResult);
   }
 }
 
@@ -2850,13 +2514,6 @@ function handlePendingAction(state) {
     case 'choose_hidden_helper':
       showHiddenHelperChoice(action.cardCount || 3);
       break;
-
-    case 'choose_stolen_helper': {
-      if (action.playerId !== myId) break; // only the card player sees the pick
-      const tgt = state.players.find(p => p.id === action.targetId);
-      showStolenHelperChoice(action.helperCount || 1, !!action.isSwap, tgt ? tgt.name : '');
-      break;
-    }
 
     case 'hire_another':
       showCenterPanel('Найняти ще?', 'Ви можете найняти ще одного помічника (1000$).', [
@@ -3188,7 +2845,27 @@ function showTargetSelectionModal(card, state) {
             handleResult(res);
           } else {
             hideModal();
-            showCardPlayFX(card.id, res);
+            // Show informer/wiretap results
+            if (res && res.type === 'informer_used' && res.cards) {
+              const cardList = res.cards.length > 0
+                ? res.cards.map(c => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1)"><strong>${c.name}</strong> <span style="color:var(--text-secondary);font-size:12px">(${c.type})</span></div>`).join('')
+                : '<div style="color:var(--text-secondary)">Карт немає</div>';
+              showCenterPanel(`${ICON.eye} Інформатор`, `Карти MAFIA у ${p.name}:`, [{ text: 'OK', action: () => hideCenterPanel() }], `<div style="margin:10px 0;text-align:left">${cardList}</div>`);
+            }
+            if (res && res.type === 'wiretap_result') {
+              const cardList = res.cards && res.cards.length > 0
+                ? res.cards.map(c => `<strong>${c.name}</strong> (${c.type})`).join(', ')
+                : 'немає';
+              const helperList = res.helpers && res.helpers.length > 0
+                ? res.helpers.map(h => `<strong>${h.name}</strong>`).join(', ')
+                : 'немає';
+              const info = `<div style="margin:10px 0;text-align:left;line-height:1.8">
+                <div>${ICON.money} Гроші: <strong>${res.money}$</strong></div>
+                <div>${ICON.cards} Карти: ${cardList}</div>
+                <div>${ICON.shield} Помічники: ${helperList}</div>
+              </div>`;
+              showCenterPanel(`${ICON.eye} Прослуховування`, `Інформація про ${p.name}:`, [{ text: 'OK', action: () => hideCenterPanel() }], info);
+            }
           }
         });
       } : null,
@@ -4176,9 +3853,8 @@ function showAllianceUI(targetPlayer) {
   socket.on('connect', () => {
     const savedRoom = sessionStorage.getItem('mafia_roomId');
     const savedName = sessionStorage.getItem('mafia_playerName');
-    const savedToken = sessionStorage.getItem('mafia_rejoinToken');
-    if (savedRoom && savedName && savedToken && !myRoomId) {
-      socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName, rejoinToken: savedToken }, (res) => {
+    if (savedRoom && savedName && !myRoomId) {
+      socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName }, (res) => {
         if (res.success) {
           myId = res.playerId;
           myRoomId = res.roomId;
@@ -4186,7 +3862,6 @@ function showAllianceUI(targetPlayer) {
         } else {
           sessionStorage.removeItem('mafia_roomId');
           sessionStorage.removeItem('mafia_playerName');
-          sessionStorage.removeItem('mafia_rejoinToken');
         }
       });
     }
@@ -4203,6 +3878,15 @@ function showAllianceUI(targetPlayer) {
     }
   });
 })();
+
+// ===== ADD INTERACTION BUTTONS TO PLAYER PANELS =====
+// Override renderPlayerPanels to add trade/alliance buttons
+const _origRenderPlayerPanels = renderPlayerPanels;
+// Note: We modify behavior in the existing function instead
+
+// ===== HANDLE TRADE/ALLIANCE PENDING ACTIONS =====
+// Add handler for trade_offer and alliance_offer in handlePendingAction
+const _origHandlePendingAction = handlePendingAction;
 
 // ===== INIT NEW FEATURES =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -4242,12 +3926,12 @@ function onMafiaCardClickExtended(card, state) {
   SFX.mafia();
 
   // New cards
-  if (card.id === 'double_agent' || card.id === 'blackmail') {
+  if (card.id === 'informer' || card.id === 'double_agent' || card.id === 'blackmail') {
     showTargetSelectionModal(card, state);
     return;
   }
   if (card.id === 'tax_collector') {
-    socket.emit('playMafiaCard', { cardId: 'tax_collector' }, (r) => handleCardResult('tax_collector', r));
+    socket.emit('playMafiaCard', { cardId: 'tax_collector' }, handleResult);
     return;
   }
   if (card.id === 'sabotage') {
@@ -4271,32 +3955,43 @@ function onMafiaCardClickExtended(card, state) {
     showCenterPanel('Саботаж', 'Оберіть бізнес для знищення впливу:', othersBiz.map(b => ({
       text: b.text,
       action: () => {
-        socket.emit('playMafiaCard', { cardId: 'sabotage', options: { businessId: b.bizId } },
-          (r) => handleCardResult('sabotage', r));
+        socket.emit('playMafiaCard', { cardId: 'sabotage', options: { businessId: b.bizId } }, handleResult);
         hideCenterPanel();
       }
     })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
     return;
   }
   if (card.id === 'witness_protection') {
-    socket.emit('playMafiaCard', { cardId: 'witness_protection' }, (r) => handleCardResult('witness_protection', r));
+    socket.emit('playMafiaCard', { cardId: 'witness_protection' }, handleResult);
     return;
   }
   if (card.id === 'insurance') {
-    socket.emit('playMafiaCard', { cardId: 'insurance' }, (r) => handleCardResult('insurance', r));
+    socket.emit('playMafiaCard', { cardId: 'insurance' }, handleResult);
     return;
   }
   // --- Wave 2 cards ---
+  if (card.id === 'wiretap') {
+    showTargetSelectionModal(card, state);
+    return;
+  }
+  if (card.id === 'forgery') {
+    socket.emit('playMafiaCard', { cardId: 'forgery' }, handleResult);
+    return;
+  }
   if (card.id === 'corruption') {
-    socket.emit('playMafiaCard', { cardId: 'corruption' }, (r) => handleCardResult('corruption', r));
+    socket.emit('playMafiaCard', { cardId: 'corruption' }, handleResult);
     return;
   }
   if (card.id === 'money_laundering') {
-    socket.emit('playMafiaCard', { cardId: 'money_laundering' }, (r) => handleCardResult('money_laundering', r));
+    socket.emit('playMafiaCard', { cardId: 'money_laundering' }, handleResult);
+    return;
+  }
+  if (card.id === 'fake_death') {
+    socket.emit('playMafiaCard', { cardId: 'fake_death' }, handleResult);
     return;
   }
   if (card.id === 'hostile_takeover') {
-    // Show business selection for hostile takeover (1.5x biz price)
+    // Show business selection for hostile takeover
     const htBiz = [];
     for (const p of state.players) {
       if (p.id === myId || !p.alive) continue;
@@ -4304,7 +3999,7 @@ function onMafiaCardClickExtended(card, state) {
         const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
         const biz = dist?.businesses.find(b => b.id === bizId);
         if (biz) {
-          htBiz.push({ text: `${biz.name} (${p.name}) — ${Math.round(biz.price * 1.5)}$`, bizId });
+          htBiz.push({ text: `${biz.name} (${p.name}) — ${biz.price * 2}$`, bizId });
         }
       }
     }
@@ -4315,8 +4010,7 @@ function onMafiaCardClickExtended(card, state) {
     showCenterPanel(`${ICON.building} Вороже поглинання`, 'Оберіть бізнес для примусової покупки:', htBiz.map(b => ({
       text: b.text,
       action: () => {
-        socket.emit('playMafiaCard', { cardId: 'hostile_takeover', options: { businessId: b.bizId } },
-          (r) => handleCardResult('hostile_takeover', r));
+        socket.emit('playMafiaCard', { cardId: 'hostile_takeover', options: { businessId: b.bizId } }, handleResult);
         hideCenterPanel();
       }
     })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
@@ -4327,11 +4021,16 @@ function onMafiaCardClickExtended(card, state) {
   if (card.type === 'attack' || card.id === 'rumors' || card.id === 'kompromat') {
     showTargetSelectionModal(card, state);
   } else if (card.id === 'bomb') {
-    socket.emit('playMafiaCard', { cardId: 'bomb' }, (r) => handleCardResult('bomb', r));
+    socket.emit('playMafiaCard', { cardId: 'bomb' }, handleResult);
   } else if (card.id === 'lawyer') {
-    socket.emit('playMafiaCard', { cardId: 'lawyer' }, (r) => handleCardResult('lawyer', r));
+    socket.emit('playMafiaCard', { cardId: 'lawyer' }, handleResult);
+  } else if (card.id === 'confession') {
+    showCenterPanel('Явка з повинною', "Вирушити у в'язницю на 1 хід?", [
+      { text: 'Так', action: () => { socket.emit('playMafiaCard', { cardId: 'confession' }, handleResult); hideCenterPanel(); } },
+      { text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }
+    ]);
   } else if (card.id === 'raider' || card.id === 'pogrom') {
-    socket.emit('playMafiaCard', { cardId: card.id }, (r) => handleCardResult(card.id, r));
+    socket.emit('playMafiaCard', { cardId: card.id }, handleResult);
   }
 }
 
@@ -4364,11 +4063,6 @@ async function loadPublicRooms() {
 }
 
 // ===== CHEAT/DEBUG PANEL =====
-// Server tells us whether cheats are enabled. On production this is false,
-// so we never bind the backtick shortcut and the panel is unreachable.
-let _cheatsEnabled = false;
-socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnabled); });
-
 (function initCheatPanel() {
   const CHEAT_CARDS = [
     { id: 'sniper', name: 'Снайпер', type: 'attack' },
@@ -4381,6 +4075,7 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'vest', name: 'Бронежилет', type: 'defense' },
     { id: 'killer', name: 'Кілер', type: 'attack' },
     { id: 'poison', name: 'Отрута', type: 'attack' },
+    { id: 'confession', name: 'Явка з повинною', type: 'utility' },
     { id: 'bribe_inmates', name: 'Підкуп співкамерників', type: 'attack' },
     { id: 'rumors', name: 'Розпустити чутки', type: 'utility' },
     { id: 'police_card', name: 'Поліція', type: 'defense' },
@@ -4388,6 +4083,7 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'bomb', name: 'Бомба', type: 'trap' },
     { id: 'lucky_shirt', name: 'Народжений у сорочці', type: 'defense' },
     { id: 'car_bomb', name: 'Авто-бомба', type: 'attack' },
+    { id: 'informer', name: 'Інформатор', type: 'utility' },
     { id: 'tax_collector', name: 'Збирач данини', type: 'economic' },
     { id: 'sabotage', name: 'Саботаж', type: 'economic' },
     { id: 'witness_protection', name: 'Захист свідків', type: 'defense' },
@@ -4395,8 +4091,12 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'insurance', name: 'Страховка', type: 'defense' },
     { id: 'blackmail', name: 'Шантаж', type: 'economic' },
     { id: 'arson', name: 'Підпал', type: 'attack' },
+    { id: 'forgery', name: 'Підробка документів', type: 'economic' },
     { id: 'corruption', name: 'Корупція', type: 'utility' },
+    { id: 'street_fight', name: 'Вулична бійка', type: 'attack' },
     { id: 'money_laundering', name: 'Відмивання грошей', type: 'economic' },
+    { id: 'fake_death', name: 'Інсценування смерті', type: 'defense' },
+    { id: 'wiretap', name: 'Прослуховування', type: 'utility' },
     { id: 'hostile_takeover', name: 'Вороже поглинання', type: 'economic' }
   ];
 
@@ -4581,9 +4281,8 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     });
   };
 
-  // Keyboard shortcut: backtick toggles cheat panel (only if server allows cheats)
+  // Keyboard shortcut: backtick toggles cheat panel
   document.addEventListener('keydown', (e) => {
-    if (!_cheatsEnabled) return;
     if (e.key === '`' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       // Don't toggle if typing in an input
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -4596,6 +4295,7 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
 // ===== UTILITY =====
 function handleResult(res) {
   if (res && res.error) {
+    console.warn(res.error);
     showEventDisplay(`<p style="color:var(--red-light)">${res.error}</p>`, 2000);
   }
 }
@@ -4966,7 +4666,6 @@ if (isPhoneMode) {
         myRoomId = res.roomId;
         sessionStorage.setItem('mafia_roomId', res.roomId);
         sessionStorage.setItem('mafia_playerName', name);
-        if (res.rejoinToken) sessionStorage.setItem('mafia_rejoinToken', res.rejoinToken);
         // Switch to waiting
         $('#phone-lobby').style.display = 'none';
         $('#phone-waiting').style.display = '';
@@ -4988,16 +4687,14 @@ if (isPhoneMode) {
     socket.on('connect', () => {
       const savedRoom = sessionStorage.getItem('mafia_roomId');
       const savedName = sessionStorage.getItem('mafia_playerName');
-      const savedToken = sessionStorage.getItem('mafia_rejoinToken');
-      if (savedRoom && savedName && savedToken && !myRoomId) {
-        socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName, rejoinToken: savedToken }, (res) => {
+      if (savedRoom && savedName && !myRoomId) {
+        socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName }, (res) => {
           if (res.success) {
             myId = res.playerId;
             myRoomId = res.roomId;
           } else {
             sessionStorage.removeItem('mafia_roomId');
             sessionStorage.removeItem('mafia_playerName');
-            sessionStorage.removeItem('mafia_rejoinToken');
           }
         });
       }

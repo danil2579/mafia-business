@@ -3,17 +3,9 @@
 // ============================================================
 const express = require('express');
 const http = require('http');
-const crypto = require('crypto');
 const { Server } = require('socket.io');
 const path = require('path');
 const GameEngine = require('./game/GameEngine');
-
-// Generates a random 32-char hex token used to authorise a rejoin.
-// Prevents a bystander from typing someone else's nickname and stealing
-// their seat after they disconnect.
-function generateRejoinToken() {
-  return crypto.randomBytes(16).toString('hex');
-}
 
 const app = express();
 const server = http.createServer(app);
@@ -53,7 +45,6 @@ const turnTimers = new Map(); // roomId -> { timer, remaining }
 const disconnectedPlayers = new Map(); // `${roomId}:${playerId}` -> { socketId, name, timer }
 const chatHistory = new Map(); // roomId -> [messages]
 const auctionTimers = new Map(); // roomId -> timeout
-const pendingActionTimers = new Map(); // roomId -> { timer, action }
 const tvSockets = new Map(); // roomId -> Set<socketId> (TV mode displays)
 const BOT_NAMES = ['Бот Вінні', 'Бот Тоні', 'Бот Сальваторе', 'Бот Луїджі', 'Бот Марко', 'Бот Ніко', 'Бот Анджело', 'Бот Ренцо'];
 const TURN_TIME_LIMIT = 60; // seconds
@@ -64,59 +55,6 @@ function generateRoomId() {
   let id = '';
   for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return id;
-}
-
-// Sanitize a display name coming from the client. Strips HTML-special
-// characters and control chars, collapses whitespace, and caps length so
-// names are always safe to interpolate into innerHTML on the client.
-function sanitizeName(raw) {
-  if (typeof raw !== 'string') return 'Player';
-  const cleaned = raw
-    .replace(/[<>&"'`]/g, '')   // HTML-dangerous chars
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x1F\x7F]/g, '') // control chars
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 20);
-  return cleaned || 'Player';
-}
-
-// Centralized room cleanup — removes the room and all associated timers/state
-// Must be used instead of raw rooms.delete(roomId) to avoid memory leaks.
-function cleanupRoom(roomId) {
-  if (!roomId) return;
-  // Clear timers
-  if (turnTimers.has(roomId)) {
-    const t = turnTimers.get(roomId);
-    if (t && t.timer) clearInterval(t.timer);
-    turnTimers.delete(roomId);
-  }
-  if (botTurnTimers.has(roomId)) {
-    clearTimeout(botTurnTimers.get(roomId));
-    botTurnTimers.delete(roomId);
-  }
-  if (auctionTimers.has(roomId)) {
-    clearTimeout(auctionTimers.get(roomId));
-    auctionTimers.delete(roomId);
-  }
-  if (pendingActionTimers.has(roomId)) {
-    const pt = pendingActionTimers.get(roomId);
-    if (pt && pt.timer) clearTimeout(pt.timer);
-    pendingActionTimers.delete(roomId);
-  }
-  // Clear disconnect grace-period timers scoped to this room
-  for (const [key, dc] of disconnectedPlayers.entries()) {
-    if (key.startsWith(roomId + ':')) {
-      if (dc && dc.timer) clearTimeout(dc.timer);
-      disconnectedPlayers.delete(key);
-    }
-  }
-  // Drop per-room state maps
-  chatHistory.delete(roomId);
-  botCounters.delete(roomId);
-  tvSockets.delete(roomId);
-  // Finally remove the game itself
-  rooms.delete(roomId);
 }
 
 function scheduleOrderRolls(roomId) {
@@ -176,9 +114,6 @@ function broadcastState(roomId) {
       if (game.pendingAction) {
         handleBotPendingParticipation(roomId, game);
       }
-      // Arm timeouts for pending actions whose actor is a human (prevents
-      // the whole table hanging if someone goes AFK during an attack).
-      armHumanPendingActionTimeout(roomId, game);
     }
   } catch (err) {
     console.error('broadcastState error:', err.message, err.stack);
@@ -677,101 +612,6 @@ function resolveBotPendingAction(roomId, game, bot) {
   }
 }
 
-// Auto-resolves attack_reaction / choose_kill_helper if the responsible
-// human player doesn't act in time (or has disconnected). Bots already
-// auto-resolve via handleBotPendingParticipation, so this helper only
-// arms a timer when the responsible actor is a human.
-function armHumanPendingActionTimeout(roomId, game) {
-  const action = game.pendingAction;
-  const existing = pendingActionTimers.get(roomId);
-
-  // No pending action — drop any stale timer
-  if (!action) {
-    if (existing) {
-      clearTimeout(existing.timer);
-      pendingActionTimers.delete(roomId);
-    }
-    return;
-  }
-  // Timer already armed for this exact pending action — leave it alone
-  if (existing && existing.action === action) return;
-  if (existing) clearTimeout(existing.timer);
-
-  // attack_reaction: human target has limited time to react
-  if (action.type === 'attack_reaction' && action.targetId) {
-    const target = game.getPlayer(action.targetId);
-    if (!target || target.isBot) return;
-    // Disconnected targets auto-resolve quickly so the table doesn't hang
-    const ms = target.disconnected
-      ? 2500
-      : (action.timeLimit && action.timeLimit > 1000 ? action.timeLimit : 15000);
-    const timer = setTimeout(() => {
-      pendingActionTimers.delete(roomId);
-      if (!game.pendingAction || game.pendingAction !== action) return;
-      try {
-        game.addLog(`${target.name} не встиг відреагувати — атака проходить.`);
-        const outcome = game.resolveAttackReaction(target.id, 'nothing');
-        if (outcome && outcome.type) broadcastEvent(roomId, 'attackOutcome', outcome);
-        broadcastState(roomId);
-      } catch (err) {
-        console.error('attack_reaction timeout error:', err.message, err.stack);
-      }
-    }, ms);
-    pendingActionTimers.set(roomId, { timer, action });
-    return;
-  }
-
-  // choose_stolen_helper: human double_agent player has limited time to pick
-  if (action.type === 'choose_stolen_helper' && action.playerId) {
-    const picker = game.getPlayer(action.playerId);
-    if (!picker || picker.isBot) return;
-    const ms = picker.disconnected ? 2500 : 20000;
-    const timer = setTimeout(() => {
-      pendingActionTimers.delete(roomId);
-      if (!game.pendingAction || game.pendingAction !== action) return;
-      try {
-        const target = game.getPlayer(action.targetId);
-        if (target && target.helpers.length > 0) {
-          game.addLog(`${picker.name} не обрав — агент повернувся ні з чим.`);
-          game.executeChooseStolenHelper(action.playerId, 0);
-        } else {
-          game.pendingAction = null;
-        }
-        broadcastState(roomId);
-      } catch (err) {
-        console.error('choose_stolen_helper timeout error:', err.message, err.stack);
-      }
-    }, ms);
-    pendingActionTimers.set(roomId, { timer, action });
-    return;
-  }
-
-  // choose_kill_helper: human attacker has limited time to pick a helper
-  if (action.type === 'choose_kill_helper' && action.attackerId) {
-    const attacker = game.getPlayer(action.attackerId);
-    if (!attacker || attacker.isBot) return;
-    const ms = attacker.disconnected ? 2500 : 20000;
-    const timer = setTimeout(() => {
-      pendingActionTimers.delete(roomId);
-      if (!game.pendingAction || game.pendingAction !== action) return;
-      try {
-        const target = game.getPlayer(action.targetId);
-        if (target && target.helpers.length > 0) {
-          game.addLog(`${attacker.name} не вибрав помічника — вбито першого.`);
-          const result = game.executeChooseKillHelper(action.attackerId, action.targetId, 0);
-          if (result && result.type) broadcastEvent(roomId, 'attackOutcome', result);
-        } else {
-          game.pendingAction = null;
-        }
-        broadcastState(roomId);
-      } catch (err) {
-        console.error('choose_kill_helper timeout error:', err.message, err.stack);
-      }
-    }, ms);
-    pendingActionTimers.set(roomId, { timer, action });
-  }
-}
-
 function handleBotPendingParticipation(roomId, game) {
   const action = game.pendingAction;
   if (!action) return;
@@ -848,25 +688,6 @@ function handleBotPendingParticipation(roomId, game) {
         game.executeAllianceOffer(action.toId, true); // Bots accept alliances
         broadcastState(roomId);
       }, 2000);
-    }
-  }
-
-  // Bot auto-picks a stolen helper when it played double_agent
-  if (action.type === 'choose_stolen_helper' && action.playerId) {
-    const picker = game.getPlayer(action.playerId);
-    if (picker && picker.isBot) {
-      setTimeout(() => {
-        if (!game.pendingAction || game.pendingAction.type !== 'choose_stolen_helper') return;
-        const target = game.getPlayer(action.targetId);
-        const count = target ? target.helpers.length : 0;
-        if (count > 0) {
-          const idx = Math.floor(Math.random() * count);
-          game.executeChooseStolenHelper(action.playerId, idx);
-        } else {
-          game.pendingAction = null;
-        }
-        broadcastState(roomId);
-      }, 1200);
     }
   }
 
@@ -971,23 +792,15 @@ function resetTurnTimer(roomId) {
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
-  // Tell the client whether cheat handlers are enabled on this server.
-  // Client uses this to hide the cheat panel trigger in production.
-  socket.emit('serverConfig', {
-    cheatsEnabled: process.env.ENABLE_CHEATS === '1'
-  });
-
   // CREATE ROOM
   socket.on('createRoom', ({ playerName, characterId }, cb) => {
-    const cleanName = sanitizeName(playerName);
     const roomId = generateRoomId();
     const game = new GameEngine(roomId);
-    const player = game.addPlayer(socket.id, cleanName, false, characterId);
-    if (player) player.rejoinToken = generateRejoinToken();
+    const player = game.addPlayer(socket.id, playerName, false, characterId);
     rooms.set(roomId, game);
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
-    cb({ roomId, playerId: socket.id, player, rejoinToken: player && player.rejoinToken });
+    cb({ roomId, playerId: socket.id, player });
     broadcastState(roomId);
   });
 
@@ -1019,21 +832,19 @@ io.on('connection', (socket) => {
 
   // JOIN ROOM
   socket.on('joinRoom', ({ roomId, playerName, characterId }, cb) => {
-    const cleanName = sanitizeName(playerName);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Кімнату не знайдено.' });
     if (game.phase !== 'waiting') return cb({ error: 'Гра вже розпочалась.' });
     if (game.players.length >= 8) return cb({ error: 'Кімната повна.' });
 
-    const player = game.addPlayer(socket.id, cleanName, false, characterId);
+    const player = game.addPlayer(socket.id, playerName, false, characterId);
     if (!player) return cb({ error: 'Не вдалося приєднатися.' });
-    player.rejoinToken = generateRejoinToken();
 
     playerRooms.set(socket.id, roomId);
     socket.join(roomId);
-    cb({ roomId, playerId: socket.id, player, rejoinToken: player.rejoinToken });
+    cb({ roomId, playerId: socket.id, player });
     broadcastState(roomId);
-    broadcastEvent(roomId, 'playerJoined', { name: cleanName, count: game.players.length });
+    broadcastEvent(roomId, 'playerJoined', { name: playerName, count: game.players.length });
   });
 
   // START GAME
@@ -1230,9 +1041,6 @@ io.on('connection', (socket) => {
       case 'choose_hidden_helper':
         result = game.executeChooseHiddenHelper(socket.id, data.cardIndex);
         break;
-      case 'choose_stolen_helper':
-        result = game.executeChooseStolenHelper(socket.id, data.helperIndex);
-        break;
       case 'decline_hire':
         game.pendingAction = null;
         result = { success: true };
@@ -1252,24 +1060,12 @@ io.on('connection', (socket) => {
           broadcastEvent(roomId, 'attackOutcome', result);
         }
         break;
-      case 'choose_kill_helper': {
-        // Anti-cheat: take attacker/target from server state, not from client.
-        // Only the attacker is allowed to pick which helper to kill.
-        const action = game.pendingAction;
-        if (!action || action.type !== 'choose_kill_helper') {
-          result = { error: 'Немає активної атаки.' };
-          break;
-        }
-        if (action.attackerId !== socket.id) {
-          result = { error: 'Це не ваша атака.' };
-          break;
-        }
-        result = game.executeChooseKillHelper(action.attackerId, action.targetId, data.helperIndex);
+      case 'choose_kill_helper':
+        result = game.executeChooseKillHelper(data.attackerId, data.targetId, data.helperIndex);
         if (result && result.type) {
           broadcastEvent(roomId, 'attackOutcome', result);
         }
         break;
-      }
       case 'choose_lose_helper':
         if (game.pendingAction && game.pendingAction.type === 'choose_lose_helper') {
           const player = game.getPlayer(socket.id);
@@ -1590,7 +1386,7 @@ io.on('connection', (socket) => {
         game.winner = alive[0];
         game.addLog(`${alive[0].name} переміг!`);
       }
-      if (alive.length === 0) cleanupRoom(roomId);
+      if (alive.length === 0) rooms.delete(roomId);
     }
     playerRooms.delete(socket.id);
     socket.leave(roomId);
@@ -1611,7 +1407,8 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('gameRestarted');
 
     // Clean up the room — players will rejoin via reload
-    cleanupRoom(roomId);
+    clearTurnTimer(roomId);
+    rooms.delete(roomId);
     // Clear all player-room mappings for this room
     for (const [sid, rid] of playerRooms.entries()) {
       if (rid === roomId) playerRooms.delete(sid);
@@ -1620,14 +1417,7 @@ io.on('connection', (socket) => {
   });
 
   // ===== CHEAT/DEBUG HANDLERS =====
-  // All cheat_* handlers are gated behind the ENABLE_CHEATS env var.
-  // In production (Railway) this is unset, so these no-op.
-  // For local dev, run with: ENABLE_CHEATS=1 node server.js
-  const cheatsEnabled = process.env.ENABLE_CHEATS === '1';
-  const denyCheat = (cb) => cb && cb({ error: 'Cheats disabled on this server.' });
-
   socket.on('cheat_addCard', (data, cb) => {
-    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1647,7 +1437,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_addHelper', (data, cb) => {
-    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1667,7 +1456,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_setMoney', (data, cb) => {
-    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1682,7 +1470,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_teleport', (data, cb) => {
-    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1696,7 +1483,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_addHelperToPlayer', (data, cb) => {
-    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1714,7 +1500,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cheat_placeBomb', (data, cb) => {
-    if (!cheatsEnabled) return denyCheat(cb);
     try {
       const roomId = playerRooms.get(socket.id);
       const game = rooms.get(roomId);
@@ -1725,9 +1510,7 @@ io.on('connection', (socket) => {
     } catch(e) { cb({ error: e.message }); }
   });
 
-  // CHAT MESSAGE — rate-limited to prevent spam / flood abuse
-  // Per-socket sliding window: at most 3 messages per 2 seconds.
-  const chatRateWindow = [];
+  // CHAT MESSAGE
   socket.on('chatMessage', ({ message }, cb) => {
     const roomId = playerRooms.get(socket.id);
     const game = rooms.get(roomId);
@@ -1736,13 +1519,6 @@ io.on('connection', (socket) => {
     if (!player) return;
     const trimmed = message.trim().slice(0, 200);
     if (!trimmed) return;
-    const now = Date.now();
-    while (chatRateWindow.length && now - chatRateWindow[0] > 2000) chatRateWindow.shift();
-    if (chatRateWindow.length >= 3) {
-      if (cb) cb({ error: 'Занадто швидко, зачекайте.' });
-      return;
-    }
-    chatRateWindow.push(now);
     const idx = game.players.indexOf(player);
     const msg = {
       playerId: socket.id,
@@ -1750,7 +1526,7 @@ io.on('connection', (socket) => {
       playerColor: player.character?.color || '#888',
       playerIndex: idx,
       message: trimmed,
-      timestamp: now
+      timestamp: Date.now()
     };
     if (!chatHistory.has(roomId)) chatHistory.set(roomId, []);
     const history = chatHistory.get(roomId);
@@ -1835,38 +1611,29 @@ io.on('connection', (socket) => {
   });
 
   // REJOIN ROOM (reconnection)
-  // Requires a rejoinToken issued at createRoom/joinRoom time. Without a
-  // matching token you cannot take over someone else's seat by typing
-  // their nickname.
-  socket.on('rejoinRoom', ({ roomId, playerName, rejoinToken }, cb) => {
-    if (!rejoinToken || typeof rejoinToken !== 'string') {
-      return cb({ error: 'Немає токена для перепідключення.' });
-    }
+  socket.on('rejoinRoom', ({ roomId, playerName }, cb) => {
+    const key = Array.from(disconnectedPlayers.keys()).find(k => {
+      const dc = disconnectedPlayers.get(k);
+      return k.startsWith(roomId + ':') && dc.name === playerName;
+    });
+    if (!key) return cb({ error: 'Не вдалося перепідключитися.' });
+    const dc = disconnectedPlayers.get(key);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
 
     const player = game.players.find(p => p.name === playerName);
     if (!player) return cb({ error: 'Гравця не знайдено.' });
-    if (!player.rejoinToken || player.rejoinToken !== rejoinToken) {
-      return cb({ error: 'Невірний токен перепідключення.' });
-    }
-
-    // Find disconnect record to clear grace timer (if any)
-    const key = Array.from(disconnectedPlayers.keys()).find(k => {
-      const dc = disconnectedPlayers.get(k);
-      return k.startsWith(roomId + ':') && dc.name === playerName;
-    });
-    if (key) {
-      const dc = disconnectedPlayers.get(key);
-      playerRooms.delete(dc.socketId);
-      clearTimeout(dc.timer);
-      disconnectedPlayers.delete(key);
-    }
 
     // Reassign socket ID
+    const oldId = player.id;
     player.id = socket.id;
     player.alive = true;
     player.disconnected = false;
+
+    // Clean up old mappings
+    playerRooms.delete(dc.socketId);
+    clearTimeout(dc.timer);
+    disconnectedPlayers.delete(key);
 
     // Set up new mappings
     playerRooms.set(socket.id, roomId);
@@ -1910,10 +1677,7 @@ io.on('connection', (socket) => {
                 game.winner = alive[0];
                 game.addLog(`${alive[0].name} переміг!`);
               }
-              if (alive.length === 0) {
-                cleanupRoom(roomId);
-                return; // room gone, skip broadcast
-              }
+              if (alive.length === 0) rooms.delete(roomId);
               broadcastState(roomId);
             }
           }, RECONNECT_GRACE * 1000);
@@ -1940,9 +1704,8 @@ io.on('connection', (socket) => {
             game.phase = 'finished';
             game.winner = alive[0];
           }
-          if (alive.length === 0) cleanupRoom(roomId);
+          if (alive.length === 0) rooms.delete(roomId);
         }
-        // broadcastState is safe even if the room was just cleaned up
         broadcastState(roomId);
       }
       playerRooms.delete(socket.id);
