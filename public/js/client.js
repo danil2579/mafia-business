@@ -3911,8 +3911,10 @@ function updateMusicButton() {
 }
 
 // ===== ENHANCED VICTORY SCREEN =====
+let _victoryDismissed = false;
 function showEnhancedVictoryScreen(state) {
   if (state.phase !== 'finished') return;
+  if (_victoryDismissed) return; // user closed it, don't re-show
   let winner = null;
   if (state.winner) winner = state.players.find(p => p.id === state.winner.id);
   if (!winner) {
@@ -3976,6 +3978,15 @@ function showEnhancedVictoryScreen(state) {
     }
   }
   overlay.classList.add('active');
+
+  // Close button — hide overlay without losing session (for spectating after game)
+  const closeBtn = document.getElementById('victory-close');
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      overlay.classList.remove('active');
+      _victoryDismissed = true;
+    };
+  }
 }
 
 // ===== TRADING UI =====

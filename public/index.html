@@ -413,6 +413,7 @@
 
   <!-- ===== VICTORY OVERLAY ===== -->
   <div id="victory-overlay" class="victory-overlay">
+    <button id="victory-close" class="victory-close" title="Закрити">&times;</button>
     <div class="victory-particles" id="victory-particles"></div>
     <div class="victory-content">
       <div class="victory-crown">
@@ -436,7 +437,7 @@
       <div class="victory-title">ПЕРЕМОЖЕЦЬ</div>
       <div id="victory-name" class="victory-name"></div>
       <div id="victory-stats" class="victory-stats"></div>
-      <button class="btn btn-primary" onclick="location.reload()">Нова гра</button>
+      <button class="btn btn-primary" onclick="sessionStorage.removeItem('mafia_roomId'); sessionStorage.removeItem('mafia_playerName'); sessionStorage.removeItem('mafia_rejoinToken'); location.reload()">Нова гра</button>
     </div>
   </div>
 
