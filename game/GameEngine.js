@@ -843,12 +843,6 @@ class GameEngine {
       return { type: 'prison_business', biz, ownerName: owner.name, pendingChoice: true };
     }
 
-    // Alliance between player and owner: no rent
-    if (this.areAllied(player.id, owner.id)) {
-      this.addLog(`${player.name} у союзі з ${owner.name} — рента не платиться.`);
-      return { type: 'alliance_no_rent', ownerName: owner.name };
-    }
-
     // Owner is free — pay rent
     const ownerBizCount = this.getPlayerBusinessesInDistrict(owner.id, sector.districtId).length;
     const rentIndex = Math.min(ownerBizCount - 1, 2);
