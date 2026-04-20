@@ -788,7 +788,9 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .board-area {
   flex: 1; display: flex; align-items: center; justify-content: center;
   position: relative; padding: 0; min-width: 0;
-  background: linear-gradient(180deg, #050712 0%, #040610 50%, #050712 100%);
+  background:
+    linear-gradient(180deg, rgba(5,7,18,0.75) 0%, rgba(4,6,16,0.7) 50%, rgba(5,7,18,0.75) 100%),
+    url('../assets/board-bg.jpg') center/cover no-repeat;
   overflow: hidden;
 }
 
