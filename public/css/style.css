@@ -68,7 +68,9 @@ button svg.icon, .btn svg.icon { margin-right: 0.3em; vertical-align: -0.15em; }
 
 body {
   font-family: var(--font-body);
-  background: var(--bg-dark);
+  background:
+    linear-gradient(180deg, rgba(5,7,18,0.75) 0%, rgba(4,6,16,0.7) 50%, rgba(5,7,18,0.75) 100%),
+    url('../assets/IMG_3457.PNG') center/cover no-repeat fixed;
   color: var(--text);
   overflow: hidden;
   height: 100vh; width: 100vw;
@@ -152,7 +154,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
    LOBBY SCREEN — Premium Cinematic Entrance
    ============================================================ */
 #lobby-screen {
-  justify-content: center; align-items: center; background: var(--bg-dark);
+  justify-content: center; align-items: center; background: transparent;
   position: relative; overflow: hidden;
 }
 #lobby-screen::before {
@@ -643,7 +645,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 /* ============================================================
    GAME SCREEN — Main layout
    ============================================================ */
-#game-screen { flex-direction: column; background: var(--bg-dark); }
+#game-screen { flex-direction: column; background: transparent; }
 
 .game-topbar {
   display: flex; align-items: center; justify-content: space-between;
@@ -788,9 +790,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .board-area {
   flex: 1; display: flex; align-items: center; justify-content: center;
   position: relative; padding: 0; min-width: 0;
-  background:
-    linear-gradient(180deg, rgba(5,7,18,0.75) 0%, rgba(4,6,16,0.7) 50%, rgba(5,7,18,0.75) 100%),
-    url('../assets/board-bg.jpg') center/cover no-repeat;
+  background: transparent;
   overflow: hidden;
 }
 
