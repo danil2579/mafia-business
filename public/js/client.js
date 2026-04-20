@@ -1098,7 +1098,7 @@ function renderBoard(state) {
           cell.classList.add('has-bomb');
           const bomb = document.createElement('div');
           bomb.className = 'bomb-marker';
-          bomb.innerHTML = `<svg viewBox="0 0 64 64" width="18" height="18">
+          bomb.innerHTML = `<svg viewBox="0 0 64 64" width="32" height="32">
             <circle cx="32" cy="38" r="20" fill="#1a1a1a" stroke="#ff4400" stroke-width="2"/>
             <circle cx="32" cy="38" r="16" fill="url(#bombGrad)"/>
             <rect x="29" y="12" width="6" height="12" rx="3" fill="#888"/>
@@ -4837,7 +4837,7 @@ function renderBoardInto(state, selector) {
           cell.classList.add('has-bomb');
           const bomb = document.createElement('div');
           bomb.className = 'bomb-marker';
-          bomb.innerHTML = `<svg viewBox="0 0 64 64" width="18" height="18"><circle cx="32" cy="38" r="20" fill="#1a1a1a" stroke="#ff4400" stroke-width="2"/><circle cx="32" cy="38" r="16" fill="#333"/><rect x="29" y="12" width="6" height="12" rx="3" fill="#888"/><circle cx="32" cy="8" r="5" fill="#ff6600" opacity="0.9"><animate attributeName="r" values="4;6;4" dur="0.8s" repeatCount="indefinite"/></circle></svg>`;
+          bomb.innerHTML = `<svg viewBox="0 0 64 64" width="32" height="32"><circle cx="32" cy="38" r="20" fill="#1a1a1a" stroke="#ff4400" stroke-width="2"/><circle cx="32" cy="38" r="16" fill="#333"/><rect x="29" y="12" width="6" height="12" rx="3" fill="#888"/><circle cx="32" cy="8" r="5" fill="#ff6600" opacity="0.9"><animate attributeName="r" values="4;6;4" dur="0.8s" repeatCount="indefinite"/></circle></svg>`;
           cell.appendChild(bomb);
         }
       } else {
