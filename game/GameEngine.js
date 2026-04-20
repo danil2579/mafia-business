@@ -2276,10 +2276,12 @@ class GameEngine {
       currentPlayer._usedMadDogThisTurn = false;
       currentPlayer._mafiaCardPlayedThisTurn = 0;
       currentPlayer._usedExtraStepThisTurn = false;
+      currentPlayer._lastRentPaid = 0; // reset for insurance card on next turn
       // Decrement money laundering rounds
       if (currentPlayer._doubleIncome && currentPlayer._doubleIncome > 0) {
         currentPlayer._doubleIncome--;
       }
+      // Note: _corruptionTurns is decremented on each police landing (handlePolice), not per turn
     }
 
     // Cappo Corrado extra step handled separately

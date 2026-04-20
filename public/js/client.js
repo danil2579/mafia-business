@@ -92,6 +92,7 @@ const isTVMode = urlParams.get('mode') === 'tv';
 const isPhoneMode = urlParams.get('mode') === 'phone';
 
 let cardRevealActive = false; // true while card reveal is shown — blocks pending actions
+let _cardRevealTimeout = null; // safety timeout to force-clear cardRevealActive
 let confirmedPendingId = null; // track already-confirmed pending action to avoid re-show
 // Unique key for a pending action — includes card id, player id, turn number so
 // two chained same-type events (event_confirm → Без гальм → new event_confirm)
@@ -1542,6 +1543,13 @@ function showCardReveal(type, title, name, description, onDismiss) {
   SFX.cardFlip();
   SFX.cardReveal();
   cardRevealActive = true;
+  // Safety timeout: if the user never dismisses (stuck modal, animation glitch),
+  // force-clear the flag after 30s so pending actions can proceed.
+  if (_cardRevealTimeout) clearTimeout(_cardRevealTimeout);
+  _cardRevealTimeout = setTimeout(() => {
+    cardRevealActive = false;
+    if (gameState && gameState.pendingAction) handlePendingAction(gameState);
+  }, 30000);
   const reveal = $('#card-reveal');
   const typeClass = type === 'mafia' ? 'mafia-type' : 'event-type';
   const typeLabel = type === 'mafia' ? 'КАРТА MAFIA' : 'ПОДІЯ';
@@ -1567,6 +1575,7 @@ function showCardReveal(type, title, name, description, onDismiss) {
     reveal.classList.remove('active');
     if (boardCenter) boardCenter.classList.remove('card-showing');
     cardRevealActive = false;
+    if (_cardRevealTimeout) { clearTimeout(_cardRevealTimeout); _cardRevealTimeout = null; }
     if (onDismiss) onDismiss();
     // After card dismissed, process any deferred pending action
     if (gameState && gameState.pendingAction) {
@@ -3631,10 +3640,20 @@ $('#btn-spin').addEventListener('click', () => {
   const wheel = $('#roulette-wheel');
   wheel.classList.add('spinning');
 
+  // Safety: if callback never fires (disconnect, network error), unfreeze wheel after 20s
+  const casinoSafetyTimer = setTimeout(() => {
+    wheel.classList.remove('spinning');
+    const resultEl = $('#casino-result');
+    if (resultEl) { resultEl.textContent = 'Втрата зв’язку. Спробуйте ще раз.'; resultEl.className = 'casino-result lose'; }
+    const spinBtn = $('#btn-spin');
+    if (spinBtn) spinBtn.disabled = false;
+  }, 20000);
+
   socket.emit('resolveAction', {
     actionType: 'casino',
     data: { betType: selectedBetType, betAmount }
   }, (res) => {
+    clearTimeout(casinoSafetyTimer);
     if (res.error) {
       wheel.classList.remove('spinning');
       const resultEl = $('#casino-result');

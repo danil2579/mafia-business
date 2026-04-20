@@ -1357,18 +1357,36 @@ io.on('connection', (socket) => {
       case 'bomb_choose_helper':
         if (game.pendingAction && game.pendingAction.type === 'bomb_choose_helper') {
           const player = game.getPlayer(socket.id);
-          if (data.helperIndex >= 0 && data.helperIndex < player.helpers.length) {
-            const helper = player.helpers.splice(data.helperIndex, 1)[0];
-            game.returnHelperToDeck(helper);
-            game.addLog(`${helper.name} загинув від вибуху бомби!`);
-            game.pendingAction = null;
-            result = { success: true };
-            // After bomb damage is resolved, continue with deferred landing if any
-            const deferredResult = game.resolveDeferredLanding(socket.id);
-            if (deferredResult) {
-              result.deferredLanding = deferredResult;
-            }
+          if (!player) {
+            result = { error: 'Гравця не знайдено.' };
+            break;
           }
+          // Ownership check — only the player whose bomb triggered can pick
+          if (game.pendingAction.playerId && game.pendingAction.playerId !== socket.id) {
+            result = { error: 'Не ваш вибух.' };
+            break;
+          }
+          if (!Array.isArray(player.helpers) || player.helpers.length === 0) {
+            game.pendingAction = null;
+            result = { error: 'У вас немає помічників.' };
+            break;
+          }
+          if (!Number.isInteger(data?.helperIndex) || data.helperIndex < 0 || data.helperIndex >= player.helpers.length) {
+            result = { error: 'Невірний індекс помічника.' };
+            break;
+          }
+          const helper = player.helpers.splice(data.helperIndex, 1)[0];
+          game.returnHelperToDeck(helper);
+          game.addLog(`${helper.name} загинув від вибуху бомби!`);
+          game.pendingAction = null;
+          result = { success: true };
+          // After bomb damage is resolved, continue with deferred landing if any
+          const deferredResult = game.resolveDeferredLanding(socket.id);
+          if (deferredResult) {
+            result.deferredLanding = deferredResult;
+          }
+        } else {
+          result = { error: 'Немає активного вибору.' };
         }
         break;
       case 'police_bonus':
