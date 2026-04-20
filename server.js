@@ -954,6 +954,11 @@ function startTurnTimer(roomId) {
   io.to(roomId).emit('turnTimer', { remaining });
 
   const interval = setInterval(() => {
+    // Room gone (ended/cleaned up) — stop ticking
+    if (!rooms.has(roomId) || !rooms.get(roomId) || rooms.get(roomId).phase !== 'playing') {
+      clearTurnTimer(roomId);
+      return;
+    }
     remaining--;
     io.to(roomId).emit('turnTimer', { remaining });
     if (remaining <= 0) {
@@ -1897,6 +1902,12 @@ io.on('connection', (socket) => {
       playerRooms.delete(dc.socketId);
       clearTimeout(dc.timer);
       disconnectedPlayers.delete(key);
+    }
+
+    // Race safety: if old socket.id still mapped to this room (disconnect event
+    // hasn't fired yet), clear it now to prevent stale playerRooms entries.
+    if (player.id && player.id !== socket.id) {
+      playerRooms.delete(player.id);
     }
 
     // Reassign socket ID

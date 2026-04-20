@@ -686,6 +686,15 @@ socket.on('gameState', (state) => {
   } else if (state.phase === 'finished') {
     showScreen(gameScreen);
     renderGame(state, true); // skip pending action
+    // Close any leftover pending modals/overlays so they don't cover victory screen
+    try { hideModal(); } catch(e) {}
+    try { hideCenterPanel(); } catch(e) {}
+    try {
+      const auction = document.getElementById('auction-overlay');
+      if (auction) auction.classList.remove('active');
+      if (auctionTimerInterval) { clearInterval(auctionTimerInterval); auctionTimerInterval = null; }
+    } catch(e) {}
+    document.querySelectorAll('.hidden-helper-overlay, .bomb-picker-overlay, .trade-overlay').forEach(el => el.remove());
     showEnhancedVictoryScreen(state);
   } else {
     // Check if we're animating — delay pending action display
@@ -1407,7 +1416,11 @@ function showCenterPanel(title, description, buttons, extraHtml) {
     el.className = `btn ${btn.cls || 'btn-primary'}`;
     el.innerHTML = btn.text;
     el.addEventListener('click', () => {
-      btn.action();
+      if (el.disabled) return;
+      el.disabled = true;
+      el.style.opacity = '0.6';
+      try { btn.action(); } catch(e) { console.error(e); }
+      setTimeout(() => { el.disabled = false; el.style.opacity = ''; }, 1000);
     });
     btnContainer.appendChild(el);
   }
@@ -3198,6 +3211,11 @@ function handlePendingAction(state) {
         ]);
       }
       break;
+
+    default:
+      // Unknown pending action type — log & don't trap user
+      console.warn('[handlePendingAction] Unknown action type:', action.type, action);
+      break;
   }
 }
 
@@ -3220,7 +3238,15 @@ function showModal(title, description, buttons) {
       el.style.opacity = '0.4';
       el.style.cursor = 'not-allowed';
     } else if (btn.action) {
-      el.addEventListener('click', btn.action);
+      // Debounce: disable button immediately on click to prevent double-fire
+      el.addEventListener('click', () => {
+        if (el.disabled) return;
+        el.disabled = true;
+        el.style.opacity = '0.6';
+        try { btn.action(); } catch(e) { console.error(e); }
+        // Re-enable after short delay in case modal stays open (nested flow)
+        setTimeout(() => { el.disabled = false; el.style.opacity = ''; }, 1000);
+      });
     }
     btnContainer.appendChild(el);
   }

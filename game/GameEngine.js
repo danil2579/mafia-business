@@ -1242,7 +1242,9 @@ class GameEngine {
     if (!player) return { error: 'Гравця не знайдено' };
 
     if (choiceId === 'pay_500') {
+      if (player.money < 500) return { error: 'Недостатньо грошей для хабара.' };
       player.money -= 500;
+      player.stats.moneySpent += 500;
       this.addLog(`${player.name} заплатив поліції хабар 500$.`);
       this.pendingAction = null;
       return { success: true, type: 'bribe' };
@@ -2291,14 +2293,26 @@ class GameEngine {
     const currentRound = this.getCurrentRound();
     if (currentRound > this.maxRounds) {
       const alive = this.getAlivePlayers();
-      const richest = alive.sort((a, b) => {
-        const aWealth = a.money + a.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
-        const bWealth = b.money + b.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
-        return bWealth - aWealth;
-      })[0];
-      this.phase = 'finished';
-      this.winner = richest;
-      this.addLog(`\u23F0 Гра закінчена після ${this.maxRounds} кіл! ${richest.name} переміг як найбагатший!`);
+      if (alive.length === 0) {
+        // Edge case: everyone dead simultaneously (e.g. chain-bomb) — pick richest of all (dead) players
+        const all = [...this.players].sort((a, b) => {
+          const aWealth = a.money + a.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
+          const bWealth = b.money + b.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
+          return bWealth - aWealth;
+        });
+        this.phase = 'finished';
+        this.winner = all[0] || null;
+        this.addLog(`⏰ Гра закінчена — переможця немає (всі загинули).`);
+      } else {
+        const richest = alive.sort((a, b) => {
+          const aWealth = a.money + a.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
+          const bWealth = b.money + b.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
+          return bWealth - aWealth;
+        })[0];
+        this.phase = 'finished';
+        this.winner = richest;
+        this.addLog(`⏰ Гра закінчена після ${this.maxRounds} кіл! ${richest.name} переміг як найбагатший!`);
+      }
     }
 
     return { nextPlayer: next.id, turnNumber: this.turnNumber };
