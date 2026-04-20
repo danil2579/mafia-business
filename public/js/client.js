@@ -1638,15 +1638,70 @@ function showHiddenHelperChoice(cardCount) {
 }
 
 // ===== DOUBLE AGENT: blind pick of a helper to steal =====
-function showStolenHelperChoice(helperCount, isSwap, targetName) {
+// Step 1 of swap: pick which of your own helpers to give up (names visible)
+function showChooseOwnHelperToRelease(ownHelpers, targetName) {
   hideCenterPanel();
   const overlay = document.createElement('div');
   overlay.className = 'hidden-helper-overlay active';
   overlay.innerHTML = `
     <div class="hh-backdrop"></div>
     <div class="hh-content">
+      <div class="hh-title" style="color:#b59c4e">ОБМІН ПОМІЧНИКАМИ</div>
+      <div class="hh-subtitle">У вас максимум помічників. Оберіть кого віддати, щоб забрати помічника ${targetName}</div>
+      <div class="hh-cards" id="own-helper-cards"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const cardsContainer = overlay.querySelector('#own-helper-cards');
+  ownHelpers.forEach((h, i) => {
+    const card = document.createElement('div');
+    card.className = 'hh-card hh-flipped'; // start flipped (face up — names visible)
+    card.dataset.index = i;
+    const hasPortrait = h.id && HELPER_PORTRAITS[h.id];
+    card.innerHTML = `
+      <div class="hh-card-inner">
+        <div class="hh-card-back"></div>
+        <div class="hh-card-front" style="border-color:rgba(181,156,78,0.6)">
+          <div class="hh-card-front-icon ${hasPortrait ? 'hh-has-portrait' : ''}">${hasPortrait ? HELPER_PORTRAITS[h.id] : '&#9733;'}</div>
+          <div class="hh-card-front-name">${h.name}</div>
+        </div>
+      </div>
+    `;
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.addEventListener('click', () => {
+      if (card.classList.contains('hh-chosen') || card.classList.contains('hh-rejected')) return;
+      SFX.cardFlip();
+      cardsContainer.querySelectorAll('.hh-card').forEach(c => {
+        if (c !== card) c.classList.add('hh-rejected');
+      });
+      card.classList.add('hh-chosen');
+      socket.emit('resolveAction', { actionType: 'choose_own_helper_to_release', data: { helperIndex: i } }, (res) => {
+        if (res && res.error) {
+          handleResult(res);
+        }
+        setTimeout(() => {
+          overlay.classList.remove('active');
+          setTimeout(() => overlay.remove(), 400);
+        }, 600);
+      });
+    });
+    cardsContainer.appendChild(card);
+  });
+}
+
+function showStolenHelperChoice(helperCount, isSwap, targetName, releasedHelperName) {
+  hideCenterPanel();
+  const overlay = document.createElement('div');
+  overlay.className = 'hidden-helper-overlay active';
+  const swapHint = isSwap && releasedHelperName
+    ? `Ви віддаєте <strong style="color:#e74c3c">${releasedHelperName}</strong>. `
+    : '';
+  overlay.innerHTML = `
+    <div class="hh-backdrop"></div>
+    <div class="hh-content">
       <div class="hh-title" style="color:#b59c4e">ПОДВІЙНИЙ АГЕНТ</div>
-      <div class="hh-subtitle">${isSwap ? 'Ваш перший помічник піде у відставку. ' : ''}Оберіть помічника ${targetName || 'цілі'} наосліп</div>
+      <div class="hh-subtitle">${swapHint}Оберіть помічника ${targetName || 'цілі'} наосліп</div>
       <div class="hh-cards" id="sh-cards"></div>
     </div>
   `;
@@ -2876,10 +2931,17 @@ function handlePendingAction(state) {
       showHiddenHelperChoice(action.cardCount || 3);
       break;
 
+    case 'choose_own_helper_to_release': {
+      if (action.playerId !== myId) break;
+      const tgt = state.players.find(p => p.id === action.targetId);
+      showChooseOwnHelperToRelease(action.ownHelpers || [], tgt ? tgt.name : 'ворога');
+      break;
+    }
+
     case 'choose_stolen_helper': {
       if (action.playerId !== myId) break; // only the card player sees the pick
       const tgt = state.players.find(p => p.id === action.targetId);
-      showStolenHelperChoice(action.helperCount || 1, !!action.isSwap, tgt ? tgt.name : '');
+      showStolenHelperChoice(action.helperCount || 1, !!action.isSwap, tgt ? tgt.name : '', action.ownHelperName);
       break;
     }
 

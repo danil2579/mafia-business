@@ -721,6 +721,26 @@ function armHumanPendingActionTimeout(roomId, game) {
     return;
   }
 
+  // choose_own_helper_to_release (double_agent swap, step 1)
+  if (action.type === 'choose_own_helper_to_release' && action.playerId) {
+    const picker = game.getPlayer(action.playerId);
+    if (!picker || picker.isBot) return;
+    const ms = picker.disconnected ? 2500 : 20000;
+    const timer = setTimeout(() => {
+      pendingActionTimers.delete(roomId);
+      if (!game.pendingAction || game.pendingAction !== action) return;
+      try {
+        game.addLog(`${picker.name} не обрав помічника — скидає першого.`);
+        game.executeChooseOwnHelperToRelease(action.playerId, 0);
+        broadcastState(roomId);
+      } catch (err) {
+        console.error('choose_own_helper_to_release timeout error:', err.message, err.stack);
+      }
+    }, ms);
+    pendingActionTimers.set(roomId, { timer, action });
+    return;
+  }
+
   // choose_stolen_helper: human double_agent player has limited time to pick
   if (action.type === 'choose_stolen_helper' && action.playerId) {
     const picker = game.getPlayer(action.playerId);
@@ -848,6 +868,19 @@ function handleBotPendingParticipation(roomId, game) {
         game.executeAllianceOffer(action.toId, true); // Bots accept alliances
         broadcastState(roomId);
       }, 2000);
+    }
+  }
+
+  // Bot auto-picks own helper to release (double_agent swap, step 1)
+  if (action.type === 'choose_own_helper_to_release' && action.playerId) {
+    const picker = game.getPlayer(action.playerId);
+    if (picker && picker.isBot) {
+      setTimeout(() => {
+        if (!game.pendingAction || game.pendingAction.type !== 'choose_own_helper_to_release') return;
+        const idx = Math.floor(Math.random() * picker.helpers.length);
+        game.executeChooseOwnHelperToRelease(action.playerId, idx);
+        broadcastState(roomId);
+      }, 1000);
     }
   }
 
@@ -1232,6 +1265,9 @@ io.on('connection', (socket) => {
         break;
       case 'choose_stolen_helper':
         result = game.executeChooseStolenHelper(socket.id, data.helperIndex);
+        break;
+      case 'choose_own_helper_to_release':
+        result = game.executeChooseOwnHelperToRelease(socket.id, data.helperIndex);
         break;
       case 'decline_hire':
         game.pendingAction = null;

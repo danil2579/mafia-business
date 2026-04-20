@@ -1353,9 +1353,38 @@ class GameEngine {
     return { type: 'choose_hidden_helper', cardCount: drawnHelpers.length };
   }
 
+  // Step 1 of double_agent swap: player picks which of their OWN helpers to give away.
+  executeChooseOwnHelperToRelease(playerId, helperIndex) {
+    const action = this.pendingAction;
+    if (!action || action.type !== 'choose_own_helper_to_release') {
+      return { error: 'Немає активного вибору.' };
+    }
+    if (action.playerId !== playerId) return { error: 'Не ваш вибір.' };
+    const player = this.getPlayer(playerId);
+    const target = this.getPlayer(action.targetId);
+    if (!player || !target) return { error: 'Гравця не знайдено.' };
+    if (helperIndex < 0 || helperIndex >= player.helpers.length) {
+      return { error: 'Невірний вибір.' };
+    }
+    if (target.helpers.length === 0) {
+      this.pendingAction = null;
+      return { error: 'У цілі більше немає помічників.' };
+    }
+    // Remember which own helper to release, then move to blind pick
+    this.pendingAction = {
+      type: 'choose_stolen_helper',
+      playerId: player.id,
+      targetId: target.id,
+      helperCount: target.helpers.length,
+      isSwap: true,
+      ownHelperToReleaseIndex: helperIndex,
+      ownHelperName: player.helpers[helperIndex].name
+    };
+    return { type: 'choose_stolen_helper', helperCount: target.helpers.length, isSwap: true };
+  }
+
   // Resolves the double_agent blind pick: player picks one of the target's
-  // helpers face-down. If the player already had max helpers, the card
-  // becomes a swap — their first (oldest) helper is released to the deck.
+  // helpers face-down. If swap — the previously-chosen own helper is released.
   executeChooseStolenHelper(playerId, helperIndex) {
     const action = this.pendingAction;
     if (!action || action.type !== 'choose_stolen_helper') {
@@ -1371,8 +1400,10 @@ class GameEngine {
 
     const stolen = target.helpers.splice(helperIndex, 1)[0];
     let released = null;
-    if (action.isSwap && player.helpers.length > 0) {
-      released = player.helpers.shift();
+    if (action.isSwap && typeof action.ownHelperToReleaseIndex === 'number'
+        && action.ownHelperToReleaseIndex >= 0
+        && action.ownHelperToReleaseIndex < player.helpers.length) {
+      released = player.helpers.splice(action.ownHelperToReleaseIndex, 1)[0];
       this.returnHelperToDeck(released);
     }
     player.helpers.push(stolen);
@@ -1666,21 +1697,36 @@ class GameEngine {
         return { type: 'witness_protection_active' };
 
       case 'double_agent': {
-        if (!target) return { error: 'Оберіть ціль.' };
-        if (target.helpers.length === 0) return { error: 'У гравця немає помічників.' };
+        // Validation — restore card on any invalid play (don't waste it)
+        if (!target || target.helpers.length === 0) {
+          player.mafiaCards.push(card);
+          this.mafiaDiscard.pop();
+          return { error: !target ? 'Оберіть ціль.' : 'У гравця немає помічників.' };
+        }
         const daRespect = this.getRespectData(player.respectLevel);
-        // If player already has max helpers, the steal turns into a swap:
-        // they will release their first (oldest) helper to make room.
         const isSwap = player.helpers.length >= daRespect.maxHelpers;
+        if (isSwap) {
+          // Two-step: first let player choose WHICH of their own helpers to release
+          this.pendingAction = {
+            type: 'choose_own_helper_to_release',
+            playerId: player.id,
+            targetId: target.id,
+            ownHelpers: player.helpers.map(h => ({ id: h.id, name: h.name, ability: h.ability }))
+          };
+          this.addLog(`${player.name} закидає подвійного агента до ${target.name}! (потрібен обмін — у вас максимум помічників)`);
+          return { type: 'choose_own_helper_to_release', targetHelperCount: target.helpers.length };
+        }
+        // Not maxed — go straight to blind pick
         this.pendingAction = {
           type: 'choose_stolen_helper',
           playerId: player.id,
           targetId: target.id,
           helperCount: target.helpers.length,
-          isSwap
+          isSwap: false,
+          ownHelperToRelease: null
         };
         this.addLog(`${player.name} закидає подвійного агента до ${target.name}!`);
-        return { type: 'choose_stolen_helper', helperCount: target.helpers.length, isSwap };
+        return { type: 'choose_stolen_helper', helperCount: target.helpers.length, isSwap: false };
       }
 
       case 'insurance':
