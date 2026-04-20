@@ -346,6 +346,7 @@ class GameEngine {
       player.inPrison = 0;
       this.addLog(`${player.name} вийшов з в'язниці!`);
       // Player is released but still skips this turn — they play next turn
+      this.turnPhase = 'end'; // prevent rolling dice on release turn
       return { inPrison: false, released: true };
     }
     this.addLog(`${player.name} у в'язниці (ще ${player.inPrison} ходів).`);

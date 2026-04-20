@@ -7,7 +7,12 @@
       "Bash(grep -n *)",
       "Bash(node -e \"require\\('./public/js/client.js'\\)\")",
       "Bash(node -c server.js)",
-      "Bash(node -c game/GameEngine.js)"
+      "Bash(node -c game/GameEngine.js)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cat)",
+      "Bash(node /tmp/test_prison.js)",
+      "Bash(sed -i 's/const { GameEngine } = require/const GameEngine = require/' test_prison.js)",
+      "Bash(node test_prison.js)"
     ]
   }
 }
