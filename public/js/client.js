@@ -1084,6 +1084,10 @@ function renderBoard(state) {
         // Player tokens (support up to 8) — centered, arranged in circle if multiple
         const tokens = getPlayersOnSector(sector.index, state);
         const tokenCount = tokens.length;
+        // Prison visual: mark cell as containing prisoners for CSS bars overlay
+        if (sector.type === 'PRISON' && tokens.some(p => p.inPrison > 0)) {
+          cell.classList.add('has-prisoners');
+        }
         tokens.forEach((p, i) => {
           const token = document.createElement('div');
           token.className = 'player-token';

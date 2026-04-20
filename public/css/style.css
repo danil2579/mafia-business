@@ -1058,6 +1058,20 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   top: 50%; left: 50%; transform: translate(-50%, -50%);
   transition: box-shadow 0.3s ease;
 }
+/* Prison cell: jail bars overlay when prisoners inside */
+.board-cell.prison.has-prisoners::before {
+  content: ''; position: absolute; inset: 0; z-index: 11; pointer-events: none;
+  background-image:
+    linear-gradient(90deg, transparent 0%, transparent 16%, rgba(180,180,200,0.5) 16%, rgba(180,180,200,0.5) 20%, transparent 20%, transparent 46%, rgba(180,180,200,0.5) 46%, rgba(180,180,200,0.5) 50%, transparent 50%, transparent 76%, rgba(180,180,200,0.5) 76%, rgba(180,180,200,0.5) 80%, transparent 80%);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.6);
+}
+/* Prison cell tokens: smaller and behind bars */
+.board-cell.prison .player-token {
+  width: 16px !important; height: 16px !important;
+  z-index: 8 !important; /* below bars (11) */
+  opacity: 0.88;
+  filter: saturate(0.7) brightness(0.85);
+}
 
 .money-float {
   position: absolute; right: 0; top: -2px; font-size: 14px; font-weight: 700;
@@ -1237,7 +1251,9 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   text-shadow: 0 0 20px rgba(201,168,76,0.25);
 }
 .center-panel p { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
-.center-panel .center-buttons { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+.center-panel .center-buttons { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; scrollbar-width: none; }
+.center-panel .center-buttons::-webkit-scrollbar { display: none; }
+.biz-purchase-card .center-buttons { overflow: visible !important; max-height: none !important; }
 .center-panel .center-buttons .btn { width: 100%; font-size: 11px; padding: 12px; flex-shrink: 0; }
 
 @keyframes centerIn {
