@@ -279,7 +279,6 @@ class GameEngine {
     let cost = baseCost;
     const respect = this.getRespectData(player.respectLevel);
     cost -= respect.attackDiscount;
-    if (this.hasHelper(player.id, 'cheaperAttacks')) cost -= 500;
     return Math.max(0, cost);
   }
 
@@ -389,12 +388,6 @@ class GameEngine {
           events.push(...this.handlePassStart(player));
         }
         if (sector.type === 'BAR') {
-          // Marco "Player" bonus on passing BAR
-          if (this.hasHelper(player.id, 'barBonus')) {
-            player.money += 1000;
-            this.addLog(`Марко «Гравець» отримав 1000$ у BAR!`);
-            events.push({ type: 'barBonus', amount: 500 });
-          }
           // Passing through BAR: offer to hire helper (per rules)
           events.push({ type: 'bar_passed' });
           this._barPassedThisTurn = true;
@@ -600,15 +593,26 @@ class GameEngine {
     player.stats.moneyEarned += respect.startBonus;
     player.canUpgradeRespect = true;
     this.addLog(`${player.name} пройшов START: +${respect.startBonus}$.`);
-    return [{ type: 'start_passed', bonus: respect.startBonus }];
+    const events = [{ type: 'start_passed', bonus: respect.startBonus }];
+    // Donnie Angelo "Інвестор": +1 free influence on one of player's businesses
+    if (this.hasHelper(player.id, 'freeInfluenceOnStart')) {
+      const upgradeable = (player.businesses || []).filter(bid => {
+        const bs = this.businesses[bid];
+        return bs && bs.owner === player.id && (bs.influenceLevel || 0) < 4;
+      });
+      if (upgradeable.length > 0) {
+        // Auto-upgrade first one (simple, no pending choice to keep flow smooth)
+        const bizId = upgradeable[0];
+        this.businesses[bizId].influenceLevel = (this.businesses[bizId].influenceLevel || 0) + 1;
+        const biz = this.getBusiness(bizId);
+        this.addLog(`Донні Анджело підвищив вплив ${player.name} на ${biz?.name || bizId} безкоштовно.`);
+        events.push({ type: 'free_influence', businessId: bizId });
+      }
+    }
+    return events;
   }
 
   handlePolice(player) {
-    if (this.hasHelper(player.id, 'noBribe')) {
-      player.money += 500;
-      this.addLog(`Міккі «Відступник» допоміг ${player.name} уникнути хабара і заробив 500$!`);
-      return [{ type: 'police_bribe_skipped' }];
-    }
     // Corruption card: skip bribe
     if (player._corruptionTurns && player._corruptionTurns > 0) {
       player._corruptionTurns--;
@@ -616,10 +620,22 @@ class GameEngine {
       return [{ type: 'police_bribe_skipped' }];
     }
     const respect = this.getRespectData(player.respectLevel);
-    player.money -= respect.policeBribe;
-    player.stats.moneySpent += respect.policeBribe;
-    this.addLog(`${player.name} заплатив хабар поліції: ${respect.policeBribe}$.`);
-    return [{ type: 'police_bribe', amount: respect.policeBribe }];
+    const bribe = respect.policeBribe;
+    player.money -= bribe;
+    player.stats.moneySpent += bribe;
+    this.addLog(`${player.name} заплатив хабар поліції: ${bribe}$.`);
+
+    // Mickey Renegade "Збирач податків": split 50% to each player who has the helper
+    const collectors = this.getAlivePlayers().filter(p => p.id !== player.id && this.hasHelper(p.id, 'policeTax'));
+    if (collectors.length > 0) {
+      const share = Math.floor(bribe / 2 / collectors.length);
+      for (const c of collectors) {
+        c.money += share;
+        c.stats.moneyEarned += share;
+        this.addLog(`Міккі «Відступник» (${c.name}) забрав ${share}$ з хабара.`);
+      }
+    }
+    return [{ type: 'police_bribe', amount: bribe }];
   }
 
   handleBombDamage(player) {
@@ -701,7 +717,7 @@ class GameEngine {
       case 'POLICE':
         return this.resolveLandOnPolice(player);
       case 'PRISON':
-        return { type: 'prison_pass', message: 'Просто відвідування.' };
+        return this.resolvePrisonVisit(player);
       case 'BAR':
         return this.resolveBar(player);
       default:
@@ -768,12 +784,6 @@ class GameEngine {
     const biz = district.businesses[sector.businessIndex];
     const bizState = this.businesses[biz.id];
 
-    // Lenny Pike bonus: 200$ on non-mafia sectors
-    if (this.hasHelper(player.id, 'bonusOnNonMafia')) {
-      player.money += 500;
-      this.addLog(`Ленні «Щука» отримав бонус 500$.`);
-    }
-
     if (!bizState.owner) {
       // Free business — player can buy or auction
       this.pendingAction = {
@@ -796,7 +806,6 @@ class GameEngine {
       const currentLevel = bizState.influenceLevel || 1;
       if (currentLevel < 4) {
         let cost = district.influenceCost;
-        if (this.hasHelper(player.id, 'cheaperInfluence')) cost -= 200;
         cost = Math.max(0, cost);
         if (player.money >= cost) {
           this.pendingAction = {
@@ -832,6 +841,12 @@ class GameEngine {
         ownerName: owner.name
       };
       return { type: 'prison_business', biz, ownerName: owner.name, pendingChoice: true };
+    }
+
+    // Alliance between player and owner: no rent
+    if (this.areAllied(player.id, owner.id)) {
+      this.addLog(`${player.name} у союзі з ${owner.name} — рента не платиться.`);
+      return { type: 'alliance_no_rent', ownerName: owner.name };
     }
 
     // Owner is free — pay rent
@@ -1219,6 +1234,62 @@ class GameEngine {
     }
   }
 
+  resolvePrisonVisit(player) {
+    // Visiting the prison: chance to free someone OR pocket corrupt cash
+    const imprisoned = this.getAlivePlayers().filter(p => p.id !== player.id && p.inPrison > 0);
+    const choices = [];
+    if (imprisoned.length > 0 && player.money >= 500) {
+      choices.push(...imprisoned.map(p => ({
+        id: `free_${p.id}`,
+        label: `Заплатити 500$ і звільнити ${p.name} (у в'язниці)`
+      })));
+    }
+    choices.push({ id: 'grab_cash', label: `Взяти 500$ з казни в'язниці` });
+    choices.push({ id: 'skip', label: 'Пропустити' });
+    this.pendingAction = {
+      type: 'prison_visit_choice',
+      playerId: player.id,
+      choices
+    };
+    return { type: 'prison_visit', pendingChoice: true };
+  }
+
+  resolvePrisonVisitChoice(playerId, choiceId) {
+    const action = this.pendingAction;
+    if (!action || action.type !== 'prison_visit_choice' || action.playerId !== playerId) {
+      return { error: 'Немає вибору.' };
+    }
+    const player = this.getPlayer(playerId);
+    if (!player) return { error: 'Гравця не знайдено.' };
+
+    if (choiceId === 'grab_cash') {
+      player.money += 500;
+      player.stats.moneyEarned += 500;
+      this.addLog(`${player.name} взяв 500$ з казни в'язниці.`);
+      this.pendingAction = null;
+      return { success: true, type: 'prison_cash', amount: 500 };
+    }
+    if (choiceId === 'skip') {
+      this.pendingAction = null;
+      return { success: true, type: 'prison_skipped' };
+    }
+    if (choiceId.startsWith('free_')) {
+      const targetId = choiceId.replace('free_', '');
+      const target = this.getPlayer(targetId);
+      if (!target || target.inPrison <= 0) {
+        return { error: 'Гравця не знайдено або він не у в\'язниці.' };
+      }
+      if (player.money < 500) return { error: 'Недостатньо грошей.' };
+      player.money -= 500;
+      player.stats.moneySpent += 500;
+      target.inPrison = 0;
+      this.addLog(`${player.name} заплатив 500$ і звільнив ${target.name} з в'язниці!`);
+      this.pendingAction = null;
+      return { success: true, type: 'prison_freed', targetName: target.name };
+    }
+    return { error: 'Невідомий вибір.' };
+  }
+
   resolveLandOnPolice(player) {
     // Landing on police — choose action
     const others = this.getAlivePlayers().filter(p => p.id !== player.id && p.inPrison <= 0);
@@ -1246,6 +1317,16 @@ class GameEngine {
       player.money -= 500;
       player.stats.moneySpent += 500;
       this.addLog(`${player.name} заплатив поліції хабар 500$.`);
+      // Mickey Renegade "Збирач податків": split 50%
+      const collectors = this.getAlivePlayers().filter(p => p.id !== player.id && this.hasHelper(p.id, 'policeTax'));
+      if (collectors.length > 0) {
+        const share = Math.floor(250 / collectors.length);
+        for (const c of collectors) {
+          c.money += share;
+          c.stats.moneyEarned += share;
+          this.addLog(`Міккі «Відступник» (${c.name}) забрав ${share}$ з хабара.`);
+        }
+      }
       this.pendingAction = null;
       return { success: true, type: 'bribe' };
     }
@@ -1275,10 +1356,6 @@ class GameEngine {
 
   resolveBar(player) {
     // Bar landing: choose hire helpers OR casino
-    if (this.hasHelper(player.id, 'barBonus')) {
-      player.money += 1000;
-      this.addLog(`Марко «Гравець» отримав 1000$ у BAR!`);
-    }
     const respect = this.getRespectData(player.respectLevel);
     const canHire = respect.maxHelpers > player.helpers.length;
     this.pendingAction = {
@@ -1473,13 +1550,14 @@ class GameEngine {
       return { type: 'jackpot', sectorIndex, sectorColor, won: true };
     }
 
-    // Red/Black — if bet matches sector color, win x2
+    // Red/Black — if bet matches sector color, win x2 (x3 with Marco)
     if (sectorColor === betType) {
-      const winnings = betAmount * bet.payout;
+      const multiplier = this.hasHelper(player.id, 'casinoTriple') ? 3 : bet.payout;
+      const winnings = betAmount * multiplier;
       player.money += winnings;
       player.stats.moneyEarned += winnings;
       player.stats.casinoWins++;
-      this.addLog(`${player.name} виграв ${winnings}$ у казино!`);
+      this.addLog(`${player.name} виграв ${winnings}$ у казино!${multiplier === 3 ? ' (Марко «Шулер» ×3)' : ''}`);
       this.pendingAction = null;
       return { type: 'casino_result', sectorIndex, sectorColor, won: true, winnings };
     }
@@ -1812,6 +1890,12 @@ class GameEngine {
         if (!action.canPolice) return { error: 'Немає карти поліції.' };
         const policeIdx = target.mafiaCards.findIndex(c => c.id === 'police_card');
         target.mafiaCards.splice(policeIdx, 1);
+        // Whitey Ross "Профі": attack is still blocked but attacker doesn't go to prison
+        if (this.hasHelper(attacker.id, 'ignorePolice')) {
+          this.addLog(`${target.name} викликав поліцію, але «Уайті» Росс витягнув ${attacker.name} з-під уваги!`);
+          this.pendingAction = null;
+          return { type: 'attack_blocked', by: 'police', attackerPrisoned: false };
+        }
         this.sendToPrison(attacker, 2);
         this.addLog(`${target.name} викликав поліцію! ${attacker.name} їде у в'язницю!`);
         this.pendingAction = null;
@@ -2079,7 +2163,7 @@ class GameEngine {
   buyInfluence(playerId, businessId) {
     const player = this.getPlayer(playerId);
     // Stanley Pollak per-turn limit
-    if (this.hasHelper(playerId, 'cheaperInfluence') && player._usedStanleyThisTurn) {
+    if (this.hasHelper(playerId, 'buyInfluenceAnywhere') && player._usedStanleyThisTurn) {
       return { error: 'Стенлі Поляк може купити вплив лише 1 раз за хід.' };
     }
     const bizState = this.businesses[businessId];
@@ -2089,9 +2173,7 @@ class GameEngine {
     const district = this.getDistrict(bizState.districtId);
     if (!district) return { error: 'Район не знайдено.' };
 
-    let cost = district.influenceCost;
-    if (this.hasHelper(playerId, 'cheaperInfluence')) cost -= 500;
-    cost = Math.max(0, cost);
+    const cost = Math.max(0, district.influenceCost);
 
     if (player.money < cost) return { error: 'Недостатньо коштів.' };
 
@@ -2100,7 +2182,7 @@ class GameEngine {
 
     this.addLog(`${player.name} збільшив вплив на ${this.getBusiness(businessId).name} (${cost}$). Рівень: ${bizState.influenceLevel}`);
     // Mark Stanley Pollak as used this turn
-    if (this.hasHelper(playerId, 'cheaperInfluence')) {
+    if (this.hasHelper(playerId, 'buyInfluenceAnywhere')) {
       player._usedStanleyThisTurn = true;
     }
     return { success: true, cost, newLevel: bizState.influenceLevel };
@@ -2159,9 +2241,7 @@ class GameEngine {
     if (player.respectLevel >= 5) return { error: 'Максимальний рівень.' };
 
     const nextLevel = RESPECT_LEVELS.find(r => r.level === player.respectLevel + 1);
-    let cost = nextLevel.upgradeCost;
-    if (this.hasHelper(playerId, 'cheaperRespect')) cost -= 1000;
-    cost = Math.max(0, cost);
+    const cost = Math.max(0, nextLevel.upgradeCost);
 
     if (player.money < cost) return { error: 'Недостатньо коштів.' };
 
@@ -2401,6 +2481,38 @@ class GameEngine {
           player._usedStanleyThisTurn = true;
         }
         return result;
+      }
+      case 'spyCards': {
+        // Lenny Pike: peek at another player's mafia cards (1x per round)
+        if (!data.targetId) return { error: 'Оберіть гравця.' };
+        const round = this.getCurrentRound();
+        if (player._lennyUsedRound === round) {
+          return { error: 'Шпигун вже працював цього кола.' };
+        }
+        const target = this.getPlayer(data.targetId);
+        if (!target || !target.alive) return { error: 'Ціль недоступна.' };
+        if (target.id === player.id) return { error: 'Не на себе.' };
+        player._lennyUsedRound = round;
+        this.addLog(`${player.name} підглянув карти ${target.name} (Ленні «Щука»).`);
+        return {
+          success: true,
+          type: 'spy_result',
+          targetName: target.name,
+          cards: target.mafiaCards.map(c => ({ id: c.id, name: c.name, type: c.type }))
+        };
+      }
+      case 'diplomat': {
+        // Tommy Morello: 1x per game cancel a card played against you
+        // (consumed as a reaction — flag is set and checked in card application)
+        if (player._tommyUsed) return { error: 'Дипломат вже використаний.' };
+        if (!this.pendingAction || (this.pendingAction.targetId !== playerId && this.pendingAction.playerId !== playerId)) {
+          return { error: 'Немає активної дії проти вас.' };
+        }
+        player._tommyUsed = true;
+        const action = this.pendingAction;
+        this.pendingAction = null;
+        this.addLog(`${player.name} скасував дію завдяки Дипломату!`);
+        return { success: true, type: 'diplomat_used', canceledType: action.type };
       }
       default:
         return { error: 'Невідома здібність.' };

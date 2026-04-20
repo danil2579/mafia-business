@@ -470,6 +470,11 @@ function resolveBotPendingAction(roomId, game, bot) {
       }
       break;
     }
+    case 'prison_visit_choice': {
+      // Bot strategy: always grab cash (simple, never frees opponents)
+      game.resolvePrisonVisitChoice(botId, 'grab_cash');
+      break;
+    }
     case 'start_bonus_choice': {
       game.resolveStartBonusChoice(botId, 'extra_cash');
       if (game.pendingAction && game.pendingAction.type === 'choose_influence_business') {
@@ -1255,6 +1260,9 @@ io.on('connection', (socket) => {
         break;
       case 'police_choice':
         result = game.resolvePoliceChoice(socket.id, data.choiceId);
+        break;
+      case 'prison_visit_choice':
+        result = game.resolvePrisonVisitChoice(socket.id, data.choiceId);
         break;
       case 'start_bonus':
         result = game.resolveStartBonusChoice(socket.id, data.choiceId);

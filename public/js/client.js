@@ -2612,6 +2612,45 @@ function renderActionPanel(state) {
       actionBtns.appendChild(btn);
     }
 
+    // Lenny Pike "Шпигун": peek at another player's cards (1x per round)
+    if (me.helpers && me.helpers.some(h => h.ability === 'spyCards')) {
+      const btn = createActionBtn('Шпигун (Щука)', () => {
+        SFX.click();
+        const others = state.players.filter(p => p.id !== myId && p.alive);
+        showCenterPanel('Ленні «Щука»', 'Оберіть гравця, чиї карти побачити:', others.map(p => ({
+          text: `${p.name}`,
+          action: () => {
+            socket.emit('useHelperAbility', { ability: 'spyCards', data: { targetId: p.id } }, (res) => {
+              hideCenterPanel();
+              if (res && res.error) { handleResult(res); return; }
+              if (res && res.type === 'spy_result') {
+                const cardList = res.cards && res.cards.length > 0
+                  ? res.cards.map(c => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1)"><strong>${c.name}</strong> <span style="color:var(--text-secondary);font-size:12px">(${c.type})</span></div>`).join('')
+                  : '<div style="color:var(--text-secondary)">Карт немає</div>';
+                showCenterPanel(`${ICON.eye} Шпигун`, `Карти MAFIA у ${res.targetName}:`, [{ text: 'OK', action: () => hideCenterPanel() }], `<div style="margin:10px 0;text-align:left">${cardList}</div>`);
+              }
+            });
+          }
+        })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
+      });
+      actionBtns.appendChild(btn);
+    }
+
+    // Tommy Morello "Дипломат": cancel a card against you (1x per game)
+    if (me.helpers && me.helpers.some(h => h.ability === 'diplomat') && !me._tommyUsed) {
+      // Only show when there's a pending action targeting the player
+      const a = state.pendingAction;
+      const canUse = a && (a.targetId === myId || (a.type === 'attack_reaction' && a.targetId === myId));
+      if (canUse) {
+        const btn = createActionBtn('Дипломат (Морелло)', () => {
+          SFX.click();
+          socket.emit('useHelperAbility', { ability: 'diplomat', data: {} }, handleResult);
+        });
+        btn.classList.add('btn-gold');
+        actionBtns.appendChild(btn);
+      }
+    }
+
     // Trade button
     const tradeBtn = createActionBtn(`${ICON.trade} Торгівля`, () => {
       SFX.click();
@@ -2941,6 +2980,21 @@ function handlePendingAction(state) {
         },
         cls: c.id.startsWith('snitch_') ? 'btn-danger' : ''
       })));
+      break;
+
+    case 'prison_visit_choice':
+      if (action.playerId === myId) {
+        SFX.event();
+        showCenterPanel(`${ICON.chain} Відвідування в'язниці`, 'Оберіть дію:', action.choices.map(c => ({
+          text: c.label,
+          action: () => {
+            SFX.buy();
+            socket.emit('resolveAction', { actionType: 'prison_visit_choice', data: { choiceId: c.id } }, handleResult);
+            hideCenterPanel();
+          },
+          cls: c.id.startsWith('free_') ? 'btn-secondary' : (c.id === 'grab_cash' ? '' : 'btn-secondary')
+        })));
+      }
       break;
 
     case 'start_bonus_choice':
