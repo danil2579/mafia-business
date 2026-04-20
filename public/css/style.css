@@ -733,6 +733,35 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   box-shadow: inset 1px 0 12px rgba(0,0,0,0.35);
 }
 
+/* Felt decorations — minimalist gold line-art inside the board */
+.felt-decor, .felt-corner {
+  position: absolute; pointer-events: none; z-index: 1;
+  filter: drop-shadow(0 0 6px rgba(201,168,76,0.15));
+}
+.felt-decor svg, .felt-corner svg { width: 100%; height: 100%; display: block; }
+
+/* Four scene illustrations in the big empty zones inside the ring of cells */
+.felt-decor { width: 140px; height: 140px; }
+.felt-decor-tl { top: 15%; left: 17%; }
+.felt-decor-tr { top: 15%; right: 17%; }
+.felt-decor-bl { bottom: 15%; left: 17%; }
+.felt-decor-br { bottom: 15%; right: 17%; }
+
+/* Corner ornamental flourishes — small and tucked in just outside the ring */
+.felt-corner { width: 72px; height: 72px; }
+.felt-corner-tl { top: 8%; left: 10%; }
+.felt-corner-tr { top: 8%; right: 10%; }
+.felt-corner-bl { bottom: 8%; left: 10%; }
+.felt-corner-br { bottom: 8%; right: 10%; }
+
+@media (max-width: 1100px) {
+  .felt-decor { width: 110px; height: 110px; }
+  .felt-corner { width: 58px; height: 58px; }
+}
+@media (max-width: 800px) {
+  .felt-decor, .felt-corner { display: none; }
+}
+
 /* ============================================================
    PLAYER PANELS — Premium player cards with depth
    ============================================================ */
