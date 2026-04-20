@@ -68,14 +68,49 @@ button svg.icon, .btn svg.icon { margin-right: 0.3em; vertical-align: -0.15em; }
 
 body {
   font-family: var(--font-body);
-  background:
-    linear-gradient(180deg, rgba(5,7,18,0.75) 0%, rgba(4,6,16,0.7) 50%, rgba(5,7,18,0.75) 100%),
-    url('../assets/IMG_3457.PNG') center/cover no-repeat fixed;
   color: var(--text);
   overflow: hidden;
   height: 100vh; width: 100vw;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  /* Premium mafia card table — pure CSS */
+  background:
+    /* subtle felt weave pattern */
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.008) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.05) 0 1px, transparent 1px 3px),
+    /* gold vignette around edges */
+    radial-gradient(ellipse 140% 120% at 50% 50%, transparent 40%, rgba(201,168,76,0.08) 72%, rgba(0,0,0,0.6) 100%),
+    /* inner felt glow */
+    radial-gradient(ellipse 90% 75% at 50% 50%, rgba(30,55,45,0.55) 0%, rgba(15,35,30,0.7) 60%, transparent 100%),
+    /* deep wood/ambient background */
+    radial-gradient(ellipse 180% 140% at 50% 0%, #3a2414 0%, #1f1208 40%, #0a0604 90%),
+    linear-gradient(180deg, #1a0f06 0%, #0a0604 100%);
+}
+/* Decorative wood frame + gold trim around the viewport */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    /* gold double-line inset */
+    linear-gradient(90deg, transparent 0 24px, rgba(201,168,76,0.35) 24px 25px, transparent 25px 30px, rgba(201,168,76,0.2) 30px 31px, transparent 31px 100%) no-repeat 0 0 / 100% 100%,
+    linear-gradient(-90deg, transparent 0 24px, rgba(201,168,76,0.35) 24px 25px, transparent 25px 30px, rgba(201,168,76,0.2) 30px 31px, transparent 31px 100%) no-repeat 0 0 / 100% 100%,
+    linear-gradient(180deg, transparent 0 24px, rgba(201,168,76,0.35) 24px 25px, transparent 25px 30px, rgba(201,168,76,0.2) 30px 31px, transparent 31px 100%) no-repeat 0 0 / 100% 100%,
+    linear-gradient(0deg, transparent 0 24px, rgba(201,168,76,0.35) 24px 25px, transparent 25px 30px, rgba(201,168,76,0.2) 30px 31px, transparent 31px 100%) no-repeat 0 0 / 100% 100%;
+  /* wood plank highlights on edges */
+  box-shadow:
+    inset 0 0 0 1px rgba(201,168,76,0.4),
+    inset 0 0 60px rgba(0,0,0,0.7),
+    inset 0 0 120px rgba(0,0,0,0.35);
+}
+/* Corner flourish dots — old money motif */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(circle 4px at 38px 38px, rgba(201,168,76,0.7) 0 2px, transparent 2px),
+    radial-gradient(circle 4px at calc(100% - 38px) 38px, rgba(201,168,76,0.7) 0 2px, transparent 2px),
+    radial-gradient(circle 4px at 38px calc(100% - 38px), rgba(201,168,76,0.7) 0 2px, transparent 2px),
+    radial-gradient(circle 4px at calc(100% - 38px) calc(100% - 38px), rgba(201,168,76,0.7) 0 2px, transparent 2px);
+  filter: drop-shadow(0 0 6px rgba(201,168,76,0.5));
 }
 
 h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
