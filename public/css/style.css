@@ -2890,10 +2890,12 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .prison-effect-content {
   text-align: center; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   animation: prisonContentIn 0.7s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .prison-effect-icon {
   width: 80px; height: 80px; line-height: 1;
+  margin: 0 auto;
   animation: prisonIconShake 0.6s 0.5s ease-in-out both;
   filter: drop-shadow(0 0 20px rgba(255,68,68,0.6)) drop-shadow(0 0 40px rgba(255,68,68,0.3));
 }
