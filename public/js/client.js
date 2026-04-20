@@ -93,6 +93,19 @@ const isPhoneMode = urlParams.get('mode') === 'phone';
 
 let cardRevealActive = false; // true while card reveal is shown — blocks pending actions
 let confirmedPendingId = null; // track already-confirmed pending action to avoid re-show
+// Unique key for a pending action — includes card id, player id, turn number so
+// two chained same-type events (event_confirm → Без гальм → new event_confirm)
+// don't collide and block the second one.
+function makePendingKey(action, state) {
+  if (!action) return null;
+  return [
+    action.type,
+    action.card?.id || '',
+    action.businessId || '',
+    action.playerId || '',
+    state?.turnNumber || 0
+  ].join('|');
+}
 let botAnimationQueue = []; // queue of bot animations to play
 let prevCurrentPlayerId = null; // track turn changes for turn start SFX
 let selectedCharacterId = null; // selected character for lobby
@@ -2763,14 +2776,14 @@ $('#btn-roll').addEventListener('click', () => {
         setTimeout(() => {
           showCardReveal('mafia', 'КАРТА MAFIA', lr.cards.map(c => c.name).join(', '),
             lr.cards.map(c => c.description).join('\n'), () => {
-              confirmedPendingId = 'mafia_confirm|';
+              confirmedPendingId = makePendingKey({ type: 'mafia_confirm', playerId: myId }, gameState);
               socket.emit('resolveAction', { actionType: 'mafia_confirm', data: {} }, handleResult);
             });
         }, animDelay);
       } else if (lr.type === 'event' && lr.card) {
         setTimeout(() => {
           showCardReveal('event', 'ПОДІЯ', lr.card.name, lr.card.description, () => {
-            confirmedPendingId = 'event_confirm|' + (lr.card.id || '');
+            confirmedPendingId = makePendingKey({ type: 'event_confirm', playerId: myId, card: lr.card }, gameState);
             socket.emit('resolveAction', { actionType: 'event_confirm', data: {} }, handleResult);
           });
         }, animDelay);
@@ -2811,11 +2824,17 @@ function handlePendingAction(state) {
   }
   // Clear confirmedPendingId if a new/different pending action appeared
   if (confirmedPendingId) {
-    // Reset if type changed, or if it's the same type but different content
-    // (e.g. event_confirm → "Без гальм" moves player → lands on EVENT → new event_confirm)
-    const actionKey = action.type + '|' + (action.card?.id || action.businessId || '');
+    const actionKey = makePendingKey(action, state);
     if (confirmedPendingId !== actionKey) {
       confirmedPendingId = null;
+    }
+  }
+
+  // Safety: if action exists but isn't an auction, make sure auction overlay is hidden
+  if (action.type !== 'auction') {
+    const auctionOverlay = document.getElementById('auction-overlay');
+    if (auctionOverlay && auctionOverlay.classList.contains('active')) {
+      hideAuctionPanel();
     }
   }
 
@@ -3130,7 +3149,7 @@ function handlePendingAction(state) {
       break;
 
     case 'mafia_confirm': {
-      const mafiaKey = 'mafia_confirm|';
+      const mafiaKey = makePendingKey(action, state);
       if (confirmedPendingId === mafiaKey) break; // already confirmed, skip re-show
       if (action.playerId === myId && action.cards && action.cards.length > 0) {
         const peekInfo = action.peekCard ? `\n\n👁 Наступна карта в колоді: ${action.peekCard.name}` : '';
@@ -3144,7 +3163,7 @@ function handlePendingAction(state) {
     }
 
     case 'event_confirm': {
-      const eventKey = 'event_confirm|' + (action.card?.id || '');
+      const eventKey = makePendingKey(action, state);
       if (confirmedPendingId === eventKey) break; // already confirmed, skip re-show
       if (action.playerId === myId && action.card) {
         showCardReveal('event', 'ПОДІЯ', action.card.name, action.card.description, () => {
@@ -4218,6 +4237,12 @@ function showEnhancedVictoryScreen(state) {
     closeBtn.onclick = () => {
       overlay.classList.remove('active');
       _victoryDismissed = true;
+      // Clear rejoin session so F5 doesn't put us back in the finished game
+      try {
+        sessionStorage.removeItem('mafia_roomId');
+        sessionStorage.removeItem('mafia_playerName');
+        sessionStorage.removeItem('mafia_rejoinToken');
+      } catch(e) {}
     };
   }
 }

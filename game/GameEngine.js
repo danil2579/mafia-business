@@ -1855,10 +1855,15 @@ class GameEngine {
     // Poison: 50% chance
     if (card.id === 'poison') {
       const dice = rollDice(1);
-      if (dice[0] <= 3) {
-        this.addLog(`Отрута спрацювала! (кубик: ${dice[0]})`);
+      const d = dice && dice[0];
+      if (!Number.isInteger(d) || d < 1 || d > 6) {
+        this.pendingAction = null;
+        return { error: 'Помилка кидка. Спробуйте ще раз.' };
+      }
+      if (d <= 3) {
+        this.addLog(`Отрута спрацювала! (кубик: ${d})`);
       } else {
-        this.addLog(`Отрута не спрацювала! (кубик: ${dice[0]})`);
+        this.addLog(`Отрута не спрацювала! (кубик: ${d})`);
         this.pendingAction = null;
         return { type: 'poison_failed', dice };
       }
@@ -1944,7 +1949,18 @@ class GameEngine {
   executeChooseKillHelper(attackerId, targetId, helperIndex) {
     const target = this.getPlayer(targetId);
     const attacker = this.getPlayer(attackerId);
-    if (helperIndex < 0 || helperIndex >= target.helpers.length) return { error: 'Невірний індекс.' };
+    if (!target || !attacker) {
+      this.pendingAction = null;
+      return { error: 'Гравця не знайдено.' };
+    }
+    if (!Array.isArray(target.helpers) || target.helpers.length === 0) {
+      // Target has no helpers anymore (state changed) — clear pending and inform
+      this.pendingAction = null;
+      return { error: 'У цілі немає помічників.' };
+    }
+    if (!Number.isInteger(helperIndex) || helperIndex < 0 || helperIndex >= target.helpers.length) {
+      return { error: 'Невірний індекс.' };
+    }
 
     const helper = target.helpers.splice(helperIndex, 1)[0];
     this.addLog(`${helper.name} (помічник ${target.name}) загинув!`);
@@ -1991,13 +2007,22 @@ class GameEngine {
     if (this.hasHelper(attacker.id, 'influenceOnKill')) {
       const upgradeable = this.getUpgradeableBusinesses(attacker.id);
       if (upgradeable.length > 0) {
-        this.pendingAction = {
-          type: 'choose_influence_business',
-          playerId: attacker.id,
-          free: true,
-          businesses: upgradeable,
-          reason: 'tony_fox'
-        };
+        if (this.pendingAction) {
+          // Something else is pending (e.g. choose_kill_helper just finished but
+          // checkCounterAttack set a new action). Auto-apply to first upgradeable
+          // business instead of losing the bonus or overwriting the pending action.
+          const biz = upgradeable[0];
+          this.businesses[biz.id].influenceLevel = Math.min(4, (this.businesses[biz.id].influenceLevel || 1) + 1);
+          this.addLog(`Тоні «Лис» підвищив вплив ${attacker.name} на ${biz.name} автоматично.`);
+        } else {
+          this.pendingAction = {
+            type: 'choose_influence_business',
+            playerId: attacker.id,
+            free: true,
+            businesses: upgradeable,
+            reason: 'tony_fox'
+          };
+        }
       }
     }
   }

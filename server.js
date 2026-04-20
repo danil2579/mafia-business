@@ -1892,13 +1892,11 @@ io.on('connection', (socket) => {
       return cb({ error: 'Невірний токен перепідключення.' });
     }
 
-    // Find disconnect record to clear grace timer (if any)
-    const key = Array.from(disconnectedPlayers.keys()).find(k => {
-      const dc = disconnectedPlayers.get(k);
-      return k.startsWith(roomId + ':') && dc.name === playerName;
-    });
-    if (key) {
-      const dc = disconnectedPlayers.get(key);
+    // Find disconnect record by direct key (O(1) — player.id still holds old socketId
+    // at this point because rejoin hasn't run yet)
+    const key = `${roomId}:${player.id}`;
+    const dc = disconnectedPlayers.get(key);
+    if (dc) {
       playerRooms.delete(dc.socketId);
       clearTimeout(dc.timer);
       disconnectedPlayers.delete(key);
@@ -1910,10 +1908,25 @@ io.on('connection', (socket) => {
       playerRooms.delete(player.id);
     }
 
+    const oldId = player.id;
     // Reassign socket ID
     player.id = socket.id;
     player.alive = true;
     player.disconnected = false;
+
+    // Update any pendingAction references to the old socket.id so the
+    // reconnected player can still act on their own pending decisions
+    // (attack_reaction, choose_kill_helper, choose_stolen_helper, auctions, etc.)
+    if (game.pendingAction && oldId) {
+      for (const field of ['playerId', 'attackerId', 'targetId', 'fromId', 'toId', 'currentBidderId']) {
+        if (game.pendingAction[field] === oldId) {
+          game.pendingAction[field] = socket.id;
+        }
+      }
+      if (Array.isArray(game.pendingAction.passed)) {
+        game.pendingAction.passed = game.pendingAction.passed.map(id => id === oldId ? socket.id : id);
+      }
+    }
 
     // Set up new mappings
     playerRooms.set(socket.id, roomId);
