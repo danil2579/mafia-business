@@ -147,6 +147,40 @@ function broadcastState(roomId) {
   const game = rooms.get(roomId);
   if (!game) return;
   try {
+    // State integrity check — catches ownership desync bugs
+    if (game.phase === 'playing') {
+      for (const [bizId, bs] of Object.entries(game.businesses || {})) {
+        if (!bs.owner) continue;
+        const owner = game.players.find(p => p.id === bs.owner);
+        if (!owner) {
+          console.warn(`[integrity] room=${roomId} biz=${bizId} has orphan owner=${bs.owner} (no such player) — freeing`);
+          bs.owner = null; bs.influenceLevel = 0;
+          continue;
+        }
+        if (!owner.alive) {
+          console.warn(`[integrity] room=${roomId} biz=${bizId} owner=${owner.name} is dead — freeing`);
+          bs.owner = null; bs.influenceLevel = 0;
+          if (Array.isArray(owner.businesses)) owner.businesses = owner.businesses.filter(id => id !== bizId);
+          continue;
+        }
+        if (Array.isArray(owner.businesses) && !owner.businesses.includes(bizId)) {
+          console.warn(`[integrity] room=${roomId} biz=${bizId} owner=${owner.name} but not in owner.businesses — resyncing`);
+          owner.businesses.push(bizId);
+        }
+      }
+      // Reverse check: businesses in player.businesses but no owner link
+      for (const p of game.players) {
+        if (!Array.isArray(p.businesses)) continue;
+        p.businesses = p.businesses.filter(bizId => {
+          const bs = game.businesses[bizId];
+          if (!bs || bs.owner !== p.id) {
+            console.warn(`[integrity] room=${roomId} player=${p.name} claims biz=${bizId} but owner mismatch — removing`);
+            return false;
+          }
+          return true;
+        });
+      }
+    }
     const sockets = io.sockets.adapter.rooms.get(roomId);
     if (sockets) {
       const tvSet = tvSockets.get(roomId);
