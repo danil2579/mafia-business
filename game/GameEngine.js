@@ -828,6 +828,31 @@ class GameEngine {
     // Someone else owns it
     const owner = this.getPlayer(bizState.owner);
 
+    // Owner is null or dead (e.g. disconnected, killed): free the business
+    if (!owner || !owner.alive) {
+      bizState.owner = null;
+      bizState.influenceLevel = 0;
+      // Also remove from the (now-dead) player's businesses list if needed
+      if (owner && Array.isArray(owner.businesses)) {
+        owner.businesses = owner.businesses.filter(id => id !== biz.id);
+      }
+      this.addLog(`Бізнес ${biz.name} повернувся на ринок (власник вибув).`);
+      // Treat as free — offer to buy
+      this.pendingAction = {
+        type: 'buy_business',
+        playerId: player.id,
+        businessId: biz.id,
+        districtId: sector.districtId,
+        price: biz.price,
+        name: biz.name,
+        districtName: district.name,
+        districtColor: district.color,
+        influenceCost: district.influenceCost,
+        rent: biz.rent
+      };
+      return { type: 'buy_business', biz, pendingChoice: true };
+    }
+
     // Owner is in prison — business can be seized (bought) by the landing player
     if (owner.inPrison > 0) {
       this.pendingAction = {
@@ -960,6 +985,16 @@ class GameEngine {
 
     const player = this.getPlayer(playerId);
     const owner = this.getPlayer(action.ownerId);
+    // If owner died/disconnected between showing pending action and now, free the biz
+    if (!owner || !owner.alive) {
+      if (action.businessId && this.businesses[action.businessId]) {
+        this.businesses[action.businessId].owner = null;
+        this.businesses[action.businessId].influenceLevel = 0;
+      }
+      this.pendingAction = null;
+      this.addLog(`Власник вибув — рента скасована.`);
+      return { success: true, type: 'rent_canceled' };
+    }
 
     if (useRobbery) {
       // Robbery card: owner pays player instead

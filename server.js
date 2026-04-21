@@ -1989,7 +1989,16 @@ io.on('connection', (socket) => {
             if (player.disconnected) {
               player.alive = false;
               player.disconnected = false;
-              game.addLog(`${player.name} не повернувся. Вибуває з гри.`);
+              // Free all their businesses so orphaned ownership doesn't cause rent bugs
+              for (const bizId of [...(player.businesses || [])]) {
+                if (game.businesses[bizId]) {
+                  game.businesses[bizId].owner = null;
+                  game.businesses[bizId].influenceLevel = 0;
+                }
+              }
+              player.businesses = [];
+              player.helpers = [];
+              game.addLog(`${player.name} не повернувся. Вибуває з гри, його бізнеси повертаються на ринок.`);
               const alive = game.getAlivePlayers();
               if (alive.length === 1 && game.phase === 'playing') {
                 game.phase = 'finished';
@@ -2021,6 +2030,15 @@ io.on('connection', (socket) => {
           game.removePlayer(socket.id);
         } else if (player) {
           player.alive = false;
+          // Free businesses so rent logic doesn't target a dead owner
+          for (const bizId of [...(player.businesses || [])]) {
+            if (game.businesses[bizId]) {
+              game.businesses[bizId].owner = null;
+              game.businesses[bizId].influenceLevel = 0;
+            }
+          }
+          player.businesses = [];
+          player.helpers = [];
           const alive = game.getAlivePlayers();
           if (alive.length === 1 && game.phase === 'playing') {
             game.phase = 'finished';
