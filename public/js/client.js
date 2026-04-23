@@ -3098,7 +3098,7 @@ function handlePendingAction(state) {
     if (action.type === 'buy_business' || action.type === 'pay_rent') {
       const current = state.players[state.currentPlayerIndex];
       if (current && current.id !== myId) {
-        showEventDisplay(`<p>${current.name} приймає рішення...</p>`, 2000);
+        showEventDisplay(`<p style="opacity:.82">${current.name} приймає рішення…</p>`, 1800);
       }
     }
     return;
