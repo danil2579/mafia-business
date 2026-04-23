@@ -2706,45 +2706,14 @@ function renderActionSidebar(state, me, isMyTurn) {
   if (!panel || !me) return;
 
   const sectorInfo = getSectorCoachData(state, me);
-  const helperItems = (me.helpers || []).slice(0, 2).map(h => `
-    <div class="coach-helper-line">
-      <span class="coach-helper-name">${h.name}</span>
-      <span class="coach-helper-ability">${h.ability || 'Спеціальна здібність'}</span>
+  panel.innerHTML = sectorInfo ? `
+    <div class="coach-card coach-card-sector" style="--coach-tone:${sectorInfo.tone}">
+      <div class="coach-kicker">ДЕ ВИ ЗАРАЗ</div>
+      <div class="coach-title">${sectorInfo.title}</div>
+      <div class="coach-subtitle">${sectorInfo.subtitle}</div>
+      <p class="coach-text">${sectorInfo.text}</p>
     </div>
-  `).join('');
-
-  panel.innerHTML = `
-    <div class="coach-card">
-      <div class="coach-kicker">ЩО РОБИТИ ЗАРАЗ</div>
-      <div class="coach-title">${isMyTurn ? 'Ваш темп у раунді' : 'Ситуація в матчі'}</div>
-      <p class="coach-text">${getCoachMessage(state, me, isMyTurn)}</p>
-      <div class="coach-pills">
-        <span class="coach-pill">START = гроші + MAFIA</span>
-        <span class="coach-pill">BAR = помічники / казино</span>
-        <span class="coach-pill">MAFIA = нові карти</span>
-        <span class="coach-pill">EVENT = випадковий ефект</span>
-      </div>
-    </div>
-    ${sectorInfo ? `
-      <div class="coach-card coach-card-sector" style="--coach-tone:${sectorInfo.tone}">
-        <div class="coach-kicker">ДЕ ВИ ЗАРАЗ</div>
-        <div class="coach-title">${sectorInfo.title}</div>
-        <div class="coach-subtitle">${sectorInfo.subtitle}</div>
-        <p class="coach-text">${sectorInfo.text}</p>
-      </div>
-    ` : ''}
-    <div class="coach-card coach-card-helper">
-      <div class="coach-kicker">ПОМІЧНИКИ</div>
-      <div class="coach-title">${(me.helpers || []).length > 0 ? `Активно: ${(me.helpers || []).length}` : 'Поки без команди'}</div>
-      ${helperItems || '<p class="coach-text">Наймайте помічників у BAR за 1000$. Саме вони часто відкривають найсильніші ходи в середині матчу.</p>'}
-      <button id="coach-open-rules" class="btn btn-secondary coach-rules-btn">Швидко відкрити правила</button>
-    </div>
-  `;
-
-  panel.querySelector('#coach-open-rules')?.addEventListener('click', () => {
-    SFX.click();
-    openRules();
-  });
+  ` : '';
 }
 
 // ===== ACTION PANEL =====

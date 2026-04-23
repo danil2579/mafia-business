@@ -1460,15 +1460,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .board-center::before {
-  content: '';
-  position: absolute;
-  inset: 12% 6%;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at center, rgba(201,168,76,0.07) 0%, rgba(201,168,76,0.02) 38%, transparent 72%);
-  filter: blur(24px);
-  z-index: -1;
-  pointer-events: none;
+  display: none;
 }
 
 /* Center info — dice and status display */
@@ -1595,9 +1587,8 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   border-radius: var(--radius-xl);
   padding: 36px 24px 24px; text-align: center; position: relative; overflow: hidden;
   box-shadow:
-    0 18px 50px rgba(0,0,0,0.72),
-    0 0 26px color-mix(in srgb, var(--_c) 12%, transparent),
-    inset 0 0 50px color-mix(in srgb, var(--_c) 4%, transparent);
+    0 16px 36px rgba(0,0,0,0.46),
+    inset 0 0 26px color-mix(in srgb, var(--_c) 3%, transparent);
   animation: cardRevealIn 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Rotating light sweep — tinted with district color */
@@ -1605,9 +1596,9 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   content: ''; position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
   background: conic-gradient(from 0deg at 50% 50%,
     transparent 0deg,
-    color-mix(in srgb, var(--_c) 8%, transparent) 60deg,
+    color-mix(in srgb, var(--_c) 4%, transparent) 60deg,
     transparent 120deg,
-    color-mix(in srgb, var(--_c) 4%, transparent) 240deg,
+    color-mix(in srgb, var(--_c) 2%, transparent) 240deg,
     transparent 360deg);
   animation: cardShineSweep 4s linear infinite;
   z-index: 0;
@@ -2218,16 +2209,15 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   gap: 10px;
   margin-bottom: 10px;
   flex: 0 0 auto;
-  max-height: 30vh;
-  overflow-y: auto;
-  padding-right: 2px;
+  overflow: visible;
+  padding-right: 0;
 }
 .coach-card {
   background: linear-gradient(145deg, rgba(16,18,36,0.97), rgba(8,10,22,0.97));
   border: 1px solid rgba(72,78,128,0.28);
   border-radius: var(--radius-xl);
   padding: 12px 12px 10px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.03);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.03);
   position: relative;
   overflow: hidden;
 }
@@ -2241,7 +2231,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .coach-card-sector {
   border-color: color-mix(in srgb, var(--coach-tone, var(--gold)) 34%, rgba(255,255,255,0.08));
-  box-shadow: 0 10px 24px rgba(0,0,0,0.32), 0 0 22px color-mix(in srgb, var(--coach-tone, var(--gold)) 10%, transparent);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.2);
 }
 .coach-kicker {
   color: rgba(255,255,255,0.42);
@@ -2268,45 +2258,6 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   font-size: 10px;
   line-height: 1.4;
   margin: 0;
-}
-.coach-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
-}
-.coach-pill {
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.62);
-  font-size: 8px;
-  letter-spacing: 0.4px;
-}
-.coach-helper-line {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 7px 9px;
-  margin-top: 7px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.05);
-}
-.coach-helper-name {
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-}
-.coach-helper-ability {
-  color: rgba(255,255,255,0.6);
-  font-size: 9px;
-  line-height: 1.4;
-}
-.coach-rules-btn {
-  width: 100%;
-  margin-top: 8px;
 }
 
 /* ============================================================
