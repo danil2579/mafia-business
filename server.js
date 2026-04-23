@@ -47,12 +47,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/rooms', (req, res) => {
   const publicRooms = [];
   for (const [roomId, game] of rooms) {
+    const host = game.players.find(player => player.id === game.hostId);
     if (game.phase === 'waiting' && game.players.length < 8) {
       publicRooms.push({
         roomId,
         playerCount: game.players.length,
         maxPlayers: 8,
-        hostName: game.players[0]?.name || 'Unknown'
+        hostName: host?.name || game.players[0]?.name || 'Unknown'
       });
     }
   }
@@ -147,6 +148,75 @@ function cleanupRoom(roomId) {
   tvSockets.delete(roomId);
   // Finally remove the game itself
   rooms.delete(roomId);
+}
+
+function clearRoomTransientState(roomId, { preserveTvSockets = true, preserveBotCounters = true } = {}) {
+  if (!roomId) return;
+
+  if (turnTimers.has(roomId)) {
+    const t = turnTimers.get(roomId);
+    if (t && t.timer) clearInterval(t.timer);
+    turnTimers.delete(roomId);
+  }
+  if (botTurnTimers.has(roomId)) {
+    clearTimeout(botTurnTimers.get(roomId));
+    botTurnTimers.delete(roomId);
+  }
+  if (auctionTimers.has(roomId)) {
+    clearTimeout(auctionTimers.get(roomId));
+    auctionTimers.delete(roomId);
+  }
+  if (pendingActionTimers.has(roomId)) {
+    const pt = pendingActionTimers.get(roomId);
+    if (pt && pt.timer) clearTimeout(pt.timer);
+    pendingActionTimers.delete(roomId);
+  }
+  for (const [key, dc] of disconnectedPlayers.entries()) {
+    if (key.startsWith(roomId + ':')) {
+      if (dc && dc.timer) clearTimeout(dc.timer);
+      disconnectedPlayers.delete(key);
+    }
+  }
+  chatHistory.delete(roomId);
+  if (!preserveBotCounters) botCounters.delete(roomId);
+  if (!preserveTvSockets) tvSockets.delete(roomId);
+}
+
+function resetRoomToLobby(roomId) {
+  const currentGame = rooms.get(roomId);
+  if (!currentGame) return null;
+
+  const playerSnapshot = [...currentGame.players]
+    .sort((a, b) => {
+      if (a.id === currentGame.hostId) return -1;
+      if (b.id === currentGame.hostId) return 1;
+      if (!!a.isBot !== !!b.isBot) return a.isBot ? 1 : -1;
+      return 0;
+    })
+    .map(player => ({
+      id: player.id,
+      name: player.name,
+      isBot: !!player.isBot,
+      characterId: player.character?.id || null,
+      avatar: player.avatar || null,
+      rejoinToken: player.rejoinToken || null,
+      disconnected: !!player.disconnected
+    }));
+
+  clearRoomTransientState(roomId, { preserveTvSockets: true, preserveBotCounters: true });
+
+  const nextGame = new GameEngine(roomId);
+  for (const player of playerSnapshot) {
+    const added = nextGame.addPlayer(player.id, player.name, player.isBot, player.characterId);
+    if (!added) continue;
+    added.avatar = player.avatar;
+    added.rejoinToken = player.rejoinToken;
+    added.disconnected = player.disconnected;
+  }
+  nextGame.hostId = currentGame.hostId || nextGame.hostId;
+  rooms.set(roomId, nextGame);
+  botCounters.set(roomId, playerSnapshot.filter(player => player.isBot).length);
+  return nextGame;
 }
 
 function scheduleOrderRolls(roomId) {
@@ -253,6 +323,30 @@ function broadcastEvent(roomId, event, data) {
   io.to(roomId).emit(event, data);
 }
 
+function broadcastBusinessBought(roomId, game, playerId, businessId, amount, source = 'buy') {
+  const player = game.getPlayer(playerId);
+  const biz = game.getBusiness(businessId);
+  if (!player || !biz || !amount) return;
+  broadcastEvent(roomId, 'businessBought', {
+    payerName: player.name,
+    payerCharacter: player.character,
+    amount,
+    businessName: biz.name,
+    source
+  });
+}
+
+function broadcastBribePaid(roomId, game, playerId, amount, reason = 'Хабар поліції') {
+  const player = game.getPlayer(playerId);
+  if (!player || !amount) return;
+  broadcastEvent(roomId, 'bribePaid', {
+    payerName: player.name,
+    payerCharacter: player.character,
+    amount,
+    reason
+  });
+}
+
 // --- Auction Timer System ---
 function clearAuctionTimer(roomId) {
   if (auctionTimers.has(roomId)) {
@@ -288,6 +382,7 @@ function resolveAuction(roomId) {
       game.businesses[action.businessId].influenceLevel = 1;
       winner.businesses.push(action.businessId);
       game.addLog(`${winner.name} виграв аукціон за ${action.businessName}: ${action.currentBid}$.`);
+      broadcastBusinessBought(roomId, game, action.currentBidderId, action.businessId, action.currentBid, 'auction');
       broadcastEvent(roomId, 'auctionResult', {
         winnerId: action.currentBidderId,
         winnerName: winner.name,
@@ -452,6 +547,13 @@ function executeBotTurn(roomId) {
       }
     }
 
+    if (result && Array.isArray(result.events)) {
+      const policeBribe = result.events.find(event => event.type === 'police_bribe' && event.amount);
+      if (policeBribe) {
+        broadcastBribePaid(roomId, game, botId, policeBribe.amount);
+      }
+    }
+
     // After broadcasting (which triggers client animation), wait for animation
     // before resolving pending action
     if (game.pendingAction || game.turnPhase === 'action') {
@@ -489,7 +591,10 @@ function resolveBotPendingAction(roomId, game, bot) {
     case 'buy_business': {
       const biz = game.getBusiness(action.businessId);
       const shouldBuy = biz && biz.price <= bot.money * 0.6 && bot.money >= biz.price;
-      game.executeBuyBusiness(botId, action.businessId, shouldBuy);
+      const buyResult = game.executeBuyBusiness(botId, action.businessId, shouldBuy);
+      if (buyResult && buyResult.bought && biz) {
+        broadcastBusinessBought(roomId, game, botId, action.businessId, biz.price, 'buy');
+      }
       break;
     }
     case 'pay_rent': {
@@ -510,7 +615,10 @@ function resolveBotPendingAction(roomId, game, bot) {
     case 'seize_prison_business': {
       const biz = game.getBusiness(action.businessId);
       const shouldBuy = biz && biz.price <= bot.money * 0.6 && bot.money >= biz.price;
-      game.executeSeizePrisonBusiness(botId, action.businessId, shouldBuy);
+      const seizeResult = game.executeSeizePrisonBusiness(botId, action.businessId, shouldBuy);
+      if (seizeResult && seizeResult.seized && biz) {
+        broadcastBusinessBought(roomId, game, botId, action.businessId, biz.price, 'seize');
+      }
       break;
     }
     case 'upgrade_influence_on_own': {
@@ -1161,7 +1269,7 @@ io.on('connection', (socket) => {
     // Allow TV socket or first player (host) to start
     const tvSet = tvSockets.get(roomId);
     const isTVHost = tvSet && tvSet.has(socket.id);
-    if (!isTVHost && game.players[0]?.id !== socket.id) return cb({ error: 'Тільки хост може почати гру.' });
+    if (!isTVHost && game.hostId !== socket.id) return cb({ error: 'Тільки хост може почати гру.' });
 
     // Apply game settings
     if (data && data.mafiaCardMinRound) {
@@ -1204,7 +1312,7 @@ io.on('connection', (socket) => {
     if (game.phase !== 'waiting') return cb({ error: 'Гра вже розпочалась.' });
     const tvSet = tvSockets.get(roomId);
     const isTVHost = tvSet && tvSet.has(socket.id);
-    if (!isTVHost && game.players[0]?.id !== socket.id) return cb({ error: 'Тільки хост може додавати ботів.' });
+    if (!isTVHost && game.hostId !== socket.id) return cb({ error: 'Тільки хост може додавати ботів.' });
     if (game.players.length >= 8) return cb({ error: 'Кімната повна.' });
 
     const count = (botCounters.get(roomId) || 0) + 1;
@@ -1271,6 +1379,13 @@ io.on('connection', (socket) => {
       }
     }
 
+    if (result && Array.isArray(result.events)) {
+      const policeBribe = result.events.find(event => event.type === 'police_bribe' && event.amount);
+      if (policeBribe) {
+        broadcastBribePaid(roomId, game, socket.id, policeBribe.amount);
+      }
+    }
+
     // Auto-end turn if player is in prison (skip turn) or just released (skip this turn too)
     if (result && (result.inPrison || result.released)) {
       setTimeout(() => {
@@ -1315,6 +1430,10 @@ io.on('connection', (socket) => {
     switch (actionType) {
       case 'buy_business':
         result = game.executeBuyBusiness(socket.id, data.businessId, data.buy);
+        if (result && result.bought) {
+          const biz = game.getBusiness(data.businessId);
+          if (biz) broadcastBusinessBought(roomId, game, socket.id, data.businessId, biz.price, 'buy');
+        }
         break;
       case 'pay_rent': {
         const rentAction = game.pendingAction;
@@ -1333,9 +1452,16 @@ io.on('connection', (socket) => {
       }
       case 'seize_prison_business':
         result = game.executeSeizePrisonBusiness(socket.id, data.businessId, data.buy);
+        if (result && result.seized) {
+          const biz = game.getBusiness(data.businessId);
+          if (biz) broadcastBusinessBought(roomId, game, socket.id, data.businessId, biz.price, 'seize');
+        }
         break;
       case 'police_choice':
         result = game.resolvePoliceChoice(socket.id, data.choiceId);
+        if (result && result.success && result.type === 'bribe') {
+          broadcastBribePaid(roomId, game, socket.id, 500);
+        }
         break;
       case 'prison_visit_choice':
         result = game.resolvePrisonVisitChoice(socket.id, data.choiceId);
@@ -1417,12 +1543,14 @@ io.on('connection', (socket) => {
         break;
       case 'pay_or_prison':
         if (game.pendingAction && game.pendingAction.type === 'pay_or_prison' && game.pendingAction.playerId === socket.id) {
+          const amount = game.pendingAction.amount;
           const player = game.getPlayer(socket.id);
-          if (data.pay && player.money >= game.pendingAction.amount) {
-            player.money -= game.pendingAction.amount;
-            player.stats.moneySpent += game.pendingAction.amount;
+          if (data.pay && player.money >= amount) {
+            player.money -= amount;
+            player.stats.moneySpent += amount;
             game.pendingAction = null;
             result = { paid: true };
+            broadcastBribePaid(roomId, game, socket.id, amount, 'Відкуп поліції');
           } else {
             game.sendToPrison(player, 2);
             game.pendingAction = null;
@@ -1776,15 +1904,11 @@ io.on('connection', (socket) => {
     const isTVHostR = tvSetR && tvSetR.has(socket.id);
     if (!isTVHostR && game.hostId !== socket.id) return cb({ error: 'Тільки хост може перезапустити гру.' });
 
-    // Notify all clients to reload
-    io.to(roomId).emit('gameRestarted');
+    const restartedGame = resetRoomToLobby(roomId);
+    if (!restartedGame) return cb({ error: 'Не вдалося перезапустити кімнату.' });
 
-    // Clean up the room — players will rejoin via reload
-    cleanupRoom(roomId);
-    // Clear all player-room mappings for this room
-    for (const [sid, rid] of playerRooms.entries()) {
-      if (rid === roomId) playerRooms.delete(sid);
-    }
+    io.to(roomId).emit('gameRestarted');
+    broadcastState(roomId);
     cb({ success: true });
   });
 

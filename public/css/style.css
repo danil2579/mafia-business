@@ -1650,6 +1650,8 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .center-panel:has(.biz-purchase-card) {
   background: none; border: none; box-shadow: none;
   backdrop-filter: none; padding: 0;
+  overflow: visible;
+  max-height: none;
 }
 .center-panel:has(.biz-purchase-card)::before,
 .center-panel:has(.biz-purchase-card)::after { display: none; }
@@ -1824,15 +1826,16 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
    CARD REVEAL — Premium cinematic card experience
    ============================================================ */
 .card-reveal {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  z-index: 30; pointer-events: none; display: none;
+  position: fixed; inset: 0;
+  z-index: 9300; pointer-events: none; display: none;
+  align-items: center; justify-content: center;
 }
-.card-reveal.active { display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+.card-reveal.active { display: flex; pointer-events: auto; }
 
 /* Card backdrop glow */
 .card-reveal.active::before {
-  content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  content: ''; position: absolute; inset: 0;
+  background: rgba(3,5,9,0.42); backdrop-filter: blur(3px);
   animation: fadeIn 0.3s ease-out;
 }
 
@@ -1869,31 +1872,29 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 /* Mafia card */
 .revealed-card.mafia-type {
   background: linear-gradient(180deg, #1e0c38 0%, #120720 30%, #0a0416 70%, #060210 100%);
-  border: 1px solid rgba(155,89,182,0.5);
+  border: 1px solid rgba(155,89,182,0.42);
   box-shadow:
-    0 20px 80px rgba(0,0,0,0.9),
-    0 0 60px rgba(155,89,182,0.2),
-    0 0 120px rgba(155,89,182,0.06),
-    inset 0 0 60px rgba(155,89,182,0.04);
+    0 18px 44px rgba(0,0,0,0.52),
+    0 0 28px rgba(155,89,182,0.14),
+    inset 0 0 28px rgba(155,89,182,0.03);
   padding: 36px 28px 28px;
 }
 .revealed-card.mafia-type::after {
-  background: linear-gradient(90deg, transparent, rgba(155,89,182,0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(155,89,182,0.48), transparent);
 }
 
 /* Event card */
 .revealed-card.event-type {
   background: linear-gradient(180deg, #0c1e38 0%, #071420 30%, #040c16 70%, #020810 100%);
-  border: 1px solid rgba(74,111,165,0.5);
+  border: 1px solid rgba(74,111,165,0.42);
   box-shadow:
-    0 20px 80px rgba(0,0,0,0.9),
-    0 0 60px rgba(74,111,165,0.2),
-    0 0 120px rgba(74,111,165,0.06),
-    inset 0 0 60px rgba(74,111,165,0.04);
+    0 18px 44px rgba(0,0,0,0.52),
+    0 0 28px rgba(74,111,165,0.14),
+    inset 0 0 28px rgba(74,111,165,0.03);
   padding: 36px 28px 28px;
 }
 .revealed-card.event-type::after {
-  background: linear-gradient(90deg, transparent, rgba(74,111,165,0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(74,111,165,0.48), transparent);
 }
 
 .revealed-card .rc-icon {

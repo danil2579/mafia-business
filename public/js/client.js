@@ -863,6 +863,33 @@ socket.on('rentPaid', (data) => {
   }
 });
 
+socket.on('businessBought', (data) => {
+  if (!data || !data.payerName || !data.businessName || !data.amount) return;
+  const sourceLabel = data.source === 'auction'
+    ? 'Аукціон'
+    : (data.source === 'seize' ? 'Захоплення' : 'Купівля');
+  showRentPaymentEffect(
+    data.payerName,
+    data.payerCharacter,
+    'Банк',
+    { color: '#c9a84c' },
+    data.amount,
+    `${sourceLabel}: ${data.businessName}`
+  );
+});
+
+socket.on('bribePaid', (data) => {
+  if (!data || !data.payerName || !data.amount) return;
+  showRentPaymentEffect(
+    data.payerName,
+    data.payerCharacter,
+    'Поліція',
+    { color: '#4aa3ff' },
+    data.amount,
+    data.reason || 'Хабар поліції'
+  );
+});
+
 socket.on('cardDrawn', (data) => {
   if (!data || !data.playerName) return;
   // Don't show to the player who drew the card (they have their own reveal)
@@ -974,13 +1001,13 @@ function renderOrderRollPhase(state) {
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
       rollBtn.disabled = true;
-      rollBtn.textContent = `${ICON.dice} Кидаю...`;
+      rollBtn.innerHTML = `${ICON.dice} Кидаю...`;
       SFX.diceRoll();
       socket.emit('rollForOrder', {}, (res) => {
         if (res.error) {
           notifyError(res.error, { title: 'Кидок для черги' });
           rollBtn.disabled = false;
-          rollBtn.textContent = `${ICON.dice} КИНУТИ КУБИКИ`;
+          rollBtn.innerHTML = `${ICON.dice} КИНУТИ КУБИКИ`;
         }
       });
     });
@@ -1600,6 +1627,7 @@ function showBusinessCard(action) {
 function showCardReveal(type, title, name, description, onDismiss) {
   // If card reveal is already showing, don't overwrite it
   if (cardRevealActive) return;
+  hideCenterPanel();
   SFX.cardFlip();
   SFX.cardReveal();
   cardRevealActive = true;
@@ -4025,8 +4053,14 @@ $('#btn-restart').addEventListener('click', () => {
 });
 
 socket.on('gameRestarted', () => {
-  // Game was restarted, reload to get fresh state
-  location.reload();
+  try { hideModal(); } catch (e) {}
+  try { hideCenterPanel(); } catch (e) {}
+  try {
+    const reveal = document.getElementById('card-reveal');
+    if (reveal) reveal.classList.remove('active');
+  } catch (e) {}
+  document.querySelectorAll('.hidden-helper-overlay, .bomb-picker-overlay, .trade-overlay').forEach(el => el.remove());
+  notifyInfo('Матч перезапущено. Ви повернулися в лобі кімнати.', { title: 'Перезапуск матчу' });
 });
 
 // ===== FULLSCREEN =====
@@ -5136,12 +5170,13 @@ if (isTVMode) {
       if (confirm('Перезапустити матч?')) {
         socket.emit('restartGame', {}, (res) => {
           if (!handleResult(res, { title: 'Перезапуск матчу' })) return;
-          location.reload();
         });
       }
     });
 
-    socket.on('gameRestarted', () => location.reload());
+    socket.on('gameRestarted', () => {
+      notifyInfo('Матч перезапущено. Повернення в лобі…', { title: 'TV режим' });
+    });
   });
 }
 
@@ -5493,7 +5528,9 @@ if (isPhoneMode) {
       }
     });
 
-    socket.on('gameRestarted', () => location.reload());
+    socket.on('gameRestarted', () => {
+      notifyInfo('Матч перезапущено. Повернення в лобі…', { title: 'Телефон' });
+    });
   });
 }
 
