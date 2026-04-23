@@ -17,7 +17,29 @@ function generateRejoinToken() {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const defaultAllowedOrigins = [
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+
+function getAllowedOrigins() {
+  const raw = process.env.ALLOWED_ORIGINS || process.env.CLIENT_ORIGIN || '';
+  const configured = raw.split(',').map(origin => origin.trim()).filter(Boolean);
+  return configured.length > 0 ? configured : defaultAllowedOrigins;
+}
+
+const allowedOrigins = getAllowedOrigins();
+const io = new Server(server, {
+  cors: {
+    origin(origin, cb) {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('Socket origin not allowed by CORS'));
+    },
+    credentials: true
+  }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -64,6 +86,14 @@ function generateRoomId() {
   let id = '';
   for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return id;
+}
+
+function generateUniqueRoomId(maxAttempts = 100) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const roomId = generateRoomId();
+    if (!rooms.has(roomId)) return roomId;
+  }
+  throw new Error('Failed to generate a unique room id');
 }
 
 // Sanitize a display name coming from the client. Strips HTML-special
@@ -1057,7 +1087,12 @@ io.on('connection', (socket) => {
   // CREATE ROOM
   socket.on('createRoom', ({ playerName, characterId }, cb) => {
     const cleanName = sanitizeName(playerName);
-    const roomId = generateRoomId();
+    let roomId;
+    try {
+      roomId = generateUniqueRoomId();
+    } catch (err) {
+      return cb({ error: 'Не вдалося створити кімнату. Спробуйте ще раз.' });
+    }
     const game = new GameEngine(roomId);
     const player = game.addPlayer(socket.id, cleanName, false, characterId);
     if (player) player.rejoinToken = generateRejoinToken();
@@ -1070,7 +1105,12 @@ io.on('connection', (socket) => {
 
   // CREATE ROOM TV (TV mode — display only, not a player)
   socket.on('createRoomTV', (_, cb) => {
-    const roomId = generateRoomId();
+    let roomId;
+    try {
+      roomId = generateUniqueRoomId();
+    } catch (err) {
+      return cb({ error: 'Не вдалося створити кімнату. Спробуйте ще раз.' });
+    }
     const game = new GameEngine(roomId);
     rooms.set(roomId, game);
     playerRooms.set(socket.id, roomId);
@@ -1247,7 +1287,9 @@ io.on('connection', (socket) => {
     if (game.pendingAction && game.pendingAction.type === 'attack_reaction') {
       broadcastEvent(roomId, 'attackAlert', {
         attackerId: game.pendingAction.attackerId,
+        attackerName: game.getPlayer(game.pendingAction.attackerId)?.name,
         targetId: game.pendingAction.targetId,
+        targetName: game.getPlayer(game.pendingAction.targetId)?.name,
         card: game.pendingAction.card,
         canVest: game.pendingAction.canVest,
         canPolice: game.pendingAction.canPolice,
@@ -1317,8 +1359,12 @@ io.on('connection', (socket) => {
         result = game.executeChooseOwnHelperToRelease(socket.id, data.helperIndex);
         break;
       case 'decline_hire':
-        game.pendingAction = null;
-        result = { success: true };
+        if (game.pendingAction && game.pendingAction.type === 'hire_another' && game.pendingAction.playerId === socket.id) {
+          game.pendingAction = null;
+          result = { success: true };
+        } else {
+          result = { error: 'Немає дії для відмови.' };
+        }
         break;
       case 'event_confirm':
         result = game.executeEventConfirm(socket.id);
@@ -1354,7 +1400,7 @@ io.on('connection', (socket) => {
         break;
       }
       case 'choose_lose_helper':
-        if (game.pendingAction && game.pendingAction.type === 'choose_lose_helper') {
+        if (game.pendingAction && game.pendingAction.type === 'choose_lose_helper' && game.pendingAction.playerId === socket.id) {
           const player = game.getPlayer(socket.id);
           if (data.helperIndex >= 0 && data.helperIndex < player.helpers.length) {
             const helper = player.helpers.splice(data.helperIndex, 1)[0];
@@ -1362,14 +1408,19 @@ io.on('connection', (socket) => {
             game.addLog(`${player.name} втратив помічника ${helper.name}.`);
             game.pendingAction = null;
             result = { success: true };
+          } else {
+            result = { error: 'Невірний індекс помічника.' };
           }
+        } else {
+          result = { error: 'Немає активного вибору помічника.' };
         }
         break;
       case 'pay_or_prison':
-        if (game.pendingAction && game.pendingAction.type === 'pay_or_prison') {
+        if (game.pendingAction && game.pendingAction.type === 'pay_or_prison' && game.pendingAction.playerId === socket.id) {
           const player = game.getPlayer(socket.id);
           if (data.pay && player.money >= game.pendingAction.amount) {
             player.money -= game.pendingAction.amount;
+            player.stats.moneySpent += game.pendingAction.amount;
             game.pendingAction = null;
             result = { paid: true };
           } else {
@@ -1377,23 +1428,34 @@ io.on('connection', (socket) => {
             game.pendingAction = null;
             result = { prison: true };
           }
+        } else {
+          result = { error: 'Немає активного вибору.' };
         }
         break;
       case 'discard_mafia':
-        if (game.pendingAction && game.pendingAction.type === 'discard_mafia_cards') {
+        if (game.pendingAction && game.pendingAction.type === 'discard_mafia_cards' && game.pendingAction.playerId === socket.id) {
           const player = game.getPlayer(socket.id);
-          const indices = data.cardIndices || [];
+          const indices = Array.isArray(data.cardIndices) ? [...data.cardIndices] : [];
+          const uniqueIndices = [...new Set(indices)];
+          if (uniqueIndices.length !== game.pendingAction.count) {
+            result = { error: `Потрібно скинути рівно ${game.pendingAction.count} карт(и).` };
+            break;
+          }
+          if (!uniqueIndices.every(idx => Number.isInteger(idx) && idx >= 0 && idx < player.mafiaCards.length)) {
+            result = { error: 'Невірний індекс карти.' };
+            break;
+          }
           const removed = [];
           // Remove from highest index first
-          indices.sort((a, b) => b - a);
-          for (const idx of indices) {
-            if (idx >= 0 && idx < player.mafiaCards.length) {
-              removed.push(...player.mafiaCards.splice(idx, 1));
-            }
+          uniqueIndices.sort((a, b) => b - a);
+          for (const idx of uniqueIndices) {
+            removed.push(...player.mafiaCards.splice(idx, 1));
           }
           game.mafiaDiscard.push(...removed);
           game.pendingAction = null;
           result = { discarded: removed.length };
+        } else {
+          result = { error: 'Немає активного скидання карт.' };
         }
         break;
       case 'bomb_choose_helper':
@@ -1464,20 +1526,13 @@ io.on('connection', (socket) => {
         break;
       case 'choose_influence_business':
         if (game.pendingAction && game.pendingAction.type === 'choose_influence_business') {
-          if (data.businessId) {
-            const bizState = game.businesses[data.businessId];
-            if (bizState) {
-              bizState.influenceLevel = (bizState.influenceLevel || 0) + 1;
-              const bizData = game.getBusiness(data.businessId);
-              game.addLog(`${game.getPlayer(socket.id).name} додав вплив на ${bizData ? bizData.name : data.businessId}.`);
-              game.pendingAction = null;
-              result = { success: true };
-            }
-          }
+          result = game.resolveChooseInfluenceBusiness(socket.id, data.businessId);
+        } else {
+          result = { error: 'Немає вибору для впливу.' };
         }
         break;
       case 'jackpot_choose_business':
-        if (game.pendingAction && game.pendingAction.type === 'jackpot_choose_business') {
+        if (game.pendingAction && game.pendingAction.type === 'jackpot_choose_business' && game.pendingAction.playerId === socket.id) {
           const player = game.getPlayer(socket.id);
           const bizState = game.businesses[data.businessId];
           if (!bizState) { result = { error: 'Бізнес не знайдено.' }; break; }
@@ -1486,11 +1541,14 @@ io.on('connection', (socket) => {
             prevOwner.businesses = prevOwner.businesses.filter(b => b !== data.businessId);
           }
           bizState.owner = player.id;
+          bizState.influenceLevel = Math.max(1, bizState.influenceLevel || 0);
           if (!player.businesses.includes(data.businessId)) player.businesses.push(data.businessId);
           const bizData = game.getBusiness(data.businessId);
           game.addLog(`${player.name} забрав ${bizData ? bizData.name : data.businessId} через MAFIA JACKPOT!`);
           game.pendingAction = null;
           result = { success: true };
+        } else {
+          result = { error: 'Немає активного джекпоту.' };
         }
         break;
       case 'extra_step_choice':
@@ -1520,7 +1578,11 @@ io.on('connection', (socket) => {
 
     // Check for attack alerts
     if (game.pendingAction && game.pendingAction.type === 'attack_reaction') {
-      broadcastEvent(roomId, 'attackAlert', game.pendingAction);
+      broadcastEvent(roomId, 'attackAlert', {
+        ...game.pendingAction,
+        attackerName: game.getPlayer(game.pendingAction.attackerId)?.name,
+        targetName: game.getPlayer(game.pendingAction.targetId)?.name
+      });
     }
    } catch (err) {
     console.error('resolveAction error:', err.message, err.stack);
@@ -1542,7 +1604,9 @@ io.on('connection', (socket) => {
     if (game.pendingAction && game.pendingAction.type === 'attack_reaction') {
       broadcastEvent(roomId, 'attackAlert', {
         attackerId: game.pendingAction.attackerId,
+        attackerName: game.getPlayer(game.pendingAction.attackerId)?.name,
         targetId: game.pendingAction.targetId,
+        targetName: game.getPlayer(game.pendingAction.targetId)?.name,
         card: game.pendingAction.card,
         canVest: game.pendingAction.canVest,
         canPolice: game.pendingAction.canPolice,
@@ -1572,6 +1636,10 @@ io.on('connection', (socket) => {
     const roomId = playerRooms.get(socket.id);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
+    const action = game.pendingAction;
+    if (!action || action.type !== 'upgrade_influence_on_own' || action.playerId !== socket.id || action.businessId !== businessId) {
+      return cb({ error: 'Зараз не можна підвищити вплив напряму.' });
+    }
     const result = game.buyInfluence(socket.id, businessId);
     cb(result);
     broadcastState(roomId);

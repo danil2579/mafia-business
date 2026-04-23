@@ -178,27 +178,39 @@
   <!-- ===== WAITING ROOM ===== -->
   <div id="waiting-screen" class="screen">
     <div class="waiting-container">
-      <h2>Кімната: <span id="room-id-display"></span></h2>
-      <p class="hint">Поділіться кодом з друзями</p>
-      <div id="players-list" class="players-list"></div>
-      <div class="character-select-section">
-        <label class="input-label">ОБЕРИ ПЕРСОНАЖА</label>
-        <div class="character-select" id="character-select"></div>
-      </div>
-      <div id="game-settings" class="game-settings" style="display:none">
-        <h3>Налаштування гри</h3>
-        <div class="setting-row">
-          <label for="setting-min-round">Карти атаки доступні з кола:</label>
-          <div class="setting-control">
-            <button class="btn-setting-minus" data-target="setting-min-round">−</button>
-            <span id="setting-min-round" class="setting-value">3</span>
-            <button class="btn-setting-plus" data-target="setting-min-round">+</button>
+      <div class="waiting-shell">
+        <div class="waiting-stage">STAGING ROOM</div>
+        <h2>Кімната: <span id="room-id-display"></span></h2>
+        <p class="hint">Поділіться кодом з друзями та зберіть свою сім'ю перед початком гри</p>
+        <div class="waiting-grid">
+          <div class="waiting-card waiting-card-roster">
+            <div class="waiting-card-title">Гравці у кімнаті</div>
+            <div id="players-list" class="players-list"></div>
+          </div>
+          <div class="waiting-card waiting-card-character">
+            <div class="character-select-section">
+              <label class="input-label">ОБЕРИ ПЕРСОНАЖА</label>
+              <div class="character-select" id="character-select"></div>
+            </div>
           </div>
         </div>
+        <div id="game-settings" class="game-settings" style="display:none">
+          <h3>Налаштування гри</h3>
+          <div class="setting-row">
+            <label for="setting-min-round">Карти атаки доступні з кола:</label>
+            <div class="setting-control">
+              <button class="btn-setting-minus" data-target="setting-min-round">−</button>
+              <span id="setting-min-round" class="setting-value">3</span>
+              <button class="btn-setting-plus" data-target="setting-min-round">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="waiting-actions">
+          <button id="btn-add-bot" class="btn btn-secondary" style="display:none">Додати бота</button>
+          <button id="btn-start" class="btn btn-primary" style="display:none">Почати гру</button>
+        </div>
+        <p id="waiting-msg" class="hint waiting-msg">Очікуємо гравців...</p>
       </div>
-      <button id="btn-add-bot" class="btn btn-secondary" style="display:none">Додати бота</button>
-      <button id="btn-start" class="btn btn-primary" style="display:none">Почати гру</button>
-      <p id="waiting-msg" class="hint">Очікуємо гравців...</p>
     </div>
   </div>
 
@@ -206,10 +218,16 @@
   <div id="game-screen" class="screen">
     <!-- Top bar -->
     <div class="game-topbar">
-      <div class="game-title">MAFIA BUSINESS</div>
+      <div class="game-title-block">
+        <div class="game-kicker">CRIME BOARD GAME</div>
+        <div class="game-title">MAFIA BUSINESS</div>
+      </div>
       <div id="turn-info" class="turn-info"></div>
       <div class="topbar-right">
-        <div id="my-money" class="money-display">$0</div>
+        <div class="money-panel">
+          <span class="money-label">КАПІТАЛ</span>
+          <div id="my-money" class="money-display">$0</div>
+        </div>
         <button id="btn-rules" class="btn-topbar" title="Правила">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h5"/></svg>
         </button>
@@ -531,6 +549,7 @@
       </div>
       <div class="victory-title">ПЕРЕМОЖЕЦЬ</div>
       <div id="victory-name" class="victory-name"></div>
+      <div id="victory-summary" class="victory-summary"></div>
       <div id="victory-stats" class="victory-stats"></div>
       <button class="btn btn-primary" onclick="sessionStorage.removeItem('mafia_roomId'); sessionStorage.removeItem('mafia_playerName'); sessionStorage.removeItem('mafia_rejoinToken'); location.reload()">Нова гра</button>
     </div>
