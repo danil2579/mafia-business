@@ -561,8 +561,8 @@ const SPECIAL_ICONS = {
   POLICE: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1l2 5h5l-4 3 1.5 5L12 11l-4.5 3L9 9 5 6h5z"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>`,
   PRISON: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M12 3v18M16 3v18"/></svg>`,
   BAR: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2h8l-3 8v5h4v2H7v-2h4v-5L8 2z"/><path d="M6 2h12"/></svg>`,
-  MAFIA: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8 2 4 5 4 8c0 1.5.5 2.5 1 3.5L3 22h18l-2-10.5c.5-1 1-2 1-3.5 0-3-4-6-8-6z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>`,
-  EVENT: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/></svg>`
+  MAFIA: ICON.skull,
+  EVENT: ICON.explosion
 };
 
 // ===== SCREEN MANAGEMENT =====
@@ -779,7 +779,12 @@ socket.on('gameState', (state) => {
       const latestLog = state.log[state.log.length - 1];
       const current = state.players[state.currentPlayerIndex];
       if (current && current.id !== myId && latestLog) {
-        showCenterMessage(current.name, latestLog.message, 3000);
+        const diceMatch = latestLog.message.match(/кинув кубики: (\d+) \+ (\d+) = (\d+)/);
+        if (diceMatch) {
+          showOtherPlayerRoll(current.name, [Number(diceMatch[1]), Number(diceMatch[2])], Number(diceMatch[3]));
+        } else {
+          showCenterMessage(current.name, latestLog.message, 2200);
+        }
       }
     }
   }
@@ -1410,6 +1415,31 @@ function showCenterInfo(playerName, dice, total, oldPos, newPos, landingSector) 
   // Auto-hide after 4 seconds
   clearTimeout(info._hideTimer);
   info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 4000);
+}
+
+function showOtherPlayerRoll(playerName, dice, total) {
+  const info = $('#center-info');
+  if (!info || !Array.isArray(dice) || dice.length < 2) return;
+
+  const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
+  let diceHtml = '<div class="ci-dice">';
+  for (const d of dice) {
+    diceHtml += '<div class="ci-die">';
+    for (let i = 1; i <= 9; i++) {
+      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
+    }
+    diceHtml += '</div>';
+  }
+  diceHtml += '</div>';
+
+  info.innerHTML = `
+    <div class="ci-title">${escapeHtml(playerName)}</div>
+    ${diceHtml}
+    <div class="ci-text">Кубики: ${dice[0]} + ${dice[1]} = ${total}</div>
+  `;
+  info.style.display = 'block';
+  clearTimeout(info._hideTimer);
+  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 2200);
 }
 
 // Show any event/action result in center info
@@ -2225,7 +2255,7 @@ function showCardDrawnEffect(data) {
     for (let i = 0; i < (data.cardCount || 1); i++) {
       cardsHtml += `<div class="cde-card cde-card-mafia" style="animation-delay:${i * 0.15}s">
         <div class="cde-card-back">
-          <div class="cde-card-back-pattern">${ICON.mask}</div>
+          <div class="cde-card-back-pattern">${ICON.skull}</div>
           <div class="cde-card-back-label">MAFIA</div>
         </div>
       </div>`;
@@ -2751,9 +2781,11 @@ function renderActionPanel(state) {
   const btnRoll = $('#btn-roll');
   const actionBtns = $('#action-buttons');
   actionBtns.innerHTML = '';
+  const canRoll = isMyTurn && state.turnPhase === 'roll' && me && me.inPrison <= 0;
 
-  btnRoll.disabled = !(isMyTurn && state.turnPhase === 'roll' && me && me.inPrison <= 0);
-  btnRoll.textContent = isMyTurn && state.turnPhase === 'roll' ? 'Кинути кубики' : 'Очікуйте...';
+  btnRoll.disabled = !canRoll;
+  btnRoll.textContent = 'Кинути кубики';
+  btnRoll.style.display = canRoll ? 'inline-flex' : 'none';
 
   if (isMyTurn && state.turnPhase === 'action' && !state.pendingAction) {
     if (me.canUpgradeRespect && me.respectLevel < 5) {
