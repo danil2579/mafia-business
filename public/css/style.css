@@ -1595,9 +1595,8 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   border-radius: var(--radius-xl);
   padding: 36px 24px 24px; text-align: center; position: relative; overflow: hidden;
   box-shadow:
-    0 20px 80px rgba(0,0,0,0.9),
-    0 0 40px color-mix(in srgb, var(--_c) 20%, transparent),
-    0 0 100px color-mix(in srgb, var(--_c) 6%, transparent),
+    0 18px 50px rgba(0,0,0,0.72),
+    0 0 26px color-mix(in srgb, var(--_c) 12%, transparent),
     inset 0 0 50px color-mix(in srgb, var(--_c) 4%, transparent);
   animation: cardRevealIn 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -2218,12 +2217,16 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   flex-direction: column;
   gap: 10px;
   margin-bottom: 10px;
+  flex: 0 0 auto;
+  max-height: 30vh;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 .coach-card {
   background: linear-gradient(145deg, rgba(16,18,36,0.97), rgba(8,10,22,0.97));
   border: 1px solid rgba(72,78,128,0.28);
   border-radius: var(--radius-xl);
-  padding: 14px 14px 12px;
+  padding: 12px 12px 10px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.03);
   position: relative;
   overflow: hidden;
@@ -2250,60 +2253,60 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .coach-title {
   color: #f5eedb;
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.8px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 .coach-subtitle {
   color: var(--coach-tone, var(--gold));
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 .coach-text {
   color: rgba(255,255,255,0.72);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 10px;
+  line-height: 1.4;
   margin: 0;
 }
 .coach-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
+  gap: 5px;
+  margin-top: 10px;
 }
 .coach-pill {
-  padding: 5px 8px;
+  padding: 4px 7px;
   border-radius: 999px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.06);
   color: rgba(255,255,255,0.62);
-  font-size: 9px;
+  font-size: 8px;
   letter-spacing: 0.4px;
 }
 .coach-helper-line {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px;
-  margin-top: 8px;
+  padding: 7px 9px;
+  margin-top: 7px;
   border-radius: 12px;
   background: rgba(255,255,255,0.035);
   border: 1px solid rgba(255,255,255,0.05);
 }
 .coach-helper-name {
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 .coach-helper-ability {
   color: rgba(255,255,255,0.6);
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.4;
 }
 .coach-rules-btn {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 /* ============================================================
@@ -2311,7 +2314,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
    ============================================================ */
 
 /* Cards panel */
-.cards-panel { flex: 1; overflow-y: auto; min-height: 0; }
+.cards-panel { flex: 1 1 0; overflow-y: auto; min-height: 120px; }
 .cards-panel h3 {
   font-size: 11px; color: var(--purple-light); margin-bottom: 10px;
   letter-spacing: 2px; text-transform: uppercase;
