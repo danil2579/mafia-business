@@ -870,29 +870,12 @@ socket.on('rentPaid', (data) => {
 
 socket.on('businessBought', (data) => {
   if (!data || !data.payerName || !data.businessName || !data.amount) return;
-  const sourceLabel = data.source === 'auction'
-    ? 'Аукціон'
-    : (data.source === 'seize' ? 'Захоплення' : 'Купівля');
-  showRentPaymentEffect(
-    data.payerName,
-    data.payerCharacter,
-    'Банк',
-    { color: '#c9a84c' },
-    data.amount,
-    `${sourceLabel}: ${data.businessName}`
-  );
+  showBoardTransactionEffect('business', data);
 });
 
 socket.on('bribePaid', (data) => {
   if (!data || !data.payerName || !data.amount) return;
-  showRentPaymentEffect(
-    data.payerName,
-    data.payerCharacter,
-    'Поліція',
-    { color: '#4aa3ff' },
-    data.amount,
-    data.reason || 'Хабар поліції'
-  );
+  showBoardTransactionEffect('bribe', data);
 });
 
 socket.on('cardDrawn', (data) => {
@@ -1436,6 +1419,40 @@ function showOtherPlayerRoll(playerName, dice, total) {
     <div class="ci-title">${escapeHtml(playerName)}</div>
     ${diceHtml}
     <div class="ci-text">Кубики: ${dice[0]} + ${dice[1]} = ${total}</div>
+  `;
+  info.style.display = 'block';
+  clearTimeout(info._hideTimer);
+  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 2200);
+}
+
+function showBoardTransactionEffect(type, data) {
+  const info = $('#center-info');
+  if (!info) return;
+
+  const isBusiness = type === 'business';
+  const accent = isBusiness ? 'var(--gold)' : 'var(--blue-light)';
+  const kicker = isBusiness ? 'УГОДА ЗАКРИТА' : 'ПОЛІЦІЯ';
+  const title = isBusiness
+    ? `${data.payerName} купує`
+    : `${data.payerName} вирішує питання`;
+  const subject = isBusiness ? data.businessName : (data.reason || 'Хабар поліції');
+  const amountLabel = `-${data.amount}$`;
+  const sourceLabel = isBusiness
+    ? (data.source === 'auction' ? 'Аукціон' : (data.source === 'seize' ? 'Захоплення' : 'Купівля'))
+    : 'Оплата';
+  const icon = isBusiness ? ICON.building : ICON.police;
+
+  info.innerHTML = `
+    <div class="ci-transaction ci-transaction-${type}" style="--ci-accent:${accent}">
+      <div class="ci-transaction-kicker">${kicker}</div>
+      <div class="ci-transaction-icon">${icon}</div>
+      <div class="ci-transaction-title">${escapeHtml(title)}</div>
+      <div class="ci-transaction-subject">${escapeHtml(subject)}</div>
+      <div class="ci-transaction-meta">
+        <span class="ci-transaction-tag">${sourceLabel}</span>
+        <span class="ci-transaction-amount">${amountLabel}</span>
+      </div>
+    </div>
   `;
   info.style.display = 'block';
   clearTimeout(info._hideTimer);
@@ -2779,6 +2796,7 @@ function renderActionPanel(state) {
   const isMyTurn = state.currentPlayerId === myId;
   const me = state.players.find(p => p.id === myId);
   const btnRoll = $('#btn-roll');
+  const diceDisplay = $('#dice-display');
   const actionBtns = $('#action-buttons');
   actionBtns.innerHTML = '';
   const canRoll = isMyTurn && state.turnPhase === 'roll' && me && me.inPrison <= 0;
@@ -2786,6 +2804,9 @@ function renderActionPanel(state) {
   btnRoll.disabled = !canRoll;
   btnRoll.textContent = 'Кинути кубики';
   btnRoll.style.display = canRoll ? 'inline-flex' : 'none';
+  if (!canRoll && diceDisplay) {
+    diceDisplay.innerHTML = '';
+  }
 
   if (isMyTurn && state.turnPhase === 'action' && !state.pendingAction) {
     if (me.canUpgradeRespect && me.respectLevel < 5) {
@@ -3078,6 +3099,11 @@ $('#btn-roll').addEventListener('click', () => {
 
 function showDice(dice) {
   const display = $('#dice-display');
+  if (!display) return;
+  if (display._hideTimer) {
+    clearTimeout(display._hideTimer);
+    display._hideTimer = null;
+  }
   display.innerHTML = '';
   const pipLayouts = {
     1: [5], 2: [3, 7], 3: [3, 5, 7],
@@ -3094,6 +3120,10 @@ function showDice(dice) {
     }
     display.appendChild(die);
   }
+  display._hideTimer = setTimeout(() => {
+    display.innerHTML = '';
+    display._hideTimer = null;
+  }, 1800);
 }
 
 // ===== PENDING ACTIONS (center panel instead of modal for most) =====

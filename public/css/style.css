@@ -1509,6 +1509,68 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .center-info .ci-text { color: var(--text); font-size: 13px; line-height: 1.5; }
 .center-info .ci-sub { color: var(--text-dim); font-size: 11px; margin-top: 6px; font-family: var(--font-accent); font-size: 13px; }
+.center-info .ci-transaction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: centerTransactionIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.center-info .ci-transaction-kicker {
+  color: color-mix(in srgb, var(--ci-accent, var(--gold)) 72%, #fff);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.center-info .ci-transaction-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ci-accent, var(--gold));
+  background: radial-gradient(circle, color-mix(in srgb, var(--ci-accent, var(--gold)) 18%, transparent), transparent 72%);
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--ci-accent, var(--gold)) 22%, transparent));
+}
+.center-info .ci-transaction-icon .icon {
+  width: 34px;
+  height: 34px;
+}
+.center-info .ci-transaction-title {
+  color: #f7f0dc;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+.center-info .ci-transaction-subject {
+  color: var(--text);
+  font-size: 14px;
+}
+.center-info .ci-transaction-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.center-info .ci-transaction-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ci-accent, var(--gold)) 35%, transparent);
+  color: color-mix(in srgb, var(--ci-accent, var(--gold)) 70%, #fff);
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+.center-info .ci-transaction-amount {
+  color: color-mix(in srgb, var(--ci-accent, var(--gold)) 88%, #fff);
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+@keyframes centerTransactionIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 /* Center panel — interactive action prompts with dramatic presence */
 .center-panel {
