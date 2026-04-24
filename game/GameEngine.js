@@ -385,6 +385,40 @@ class GameEngine {
           } else {
             events.push({ type: 'bomb_damage', target: player.id });
             this.handleBombDamage(player);
+            player.position = newPos;
+
+            if (!player.alive) {
+              this._barPassedThisTurn = false;
+              this.turnPhase = 'action';
+              return {
+                oldPos,
+                newPos,
+                events,
+                landingSector: sector,
+                landingResult: null,
+                bombExploded: true
+              };
+            }
+
+            if (this.pendingAction && this.pendingAction.type === 'bomb_choose_helper') {
+              this._deferredLanding = {
+                playerId: player.id,
+                sector,
+                barPassedThisTurn: this._barPassedThisTurn,
+                hasCorrado: this.hasHelper(player.id, 'extraStep') && !player._usedExtraStepThisTurn
+              };
+              this._barPassedThisTurn = false;
+              this.turnPhase = 'action';
+              return {
+                oldPos,
+                newPos,
+                events,
+                landingSector: sector,
+                landingResult: null,
+                bombExploded: true,
+                bombPendingChoice: true
+              };
+            }
           }
         }
       }

@@ -67,6 +67,26 @@ test('car bomb kills the boss even if target still has helpers left', () => {
   assert.equal(target.helpers.length, 0);
 });
 
+test('pass-through bomb with helpers stops movement and waits for helper choice', () => {
+  const game = createPlayingGame();
+  const player = game.getPlayer('p1');
+
+  game.turnPhase = 'roll';
+  game.currentPlayerIndex = 0;
+  player.position = 0;
+  player.helpers.push(HELPERS[0], HELPERS[1]);
+  game.bombs.push({ sector: 1, placedBy: 'p2' });
+
+  const moveResult = game.movePlayer(player, 4);
+
+  assert.equal(moveResult.bombExploded, true);
+  assert.equal(moveResult.bombPendingChoice, true);
+  assert.equal(moveResult.newPos, 1);
+  assert.equal(player.position, 1);
+  assert.equal(game.pendingAction?.type, 'bomb_choose_helper');
+  assert.equal(game.pendingAction?.playerId, 'p1');
+});
+
 test('casino can be skipped without throwing an invalid bet error', () => {
   const game = createPlayingGame();
   game.pendingAction = { type: 'casino', playerId: 'p1', phase: 'betting' };
