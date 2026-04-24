@@ -2198,7 +2198,8 @@ io.on('connection', (socket) => {
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
 
-    const player = game.players.find(p => p.name === playerName);
+    const player = game.players.find(p => p.rejoinToken === rejoinToken)
+      || game.players.find(p => p.name === playerName);
     if (!player) return cb({ error: 'Гравця не знайдено.' });
     if (!player.rejoinToken || player.rejoinToken !== rejoinToken) {
       return cb({ error: 'Невірний токен перепідключення.' });

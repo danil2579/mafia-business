@@ -4802,21 +4802,29 @@ function showAllianceUI(targetPlayer) {
 // ===== RECONNECT =====
 (function initReconnect() {
   if (isTVMode || isPhoneMode) return; // TV/Phone handle their own reconnection
+  let rejoinInFlight = false;
   // Store session info
   socket.on('connect', () => {
     const savedRoom = sessionStorage.getItem('mafia_roomId');
     const savedName = sessionStorage.getItem('mafia_playerName');
     const savedToken = sessionStorage.getItem('mafia_rejoinToken');
-    if (savedRoom && savedName && savedToken && !myRoomId) {
+    const needsRejoin = savedRoom && savedName && savedToken && (myRoomId !== savedRoom || myId !== socket.id);
+    if (needsRejoin && !rejoinInFlight) {
+      rejoinInFlight = true;
       socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName, rejoinToken: savedToken }, (res) => {
+        rejoinInFlight = false;
         if (res.success) {
           myId = res.playerId;
           myRoomId = res.roomId;
           showScreen(gameScreen);
+          notifyInfo('Підключення відновлено. Ви повернулися до матчу.', { title: 'Перепідключення', duration: 2800 });
         } else {
           sessionStorage.removeItem('mafia_roomId');
           sessionStorage.removeItem('mafia_playerName');
           sessionStorage.removeItem('mafia_rejoinToken');
+          myId = null;
+          myRoomId = null;
+          notifyError('Не вдалося повернутися до матчу після розриву з’єднання.', { title: 'Перепідключення' });
         }
       });
     }
@@ -5659,7 +5667,7 @@ if (isPhoneMode) {
       const savedRoom = sessionStorage.getItem('mafia_roomId');
       const savedName = sessionStorage.getItem('mafia_playerName');
       const savedToken = sessionStorage.getItem('mafia_rejoinToken');
-      if (savedRoom && savedName && savedToken && !myRoomId) {
+      if (savedRoom && savedName && savedToken && (myRoomId !== savedRoom || myId !== socket.id)) {
         socket.emit('rejoinRoom', { roomId: savedRoom, playerName: savedName, rejoinToken: savedToken }, (res) => {
           if (res.success) {
             myId = res.playerId;
