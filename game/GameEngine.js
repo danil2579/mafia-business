@@ -179,6 +179,41 @@ class GameEngine {
     return this.players.find(p => p.id === playerId);
   }
 
+  getPlayerVictoryBreakdown(playerOrId) {
+    const player = typeof playerOrId === 'string' ? this.getPlayer(playerOrId) : playerOrId;
+    if (!player) {
+      return {
+        cash: 0,
+        businessValue: 0,
+        influenceValue: 0,
+        total: 0
+      };
+    }
+
+    let businessValue = 0;
+    let influenceValue = 0;
+    for (const bizId of player.businesses) {
+      const biz = this.getBusiness(bizId);
+      const bizState = this.businesses[bizId];
+      if (!biz || !bizState) continue;
+      businessValue += biz.price || 0;
+      const district = this.getDistrict(bizState.districtId || biz.districtId);
+      const influenceCost = district?.influenceCost || 0;
+      influenceValue += (bizState.influenceLevel || 0) * influenceCost;
+    }
+
+    return {
+      cash: player.money || 0,
+      businessValue,
+      influenceValue,
+      total: (player.money || 0) + businessValue + influenceValue
+    };
+  }
+
+  getPlayerVictoryScore(playerOrId) {
+    return this.getPlayerVictoryBreakdown(playerOrId).total;
+  }
+
   getAlivePlayers() {
     return this.players.filter(p => p.alive);
   }
@@ -2656,22 +2691,18 @@ class GameEngine {
       if (alive.length === 0) {
         // Edge case: everyone dead simultaneously (e.g. chain-bomb) — pick richest of all (dead) players
         const all = [...this.players].sort((a, b) => {
-          const aWealth = a.money + a.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
-          const bWealth = b.money + b.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
-          return bWealth - aWealth;
+          return this.getPlayerVictoryScore(b) - this.getPlayerVictoryScore(a);
         });
         this.phase = 'finished';
         this.winner = all[0] || null;
         this.addLog(`⏰ Гра закінчена — переможця немає (всі загинули).`);
       } else {
         const richest = alive.sort((a, b) => {
-          const aWealth = a.money + a.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
-          const bWealth = b.money + b.businesses.reduce((sum, bizId) => sum + (this.getBusiness(bizId)?.price || 0), 0);
-          return bWealth - aWealth;
+          return this.getPlayerVictoryScore(b) - this.getPlayerVictoryScore(a);
         })[0];
         this.phase = 'finished';
         this.winner = richest;
-        this.addLog(`⏰ Гра закінчена після ${this.maxRounds} кіл! ${richest.name} переміг як найбагатший!`);
+        this.addLog(`⏰ Гра закінчена після ${this.maxRounds} кіл! ${richest.name} переміг за сумарним капіталом, бізнесами та впливом!`);
       }
     }
 
@@ -3047,7 +3078,9 @@ class GameEngine {
         // Only show own mafia cards
         mafiaCards: (forPlayerId === p.id) ? p.mafiaCards : undefined,
         stats: p.stats,
-        avatar: p.avatar || null
+        avatar: p.avatar || null,
+        victoryBreakdown: this.getPlayerVictoryBreakdown(p),
+        victoryScore: this.getPlayerVictoryScore(p)
       })),
       businesses: { ...this.businesses },
       bombs: this.bombs.map(b => ({ sector: b.sector })), // Don't reveal who placed

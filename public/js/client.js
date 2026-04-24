@@ -2483,26 +2483,29 @@ function showVictoryScreen(state) {
   // Find winner: try state.winner, then last alive, then richest
   let winner = null;
   if (state.winner) {
-    winner = state.players.find(p => p.id === state.winner);
+    winner = state.players.find(p => p.id === (state.winner.id || state.winner));
   }
   if (!winner) {
     const alive = state.players.filter(p => p.alive);
     if (alive.length === 1) {
       winner = alive[0];
     } else if (alive.length > 0) {
-      winner = alive.reduce((a, b) => (a.money > b.money ? a : b));
+      winner = alive.reduce((a, b) => ((a.victoryScore || 0) > (b.victoryScore || 0) ? a : b));
     } else {
-      winner = state.players.reduce((a, b) => (a.money > b.money ? a : b));
+      winner = state.players.reduce((a, b) => ((a.victoryScore || 0) > (b.victoryScore || 0) ? a : b));
     }
   }
   if (!winner) return;
 
   SFX.epicVictory();
   const overlay = $('#victory-overlay');
+  const breakdown = winner.victoryBreakdown || {};
   $('#victory-name').textContent = winner.name;
   $('#victory-stats').innerHTML = `
     <div class="stat-row"><span class="stat-label">Гроші</span><span class="stat-value">${winner.money}$</span></div>
     <div class="stat-row"><span class="stat-label">Бізнеси</span><span class="stat-value">${winner.businessCount || 0}</span></div>
+    <div class="stat-row"><span class="stat-label">Вплив</span><span class="stat-value">${breakdown.influenceValue || 0}$</span></div>
+    <div class="stat-row"><span class="stat-label">Підсумок</span><span class="stat-value">${winner.victoryScore || winner.money || 0}$</span></div>
     <div class="stat-row"><span class="stat-label">Повага</span><span class="stat-value">${winner.respectName || '???'} (Lv.${winner.respectLevel || 1})</span></div>
     <div class="stat-row"><span class="stat-label">Помічники</span><span class="stat-value">${winner.helpers ? winner.helpers.length : (winner.helperCount || 0)}</span></div>
   `;
@@ -4637,7 +4640,11 @@ function showEnhancedVictoryScreen(state) {
   if (state.winner) winner = state.players.find(p => p.id === state.winner.id);
   if (!winner) {
     const alive = state.players.filter(p => p.alive);
-    winner = alive.length === 1 ? alive[0] : (alive.length > 0 ? alive.reduce((a,b) => a.money > b.money ? a : b) : state.players.reduce((a,b) => a.money > b.money ? a : b));
+    winner = alive.length === 1
+      ? alive[0]
+      : (alive.length > 0
+        ? alive.reduce((a, b) => ((a.victoryScore || 0) > (b.victoryScore || 0) ? a : b))
+        : state.players.reduce((a, b) => ((a.victoryScore || 0) > (b.victoryScore || 0) ? a : b)));
   }
   if (!winner) return;
 
@@ -4646,11 +4653,14 @@ function showEnhancedVictoryScreen(state) {
   document.getElementById('victory-name').textContent = winner.name;
   const winnerStats = winner.stats || {};
   const businessCount = winner.businessCount || (winner.businesses || []).length || 0;
+  const winnerBreakdown = winner.victoryBreakdown || {};
   const summaryEl = document.getElementById('victory-summary');
   if (summaryEl) {
     const summaryBits = [
       `${ICON.money} ${winner.money}$`,
-      `${ICON.building} ${businessCount} бізнесів`,
+      `${ICON.building} ${businessCount} бізнесів / ${winnerBreakdown.businessValue || 0}$`,
+      `★ Вплив ${winnerBreakdown.influenceValue || 0}$`,
+      `${ICON.medal_gold} Підсумок ${winner.victoryScore || 0}$`,
       `${ICON.crown} Повага ${winner.respectLevel || 1}`
     ];
     if ((winnerStats.attacksMade || 0) > 0) summaryBits.push(`${ICON.swords} ${winnerStats.attacksMade} атак`);
@@ -4665,9 +4675,7 @@ function showEnhancedVictoryScreen(state) {
     if (a.id === winner.id) return -1;
     if (b.id === winner.id) return 1;
     if (a.alive !== b.alive) return b.alive ? 1 : -1;
-    let aWealth = a.money + (a.businesses || []).length * 2000;
-    let bWealth = b.money + (b.businesses || []).length * 2000;
-    return bWealth - aWealth;
+    return (b.victoryScore || 0) - (a.victoryScore || 0);
   });
 
   let statsHtml = '<div class="victory-leaderboard">';
@@ -4675,6 +4683,7 @@ function showEnhancedVictoryScreen(state) {
     const isWinner = p.id === winner.id;
     const medal = i === 0 ? ICON.medal_gold : i === 1 ? ICON.medal_silver : i === 2 ? ICON.medal_bronze : `#${i+1}`;
     const s = p.stats || {};
+    const breakdown = p.victoryBreakdown || {};
     statsHtml += `
       <div class="vl-row ${isWinner ? 'vl-winner' : ''} ${!p.alive ? 'vl-dead' : ''}">
         <span class="vl-rank">${medal}</span>
@@ -4682,8 +4691,10 @@ function showEnhancedVictoryScreen(state) {
         <div class="vl-info">
           <div class="vl-name">${p.name} ${!p.alive ? '☠' : ''}</div>
           <div class="vl-stats-row">
+            <span>${ICON.medal_gold} ${p.victoryScore || 0}$</span>
             <span>${ICON.money} ${p.money}$</span>
-            <span>${ICON.building} ${p.businessCount || 0}</span>
+            <span>${ICON.building} ${breakdown.businessValue || 0}$</span>
+            <span>★ ${breakdown.influenceValue || 0}$</span>
             <span>${ICON.cards} ${s.mafiaCardsUsed || 0}</span>
             <span>${ICON.swords} ${s.attacksMade || 0}</span>
             <span>${ICON.casino_chip} ${(s.casinoWins||0)}W/${(s.casinoLosses||0)}L</span>

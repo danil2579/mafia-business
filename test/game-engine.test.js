@@ -213,3 +213,28 @@ test('private pending actions are sanitized for uninvolved viewers', () => {
   assert.equal('ownHelpers' in otherState.pendingAction, false);
   assert.equal(otherState.pendingAction.targetHelperCount, 2);
 });
+
+test('victory score includes cash, business value, and influence investments', () => {
+  const game = createPlayingGame();
+  const p1 = game.getPlayer('p1');
+  const p2 = game.getPlayer('p2');
+
+  p1.money = 4000;
+  p1.businesses.push('kiosk');
+  game.businesses.kiosk.owner = 'p1';
+  game.businesses.kiosk.influenceLevel = 4;
+
+  p2.money = 5200;
+  p2.businesses.push('avto_moyka');
+  game.businesses.avto_moyka.owner = 'p2';
+  game.businesses.avto_moyka.influenceLevel = 1;
+
+  const p1Score = game.getPlayerVictoryBreakdown(p1);
+  const p2Score = game.getPlayerVictoryBreakdown(p2);
+
+  assert.equal(p1Score.businessValue, 900);
+  assert.equal(p1Score.influenceValue, 1200);
+  assert.equal(p1Score.total, 6100);
+  assert.equal(p2Score.total, 6800);
+  assert.equal(game.getPlayerVictoryScore('p2') > game.getPlayerVictoryScore('p1'), true);
+});

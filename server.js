@@ -97,6 +97,54 @@ function generateUniqueRoomId(maxAttempts = 100) {
   throw new Error('Failed to generate a unique room id');
 }
 
+function remapPlayerReferences(game, oldId, newId) {
+  if (!game || !oldId || !newId || oldId === newId) return;
+
+  for (const bizState of Object.values(game.businesses || {})) {
+    if (bizState.owner === oldId) bizState.owner = newId;
+    if (bizState.influenceTokens && bizState.influenceTokens[oldId] !== undefined) {
+      bizState.influenceTokens[newId] = (bizState.influenceTokens[newId] || 0) + bizState.influenceTokens[oldId];
+      delete bizState.influenceTokens[oldId];
+    }
+  }
+
+  if (game.orderRolls && game.orderRolls[oldId]) {
+    game.orderRolls[newId] = game.orderRolls[oldId];
+    delete game.orderRolls[oldId];
+  }
+
+  if (Array.isArray(game.bombs)) {
+    for (const bomb of game.bombs) {
+      if (bomb.placedBy === oldId) bomb.placedBy = newId;
+    }
+  }
+
+  if (Array.isArray(game.alliances)) {
+    for (const alliance of game.alliances) {
+      if (alliance.player1 === oldId) alliance.player1 = newId;
+      if (alliance.player2 === oldId) alliance.player2 = newId;
+    }
+  }
+
+  if (game.winner?.id === oldId) {
+    game.winner.id = newId;
+  }
+
+  if (game.hostId === oldId) {
+    game.hostId = newId;
+  }
+
+  if (game.pendingAction && oldId) {
+    for (const [key, value] of Object.entries(game.pendingAction)) {
+      if (value === oldId) {
+        game.pendingAction[key] = newId;
+      } else if (Array.isArray(value)) {
+        game.pendingAction[key] = value.map(item => item === oldId ? newId : item);
+      }
+    }
+  }
+}
+
 // Sanitize a display name coming from the client. Strips HTML-special
 // characters and control chars, collapses whitespace, and caps length so
 // names are always safe to interpolate into innerHTML on the client.
@@ -2226,6 +2274,7 @@ io.on('connection', (socket) => {
     player.id = socket.id;
     player.alive = true;
     player.disconnected = false;
+    remapPlayerReferences(game, oldId, socket.id);
 
     // Update any pendingAction references to the old socket.id so the
     // reconnected player can still act on their own pending decisions
