@@ -48,6 +48,8 @@ let prevMoney = {}; // track previous money for animation
 let animatingTokens = false;
 let animatingPlayerId = null; // player whose token is being animated
 let pendingActionDelay = 0; // ms to delay showing pending actions (for animation)
+let publicEventRevealActive = false;
+const publicEventRevealQueue = [];
 
 // ===== INLINE SVG ICONS (replacing emojis) =====
 const ICON = {
@@ -871,19 +873,25 @@ socket.on('rentPaid', (data) => {
 socket.on('businessBought', (data) => {
   if (!data || !data.payerName || !data.businessName || !data.amount) return;
   if (data.payerId && data.payerId === myId) return;
-  showBoardTransactionEffect('business', data);
+  showPublicEventReveal('business', data);
 });
 
 socket.on('bribePaid', (data) => {
   if (!data || !data.payerName || !data.amount) return;
   if (data.payerId && data.payerId === myId) return;
-  showBoardTransactionEffect('bribe', data);
+  showPublicEventReveal('bribe', data);
 });
 
 socket.on('startPassed', (data) => {
   if (!data || !data.playerName || !data.amount) return;
   if (data.playerId && data.playerId === myId) return;
-  showBoardTransactionEffect('start', data);
+  showPublicEventReveal('start', data);
+});
+
+socket.on('casinoResult', (data) => {
+  if (!data || !data.playerName) return;
+  if (data.playerId && data.playerId === myId) return;
+  showPublicEventReveal('casino', data);
 });
 
 socket.on('cardDrawn', (data) => {
@@ -1369,6 +1377,7 @@ function hideEventDisplay() {
 function showCenterInfo(playerName, dice, total, oldPos, newPos, landingSector) {
   const info = $('#center-info');
   if (!info) return;
+  info.classList.add('center-info-compact');
 
   // Build dice display
   const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
@@ -1411,6 +1420,7 @@ function showCenterInfo(playerName, dice, total, oldPos, newPos, landingSector) 
 function showOtherPlayerRoll(playerName, dice, total) {
   const info = $('#center-info');
   if (!info || !Array.isArray(dice) || dice.length < 2) return;
+  info.classList.add('center-info-compact');
 
   const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
   let diceHtml = '<div class="ci-dice">';
@@ -1433,50 +1443,96 @@ function showOtherPlayerRoll(playerName, dice, total) {
   info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 2200);
 }
 
-function showBoardTransactionEffect(type, data) {
-  const info = $('#center-info');
-  if (!info) return;
+function showPublicEventReveal(type, data) {
+  publicEventRevealQueue.push({ type, data });
+  processPublicEventRevealQueue();
+}
+
+function processPublicEventRevealQueue() {
+  if (publicEventRevealActive || publicEventRevealQueue.length === 0) return;
+  const next = publicEventRevealQueue.shift();
+  renderPublicEventReveal(next.type, next.data);
+}
+
+function renderPublicEventReveal(type, data) {
+  const boardArea = document.querySelector('.board-area');
+  if (!boardArea) return;
+
+  publicEventRevealActive = true;
 
   const isBusiness = type === 'business';
   const isBribe = type === 'bribe';
   const isStart = type === 'start';
+  const isCasino = type === 'casino';
   const accent = isBusiness
     ? 'var(--gold)'
-    : (isStart ? 'var(--green-light)' : 'var(--blue-light)');
-  const kicker = isBusiness ? 'УГОДА ЗАКРИТА' : (isStart ? 'START' : 'ПОЛІЦІЯ');
+    : isBribe
+      ? 'var(--blue-light)'
+      : isStart
+        ? 'var(--green-light)'
+        : (data.jackpot ? 'var(--green-light)' : (data.won ? 'var(--gold-light)' : 'var(--red-light)'));
+  const kicker = isBusiness ? 'УГОДА' : isBribe ? 'ПОЛІЦІЯ' : isStart ? 'START' : 'РУЛЕТКА';
   const title = isBusiness
-    ? `${data.payerName} купує`
-    : (isStart ? `${data.playerName} проходить START` : `${data.payerName} вирішує питання`);
+    ? `${data.payerName} купує бізнес`
+    : isBribe
+      ? `${data.payerName} платить поліції`
+      : isStart
+        ? `${data.playerName} проходить START`
+        : `${data.playerName} крутить рулетку`;
   const subject = isBusiness
     ? data.businessName
-    : (isStart ? 'Прохідний бонус' : (data.reason || 'Хабар поліції'));
-  const amountLabel = `${isStart ? '+' : '-'}${data.amount}$`;
-  const sourceLabel = isBusiness
-    ? (data.source === 'auction' ? 'Аукціон' : (data.source === 'seize' ? 'Захоплення' : 'Купівля'))
-    : (isStart ? 'Бонус' : 'Оплата');
-  const icon = isBusiness ? ICON.building : (isStart ? ICON.start : ICON.police);
+    : isBribe
+      ? (data.reason || 'Хабар поліції')
+      : isStart
+        ? 'Прохідний бонус'
+        : (data.jackpot ? 'MAFIA JACKPOT' : `${data.colorName || 'Сектор'} рулетки`);
+  const amount = isBusiness
+    ? `-${data.amount}$`
+    : isBribe
+      ? `-${data.amount}$`
+      : isStart
+        ? `+${data.amount}$`
+        : (data.jackpot ? 'JACKPOT' : (data.won ? `+${data.winnings}$` : `-${data.lost}$`));
+  const tag = isBusiness
+    ? (data.source === 'auction' ? 'АУКЦІОН' : (data.source === 'seize' ? 'ЗАХОПЛЕННЯ' : 'КУПІВЛЯ'))
+    : isBribe
+      ? 'ОПЛАТА'
+      : isStart
+        ? 'БОНУС'
+        : (data.jackpot ? 'УДАЧА' : (data.won ? 'ВИГРАШ' : 'ПРОГРАШ'));
+  const icon = isBusiness ? ICON.building : isBribe ? ICON.police : isStart ? ICON.start : ICON.casino_chip;
 
-  info.innerHTML = `
-    <div class="ci-transaction ci-transaction-${type}" style="--ci-accent:${accent}">
-      <div class="ci-transaction-kicker">${kicker}</div>
-      <div class="ci-transaction-icon">${icon}</div>
-      <div class="ci-transaction-title">${escapeHtml(title)}</div>
-      <div class="ci-transaction-subject">${escapeHtml(subject)}</div>
-      <div class="ci-transaction-meta">
-        <span class="ci-transaction-tag">${sourceLabel}</span>
-        <span class="ci-transaction-amount">${amountLabel}</span>
+  const overlay = document.createElement('div');
+  overlay.className = `public-event-reveal active event-${type}`;
+  overlay.innerHTML = `
+    <div class="public-event-card" style="--event-accent:${accent}">
+      <div class="public-event-shine"></div>
+      <div class="public-event-kicker">${kicker}</div>
+      <div class="public-event-icon">${icon}</div>
+      <div class="public-event-title">${escapeHtml(title)}</div>
+      <div class="public-event-subject">${escapeHtml(subject)}</div>
+      <div class="public-event-meta">
+        <span class="public-event-tag">${tag}</span>
+        <span class="public-event-amount">${escapeHtml(amount)}</span>
       </div>
     </div>
   `;
-  info.style.display = 'block';
-  clearTimeout(info._hideTimer);
-  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, isStart ? 3200 : 3000);
+  boardArea.appendChild(overlay);
+
+  const duration = isCasino ? 5000 : 4000;
+  setTimeout(() => overlay.classList.remove('active'), duration - 350);
+  setTimeout(() => {
+    overlay.remove();
+    publicEventRevealActive = false;
+    processPublicEventRevealQueue();
+  }, duration);
 }
 
 // Show any event/action result in center info
 function showCenterMessage(title, text, duration = 3000) {
   const info = $('#center-info');
   if (!info) return;
+  info.classList.remove('center-info-compact');
   info.innerHTML = `
     <div class="ci-title">${escapeHtml(title)}</div>
     <div class="ci-text">${formatUiText(text)}</div>

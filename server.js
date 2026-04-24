@@ -1546,6 +1546,20 @@ io.on('connection', (socket) => {
         break;
       case 'casino':
         result = game.playCasino(socket.id, data.betType, data.betAmount);
+        if (result && (result.type === 'casino_result' || result.type === 'jackpot')) {
+          const player = game.getPlayer(socket.id);
+          const colorNames = { red: 'Червоне', black: 'Чорне', green: 'Зелене' };
+          broadcastEvent(roomId, 'casinoResult', {
+            playerId: socket.id,
+            playerName: player?.name || 'Гравець',
+            sectorColor: result.sectorColor,
+            colorName: colorNames[result.sectorColor] || result.sectorColor,
+            won: !!result.won,
+            jackpot: result.type === 'jackpot',
+            winnings: result.winnings || 0,
+            lost: result.lost || 0
+          });
+        }
         break;
       case 'attack_reaction':
         result = game.resolveAttackReaction(socket.id, data.reaction);
