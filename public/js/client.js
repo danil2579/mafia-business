@@ -2960,9 +2960,9 @@ function renderActionPanel(state) {
               if (res && res.error) { handleResult(res); return; }
               if (res && res.type === 'spy_result') {
                 const cardList = res.cards && res.cards.length > 0
-                  ? res.cards.map(c => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1)"><strong>${c.name}</strong> <span style="color:var(--text-secondary);font-size:12px">(${c.type})</span></div>`).join('')
-                  : '<div style="color:var(--text-secondary)">Карт немає</div>';
-                showCenterPanel(`${ICON.eye} Шпигун`, `Карти MAFIA у ${res.targetName}:`, [{ text: 'OK', action: () => hideCenterPanel() }], `<div style="margin:10px 0;text-align:left">${cardList}</div>`);
+                  ? res.cards.map(c => `• ${c.name} (${c.type})`).join('\n')
+                  : 'Карт MAFIA немає';
+                showCardReveal('helper', 'ШПИГУН', `Карти у ${res.targetName}`, cardList, null);
               }
             });
           }
@@ -3994,6 +3994,21 @@ function showAttackAlert(data) {
       SFX.payRent();
       socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'buyoff' } }, handleResult);
       hideAttackAlert();
+    });
+    reactions.appendChild(btn);
+  }
+
+  if (gameState?.players?.find(p => p.id === myId)?.helpers?.some(h => h.ability === 'diplomat')
+      && !gameState?.players?.find(p => p.id === myId)?._tommyUsed) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-gold';
+    btn.innerHTML = `${ICON.handshake} Дипломат`;
+    btn.addEventListener('click', () => {
+      clearInterval(attackTimer);
+      SFX.click();
+      socket.emit('useHelperAbility', { ability: 'diplomat', data: {} }, (res) => {
+        if (handleResult(res) !== false) hideAttackAlert();
+      });
     });
     reactions.appendChild(btn);
   }
@@ -6263,6 +6278,8 @@ function renderPhoneAuction(state, container) {
 function renderPhoneAttackReaction(state, container) {
   const action = state.pendingAction;
   if (!action) return;
+  const me = state.players.find(p => p.id === myId);
+  const canDiplomat = !!(me?.helpers?.some(h => h.ability === 'diplomat') && !me?._tommyUsed);
   container.innerHTML = `
     <div class="phone-action-title">${ICON.swords} Вас атакують!</div>
     <div class="phone-action-desc">${action.attackerName || 'Хтось'} атакує вас картою ${action.card?.name || ''}</div>
@@ -6270,6 +6287,7 @@ function renderPhoneAttackReaction(state, container) {
       ${action.canVest ? '<button class="phone-btn-action" id="pa-react-vest">Бронежилет</button>' : ''}
       ${action.canPolice ? '<button class="phone-btn-action" id="pa-react-police">Поліція</button>' : ''}
       ${action.canBuyOff ? `<button class="phone-btn-action" id="pa-react-buyoff">Відкупитися ($${action.buyOffCost})</button>` : ''}
+      ${canDiplomat ? '<button class="phone-btn-action" id="pa-react-diplomat">Дипломат</button>' : ''}
       <button class="phone-btn-action phone-btn-danger" id="pa-react-nothing">Нічого</button>
     </div>
   `;
@@ -6281,6 +6299,9 @@ function renderPhoneAttackReaction(state, container) {
   });
   document.getElementById('pa-react-buyoff')?.addEventListener('click', () => {
     socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'buyoff' } }, handleResult);
+  });
+  document.getElementById('pa-react-diplomat')?.addEventListener('click', () => {
+    socket.emit('useHelperAbility', { ability: 'diplomat', data: {} }, handleResult);
   });
   document.getElementById('pa-react-nothing')?.addEventListener('click', () => {
     socket.emit('resolveAction', { actionType: 'attack_reaction', data: { reaction: 'nothing' } }, handleResult);

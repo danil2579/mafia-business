@@ -2200,20 +2200,34 @@ class GameEngine {
       }
     }
 
-    // Car bomb: kills 1 helper + damages boss
+    // Car bomb: kills up to 2 helpers; only kills the boss if there are no helpers at all.
     if (card.id === 'car_bomb') {
-      let helperName = null;
+      const killedHelpers = [];
       if (target.helpers.length > 0) {
-        const helper = target.helpers.pop();
-        helperName = helper.name;
-        this.returnHelperToDeck(helper);
-        this.addLog(`Автомобільна бомба знищила ${helper.name} у ${target.name}!`);
+        const helperKillCount = Math.min(2, target.helpers.length);
+        for (let i = 0; i < helperKillCount; i++) {
+          const helper = target.helpers.pop();
+          if (!helper) continue;
+          killedHelpers.push(helper.name);
+          this.returnHelperToDeck(helper);
+        }
+        this.addLog(`Автомобільна бомба знищила ${killedHelpers.length} помічник(ів) у ${target.name}!`);
+        this.checkCounterAttack(attacker, target);
+        this.checkAfterKill(attacker, target, killedHelpers.length > 0);
+        this.pendingAction = null;
+        return {
+          type: 'car_bomb_result',
+          helperKilled: killedHelpers[0] || null,
+          helperKilledNames: killedHelpers,
+          helpersKilled: killedHelpers.length,
+          bossKilled: false
+        };
       }
       this.killBoss(target, 'car_bomb');
       this.checkAfterKill(attacker, target, true);
       this.checkCounterAttack(attacker, target);
       this.pendingAction = null;
-      return { type: 'car_bomb_result', helperKilled: helperName, bossKilled: true };
+      return { type: 'car_bomb_result', helperKilled: null, helperKilledNames: [], helpersKilled: 0, bossKilled: true };
     }
 
     // Massacre: kills 2 helpers
@@ -2821,9 +2835,10 @@ class GameEngine {
         }
         player._tommyUsed = true;
         const action = this.pendingAction;
+        const cardName = action.card?.name || action.type;
         this.pendingAction = null;
-        this.addLog(`${player.name} скасував дію завдяки Дипломату!`);
-        return { success: true, type: 'diplomat_used', canceledType: action.type };
+        this.addLog(`${player.name} скасував ${cardName} завдяки Дипломату!`);
+        return { success: true, type: 'diplomat_used', canceledType: action.type, canceledCardName: cardName };
       }
       default:
         return { error: 'Невідома здібність.' };

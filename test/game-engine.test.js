@@ -38,7 +38,7 @@ test('buying a business requires an active buy_business pending action', () => {
   assert.equal(game.getPlayer('p1').money, 20000);
 });
 
-test('car bomb kills the boss even if target still has helpers left', () => {
+test('car bomb kills up to two helpers before it can kill the boss', () => {
   const game = createPlayingGame();
   const attacker = game.getPlayer('p1');
   const target = game.getPlayer('p2');
@@ -62,9 +62,54 @@ test('car bomb kills the boss even if target still has helpers left', () => {
 
   assert.equal(playResult.type, 'attack_initiated');
   assert.equal(reactionResult.type, 'car_bomb_result');
+  assert.equal(reactionResult.bossKilled, false);
+  assert.equal(reactionResult.helpersKilled, 2);
+  assert.equal(target.alive, true);
+  assert.equal(target.helpers.length, 0);
+});
+
+test('car bomb kills the boss only when the target has no helpers', () => {
+  const game = createPlayingGame();
+  const attacker = game.getPlayer('p1');
+  const target = game.getPlayer('p2');
+
+  attacker.money = 10000;
+  attacker.mafiaCards.push({
+    id: 'car_bomb',
+    name: 'Автомобільна бомба',
+    type: 'attack',
+    cost: 2500,
+    range: Infinity,
+    killsHelper: true,
+    canDodge: true,
+    canBuyOff: true,
+    canPolice: true
+  });
+
+  const playResult = game.playMafiaCard('p1', 'car_bomb', 'p2');
+  const reactionResult = game.resolveAttackReaction('p2', 'nothing');
+
+  assert.equal(playResult.type, 'attack_initiated');
+  assert.equal(reactionResult.type, 'car_bomb_result');
   assert.equal(reactionResult.bossKilled, true);
   assert.equal(target.alive, false);
-  assert.equal(target.helpers.length, 0);
+});
+
+test('diplomat cancels an active attack reaction against the player', () => {
+  const game = createPlayingGame();
+  const attacker = game.getPlayer('p1');
+  const target = game.getPlayer('p2');
+
+  target.helpers.push(HELPERS.find(h => h.ability === 'diplomat'));
+  attacker.mafiaCards.push({ ...MAFIA_CARDS.find(c => c.id === 'sniper') });
+
+  const playResult = game.playMafiaCard('p1', 'sniper', 'p2');
+  const helperResult = game.useHelperAbility('p2', 'diplomat', {});
+
+  assert.equal(playResult.type, 'attack_initiated');
+  assert.equal(helperResult.type, 'diplomat_used');
+  assert.equal(game.pendingAction, null);
+  assert.equal(target._tommyUsed, true);
 });
 
 test('pass-through bomb with helpers stops movement and waits for helper choice', () => {
