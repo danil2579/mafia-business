@@ -347,6 +347,16 @@ function broadcastBribePaid(roomId, game, playerId, amount, reason = 'Хабар
   });
 }
 
+function broadcastHelperHired(roomId, game, playerId) {
+  const player = game.getPlayer(playerId);
+  if (!player) return;
+  broadcastEvent(roomId, 'cardDrawn', {
+    type: 'helper',
+    playerName: player.name,
+    playerCharacter: player.character
+  });
+}
+
 // --- Auction Timer System ---
 function clearAuctionTimer(roomId) {
   if (auctionTimers.has(roomId)) {
@@ -660,14 +670,20 @@ function resolveBotPendingAction(roomId, game, bot) {
       // Hire helper if affordable and has room
       const respect = game.getRespectData(bot.respectLevel);
       const canHire = bot.helpers.length < respect.maxHelpers && bot.money >= 1000;
-      game.executeBarChoice(botId, canHire ? 'hire' : 'skip');
+      const barResult = game.executeBarChoice(botId, canHire ? 'hire' : 'skip');
+      if (barResult && barResult.hired) {
+        broadcastHelperHired(roomId, game, botId);
+      }
       break;
     }
     case 'choose_hidden_helper': {
       // Bot picks a random face-down card
       const drawnCount = action.drawnHelpers ? action.drawnHelpers.length : 3;
       const randomIdx = Math.floor(Math.random() * drawnCount);
-      game.executeChooseHiddenHelper(botId, randomIdx);
+      const hireResult = game.executeChooseHiddenHelper(botId, randomIdx);
+      if (hireResult && hireResult.hired) {
+        broadcastHelperHired(roomId, game, botId);
+      }
       break;
     }
     case 'hire_another': {
@@ -675,7 +691,10 @@ function resolveBotPendingAction(roomId, game, bot) {
       const resp = game.getRespectData(bot.respectLevel);
       const canHireMore = bot.helpers.length < resp.maxHelpers && bot.money >= 1000;
       if (canHireMore) {
-        game.hireHelper(botId);
+        const hireAgainResult = game.hireHelper(botId);
+        if (hireAgainResult && hireAgainResult.hired) {
+          broadcastHelperHired(roomId, game, botId);
+        }
       } else {
         game.pendingAction = null;
       }
@@ -1474,9 +1493,15 @@ io.on('connection', (socket) => {
         break;
       case 'hire_helper':
         result = game.hireHelper(socket.id);
+        if (result && result.hired) {
+          broadcastHelperHired(roomId, game, socket.id);
+        }
         break;
       case 'choose_hidden_helper':
         result = game.executeChooseHiddenHelper(socket.id, data.cardIndex);
+        if (result && result.hired) {
+          broadcastHelperHired(roomId, game, socket.id);
+        }
         break;
       case 'choose_stolen_helper':
         result = game.executeChooseStolenHelper(socket.id, data.helperIndex);

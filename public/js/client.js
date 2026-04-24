@@ -1686,10 +1686,10 @@ function showCardReveal(type, title, name, description, onDismiss) {
     if (gameState && gameState.pendingAction) handlePendingAction(gameState);
   }, 30000);
   const reveal = $('#card-reveal');
-  const typeClass = type === 'mafia' ? 'mafia-type' : 'event-type';
-  const typeLabel = type === 'mafia' ? 'КАРТА MAFIA' : 'ПОДІЯ';
+  const typeClass = type === 'mafia' ? 'mafia-type' : (type === 'helper' ? 'helper-type' : 'event-type');
+  const typeLabel = type === 'mafia' ? 'КАРТА MAFIA' : (type === 'helper' ? 'ПОМІЧНИК' : 'ПОДІЯ');
 
-  const typeIcon = type === 'mafia' ? '&#9760;' : '&#9733;';
+  const typeIcon = type === 'mafia' ? '&#9760;' : (type === 'helper' ? '&#10022;' : '&#9733;');
   reveal.innerHTML = `
     <div class="revealed-card ${typeClass}">
       <div class="rc-icon">${typeIcon}</div>
@@ -1794,7 +1794,7 @@ function showHiddenHelperChoice(cardCount) {
             overlay.classList.remove('active');
             setTimeout(() => overlay.remove(), 400);
             cardRevealActive = false; // Reset so showCardReveal can activate
-            showCardReveal('event', 'НОВИЙ ПОМІЧНИК', res.hired.name, res.hired.description || '', null);
+            showCardReveal('helper', 'НОВИЙ ПОМІЧНИК', res.hired.name, res.hired.description || '', null);
           }, 1200);
         } else {
           cardRevealActive = false;
@@ -1930,7 +1930,7 @@ function showStolenHelperChoice(helperCount, isSwap, targetName, releasedHelperN
             overlay.classList.remove('active');
             setTimeout(() => overlay.remove(), 400);
             cardRevealActive = false;
-            showCardReveal('event', 'ПЕРЕМАНЕНО АГЕНТА', helperName,
+            showCardReveal('helper', 'ПЕРЕМАНЕНО АГЕНТА', helperName,
               res.released ? `В обмін на ${res.released}` : 'Агент працює на вас', null);
           }, 1200);
         } else {
@@ -2257,6 +2257,7 @@ function showCardDrawnEffect(data) {
   }
 
   const isMafia = data.type === 'mafia';
+  const isHelper = data.type === 'helper';
   const displayTime = isMafia ? 4500 : 5000; // minimum display time in ms
   _cdeProtectedUntil = now + displayTime;
 
@@ -2268,27 +2269,39 @@ function showCardDrawnEffect(data) {
   // For event: show open card with name/description
   let cardContent = '';
   if (isMafia) {
-    let cardsHtml = '';
-    for (let i = 0; i < (data.cardCount || 1); i++) {
-      cardsHtml += `<div class="cde-card cde-card-mafia" style="animation-delay:${i * 0.15}s">
-        <div class="cde-card-back">
-          <div class="cde-card-back-pattern">${ICON.skull}</div>
-          <div class="cde-card-back-label">MAFIA</div>
-        </div>
-      </div>`;
-    }
     cardContent = `
-      <div class="cde-cards">${cardsHtml}</div>
+      <div class="revealed-card mafia-type cde-reveal-card">
+        <div class="rc-inner-content">
+          <div class="rc-icon">&#9760;</div>
+          <div class="rc-title">КАРТА MAFIA</div>
+          <div class="rc-divider"></div>
+          <div class="rc-name">Карта прихована</div>
+          <div class="rc-desc">${data.playerName} отримав ${data.cardCount || 1} карту MAFIA</div>
+        </div>
+      </div>
       <div class="cde-text">${data.playerName} отримав ${data.cardCount} карту MAFIA</div>
+    `;
+  } else if (isHelper) {
+    cardContent = `
+      <div class="revealed-card helper-type cde-reveal-card">
+        <div class="rc-inner-content">
+          <div class="rc-icon">&#10022;</div>
+          <div class="rc-title">ПОМІЧНИК</div>
+          <div class="rc-divider"></div>
+          <div class="rc-name">Новий помічник</div>
+          <div class="rc-desc">${data.playerName} найняв нового помічника</div>
+        </div>
+      </div>
     `;
   } else {
     cardContent = `
-      <div class="cde-card cde-card-event">
-        <div class="cde-card-front">
-          <div class="cde-card-icon">${ICON.explosion}</div>
-          <div class="cde-card-type">ПОДІЯ</div>
-          <div class="cde-card-name">${data.cardName || ''}</div>
-          <div class="cde-card-desc">${data.cardDescription || ''}</div>
+      <div class="revealed-card event-type cde-reveal-card">
+        <div class="rc-inner-content">
+          <div class="rc-icon">&#9733;</div>
+          <div class="rc-title">ПОДІЯ</div>
+          <div class="rc-divider"></div>
+          <div class="rc-name">${data.cardName || ''}</div>
+          <div class="rc-desc">${data.cardDescription || ''}</div>
         </div>
       </div>
       <div class="cde-text">${data.playerName}: ${data.cardName}</div>
@@ -2298,7 +2311,7 @@ function showCardDrawnEffect(data) {
   const overlay = document.createElement('div');
   overlay.className = 'card-drawn-overlay';
   overlay.innerHTML = `
-    <div class="cde-container ${isMafia ? 'cde-mafia' : 'cde-event'}">
+    <div class="cde-container ${isMafia ? 'cde-mafia' : (isHelper ? 'cde-helper' : 'cde-event')}">
       <div class="cde-player">
         <div class="cde-avatar" style="--char-color:${avatarColor}">${portrait || data.playerName[0]}</div>
       </div>
@@ -2309,12 +2322,6 @@ function showCardDrawnEffect(data) {
   SFX.cardFlip();
 
   // For mafia cards: trigger fly-away animation after 3.5s (separate from entrance)
-  if (isMafia) {
-    setTimeout(() => {
-      overlay.querySelectorAll('.cde-card').forEach(c => c.classList.add('cde-fly'));
-    }, 3500);
-  }
-
   setTimeout(() => {
     overlay.classList.add('cde-fade-out');
     setTimeout(() => { overlay.remove(); _cdeProtectedUntil = 0; }, 500);
@@ -2802,7 +2809,7 @@ function renderActionPanel(state) {
   const canRoll = isMyTurn && state.turnPhase === 'roll' && me && me.inPrison <= 0;
 
   btnRoll.disabled = !canRoll;
-  btnRoll.textContent = 'Кинути кубики';
+  btnRoll.textContent = 'КИНУТИ';
   btnRoll.style.display = canRoll ? 'inline-flex' : 'none';
   if (!canRoll && diceDisplay) {
     diceDisplay.innerHTML = '';
