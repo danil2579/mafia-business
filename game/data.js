@@ -461,8 +461,6 @@ const HELPERS = [
     description: 'При замаху удар у відповідь. Кубик: 1-2 влучає, 3-6 промах.' },
   { id: 'tommy_morello', name: 'Томмі Морелло', ability: 'diplomat', passive: false,
     description: 'Дипломат: 1 раз за гру скасувати будь-яку карту, яку зіграли проти тебе.' },
-  { id: 'nikki_king', name: 'Ніккі «Король»', ability: 'doubleMafia', passive: true,
-    description: 'На секторі MAFIA бере 1 карту + бачить наступну карту в колоді.' },
   { id: 'survivor_joe', name: 'Живучий Джо', ability: 'surviveOnce', passive: true, rechargeable: true,
     description: 'Блокує замах та перезаряджується 1 коло. Якщо атакують під час перезарядки — Джо гине.' },
   { id: 'steel_ronnie', name: '«Сталевий» Ронні', ability: 'doubleBuyOff', passive: true,

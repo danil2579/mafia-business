@@ -783,7 +783,7 @@ socket.on('gameState', (state) => {
         if (diceMatch) {
           showOtherPlayerRoll(current.name, [Number(diceMatch[1]), Number(diceMatch[2])], Number(diceMatch[3]));
         } else {
-          showCenterMessage(current.name, latestLog.message, 2200);
+          showCenterMessage(current.name, latestLog.message, 3000);
         }
       }
     }
@@ -870,12 +870,20 @@ socket.on('rentPaid', (data) => {
 
 socket.on('businessBought', (data) => {
   if (!data || !data.payerName || !data.businessName || !data.amount) return;
+  if (data.payerId && data.payerId === myId) return;
   showBoardTransactionEffect('business', data);
 });
 
 socket.on('bribePaid', (data) => {
   if (!data || !data.payerName || !data.amount) return;
+  if (data.payerId && data.payerId === myId) return;
   showBoardTransactionEffect('bribe', data);
+});
+
+socket.on('startPassed', (data) => {
+  if (!data || !data.playerName || !data.amount) return;
+  if (data.playerId && data.playerId === myId) return;
+  showBoardTransactionEffect('start', data);
 });
 
 socket.on('cardDrawn', (data) => {
@@ -1430,17 +1438,23 @@ function showBoardTransactionEffect(type, data) {
   if (!info) return;
 
   const isBusiness = type === 'business';
-  const accent = isBusiness ? 'var(--gold)' : 'var(--blue-light)';
-  const kicker = isBusiness ? 'УГОДА ЗАКРИТА' : 'ПОЛІЦІЯ';
+  const isBribe = type === 'bribe';
+  const isStart = type === 'start';
+  const accent = isBusiness
+    ? 'var(--gold)'
+    : (isStart ? 'var(--green-light)' : 'var(--blue-light)');
+  const kicker = isBusiness ? 'УГОДА ЗАКРИТА' : (isStart ? 'START' : 'ПОЛІЦІЯ');
   const title = isBusiness
     ? `${data.payerName} купує`
-    : `${data.payerName} вирішує питання`;
-  const subject = isBusiness ? data.businessName : (data.reason || 'Хабар поліції');
-  const amountLabel = `-${data.amount}$`;
+    : (isStart ? `${data.playerName} проходить START` : `${data.payerName} вирішує питання`);
+  const subject = isBusiness
+    ? data.businessName
+    : (isStart ? 'Прохідний бонус' : (data.reason || 'Хабар поліції'));
+  const amountLabel = `${isStart ? '+' : '-'}${data.amount}$`;
   const sourceLabel = isBusiness
     ? (data.source === 'auction' ? 'Аукціон' : (data.source === 'seize' ? 'Захоплення' : 'Купівля'))
-    : 'Оплата';
-  const icon = isBusiness ? ICON.building : ICON.police;
+    : (isStart ? 'Бонус' : 'Оплата');
+  const icon = isBusiness ? ICON.building : (isStart ? ICON.start : ICON.police);
 
   info.innerHTML = `
     <div class="ci-transaction ci-transaction-${type}" style="--ci-accent:${accent}">
@@ -1456,7 +1470,7 @@ function showBoardTransactionEffect(type, data) {
   `;
   info.style.display = 'block';
   clearTimeout(info._hideTimer);
-  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 2200);
+  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, isStart ? 3200 : 3000);
 }
 
 // Show any event/action result in center info
@@ -2946,7 +2960,8 @@ function renderActionPanel(state) {
 
   if (isMyTurn && me && me.inPrison > 0 && state.turnPhase === 'roll') {
     btnRoll.disabled = false;
-    btnRoll.innerHTML = `${ICON.chain} У в'язниці (${me.inPrison})`;
+    btnRoll.style.display = 'inline-flex';
+    btnRoll.innerHTML = `${ICON.chain} ПРОПУСТИТИ ХІД`;
     if (me.mafiaCards && me.mafiaCards.some(c => c.id === 'lawyer')) {
       const btn = createActionBtn('Використати Адвоката', () => {
         SFX.buy();
@@ -2954,6 +2969,12 @@ function renderActionPanel(state) {
       });
       actionBtns.appendChild(btn);
     }
+  }
+
+  const boardControls = document.querySelector('.board-controls');
+  if (boardControls) {
+    const shouldShowControls = btnRoll.style.display !== 'none' || !!diceDisplay?.innerHTML.trim() || actionBtns.children.length > 0;
+    boardControls.style.display = shouldShowControls ? 'flex' : 'none';
   }
 
   if (me) renderActionSidebar(state, me, isMyTurn);
@@ -4965,7 +4986,6 @@ socket.on('serverConfig', (cfg) => { _cheatsEnabled = !!(cfg && cfg.cheatsEnable
     { id: 'mickey_renegade', name: 'Міккі «Відступник»', ability: 'policeTax' },
     { id: 'baby_flemmi', name: 'Малюк Флеммі', ability: 'counterAttack' },
     { id: 'tommy_morello', name: 'Томмі Морелло', ability: 'diplomat' },
-    { id: 'nikki_king', name: 'Ніккі «Король»', ability: 'doubleMafia' },
     { id: 'survivor_joe', name: 'Живучий Джо', ability: 'surviveOnce' },
     { id: 'steel_ronnie', name: '«Сталевий» Ронні', ability: 'doubleBuyOff' },
     { id: 'donnie_angelo', name: 'Донні Анджело', ability: 'freeInfluenceOnStart' },

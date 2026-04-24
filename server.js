@@ -328,6 +328,7 @@ function broadcastBusinessBought(roomId, game, playerId, businessId, amount, sou
   const biz = game.getBusiness(businessId);
   if (!player || !biz || !amount) return;
   broadcastEvent(roomId, 'businessBought', {
+    payerId: player.id,
     payerName: player.name,
     payerCharacter: player.character,
     amount,
@@ -340,10 +341,22 @@ function broadcastBribePaid(roomId, game, playerId, amount, reason = 'Хабар
   const player = game.getPlayer(playerId);
   if (!player || !amount) return;
   broadcastEvent(roomId, 'bribePaid', {
+    payerId: player.id,
     payerName: player.name,
     payerCharacter: player.character,
     amount,
     reason
+  });
+}
+
+function broadcastStartPassed(roomId, game, playerId, amount) {
+  const player = game.getPlayer(playerId);
+  if (!player || !amount) return;
+  broadcastEvent(roomId, 'startPassed', {
+    playerId: player.id,
+    playerName: player.name,
+    playerCharacter: player.character,
+    amount
   });
 }
 
@@ -561,6 +574,10 @@ function executeBotTurn(roomId) {
       const policeBribe = result.events.find(event => event.type === 'police_bribe' && event.amount);
       if (policeBribe) {
         broadcastBribePaid(roomId, game, botId, policeBribe.amount);
+      }
+      const startPassed = result.events.find(event => event.type === 'start_passed' && event.bonus);
+      if (startPassed) {
+        broadcastStartPassed(roomId, game, botId, startPassed.bonus);
       }
     }
 
@@ -1402,6 +1419,10 @@ io.on('connection', (socket) => {
       const policeBribe = result.events.find(event => event.type === 'police_bribe' && event.amount);
       if (policeBribe) {
         broadcastBribePaid(roomId, game, socket.id, policeBribe.amount);
+      }
+      const startPassed = result.events.find(event => event.type === 'start_passed' && event.bonus);
+      if (startPassed) {
+        broadcastStartPassed(roomId, game, socket.id, startPassed.bonus);
       }
     }
 

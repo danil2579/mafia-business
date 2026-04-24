@@ -1087,15 +1087,6 @@ class GameEngine {
 
   resolveMafia(player) {
     let cardCount = 1;
-    let peekCard = null;
-    if (this.hasHelper(player.id, 'doubleMafia')) {
-      // Peek at next card in deck
-      if (this.mafiaDiscard.length > 0 || this.mafiaDeck.length > 1) {
-        const peekIdx = this.mafiaDeck.length > 1 ? 1 : 0;
-        if (this.mafiaDeck[peekIdx]) peekCard = { ...this.mafiaDeck[peekIdx] };
-      }
-      this.addLog(`Ніккі «Король» підглядає наступну карту в колоді!`);
-    }
     const drawnCards = [];
     for (let i = 0; i < cardCount; i++) {
       const card = this.drawMafiaCard();
@@ -1105,10 +1096,9 @@ class GameEngine {
     this.pendingAction = {
       type: 'mafia_confirm',
       playerId: player.id,
-      cards: drawnCards,
-      peekCard: peekCard
+      cards: drawnCards
     };
-    return { type: 'mafia', cards: drawnCards, peekCard, pendingConfirm: true };
+    return { type: 'mafia', cards: drawnCards, pendingConfirm: true };
   }
 
   executeMafiaConfirm(playerId) {
@@ -1876,6 +1866,7 @@ class GameEngine {
 
       case 'rumors':
         if (!target || !target.alive || target.id === player.id) return { error: 'Оберіть іншу живу ціль.' };
+        if ((target.respectLevel || 1) <= 1) return { error: 'У цілі вже мінімальний рівень поваги.' };
         this.loseRespect(target);
         this.addLog(`${player.name} розпустив чутки про ${target.name}!`);
         return finish({ type: 'rumors_used', target: target.id });
