@@ -1149,13 +1149,13 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .cell-art {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
   object-fit: cover;
-  border-radius: inherit;
-  opacity: 0.96;
-  filter: saturate(1.04) contrast(1.04) brightness(0.98);
+  border-radius: calc(var(--radius-lg) - 3px);
+  opacity: 0.68;
+  filter: saturate(0.92) contrast(1.08) brightness(0.78);
   z-index: 1;
   pointer-events: none;
 }
@@ -1165,8 +1165,8 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   inset: 0;
   z-index: 2;
   background:
-    linear-gradient(180deg, rgba(2,3,8,0.02), rgba(2,3,8,0.1)),
-    radial-gradient(circle at 50% 18%, rgba(255,255,255,0.06), transparent 42%);
+    linear-gradient(180deg, rgba(2,3,8,0.08), rgba(2,3,8,0.42)),
+    radial-gradient(circle at 50% 18%, rgba(255,255,255,0.08), transparent 42%);
   pointer-events: none;
 }
 .board-cell.has-art .cell-content {
@@ -1183,15 +1183,6 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .board-cell.has-art .cell-price {
   color: #ffd76a;
   text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 14px rgba(255,180,60,0.34);
-}
-.board-cell.has-art.business .cell-content,
-.board-cell.has-art.start .cell-content,
-.board-cell.has-art.police .cell-content,
-.board-cell.has-art.prison .cell-content,
-.board-cell.has-art.bar .cell-content,
-.board-cell.has-art.mafia .cell-content,
-.board-cell.has-art.event .cell-content {
-  opacity: 0;
 }
 /* Rotating light sweep on business cells */
 .board-cell.business::before {
