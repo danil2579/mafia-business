@@ -1144,6 +1144,46 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
     0 2px 10px rgba(0,0,0,0.4),
     inset 0 0 15px color-mix(in srgb, var(--dist-color, #c9a84c) 5%, transparent);
 }
+.board-cell.has-art {
+  background: #080910;
+}
+.cell-art {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  object-fit: cover;
+  border-radius: calc(var(--radius-lg) - 3px);
+  opacity: 0.68;
+  filter: saturate(0.92) contrast(1.08) brightness(0.78);
+  z-index: 1;
+  pointer-events: none;
+}
+.board-cell.has-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(2,3,8,0.08), rgba(2,3,8,0.42)),
+    radial-gradient(circle at 50% 18%, rgba(255,255,255,0.08), transparent 42%);
+  pointer-events: none;
+}
+.board-cell.has-art .cell-content {
+  z-index: 4;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.65);
+}
+.board-cell.has-art .cell-icon {
+  display: none;
+}
+.board-cell.has-art .cell-name {
+  color: #f5d37a !important;
+  font-weight: 800;
+}
+.board-cell.has-art .cell-price {
+  color: #ffd76a;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 14px rgba(255,180,60,0.34);
+}
 /* Rotating light sweep on business cells */
 .board-cell.business::before {
   content: ''; position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
