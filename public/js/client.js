@@ -1317,10 +1317,8 @@ function renderCellInner(cell, sector, state, side) {
     nameDiv.className = 'cell-name';
     const colorMap = { START: 'var(--green-light)', POLICE: 'var(--blue-light)', PRISON: 'var(--red-light)', BAR: 'var(--gold)', MAFIA: 'var(--purple-light)', EVENT: '#6688bb' };
     nameDiv.style.color = colorMap[typeKey] || 'var(--text)';
-    const cornerClass = getCornerSide(sector.index);
     const nameMap = { START: 'START', POLICE: 'ПОЛІЦІЯ', PRISON: "В'ЯЗНИЦЯ", BAR: 'BAR', MAFIA: 'MAFIA', EVENT: 'ПОДІЯ' };
-    const cornerNameMap = { START: 'START', POLICE: 'POLICE', PRISON: 'PRISON', BAR: 'BAR', MAFIA: 'MAFIA', EVENT: 'EVENT' };
-    nameDiv.textContent = cornerClass ? (cornerNameMap[typeKey] || typeKey) : (nameMap[typeKey] || typeKey);
+    nameDiv.textContent = nameMap[typeKey] || typeKey;
     content.appendChild(nameDiv);
 
     cell.appendChild(content);
