@@ -1780,6 +1780,10 @@ class GameEngine {
         }
       }
 
+      if (card.id === 'massacre' && target.helpers.length === 0) {
+        return { error: 'У цілі немає помічників для Бійні.' };
+      }
+
       if (card.id === 'arson') {
         const district = this.getDistrictByPosition(attacker.position);
         if (!district) return { error: 'Ви не в районі з бізнесами.' };

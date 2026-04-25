@@ -313,3 +313,16 @@ test('blackmail is not consumed when target has no money', () => {
   assert.equal(player.mafiaCards.length, 1);
   assert.equal(game.mafiaDiscard.length, 0);
 });
+
+test('massacre is not consumed when target has no helpers', () => {
+  const game = createPlayingGame();
+  const player = game.getPlayer('p1');
+
+  player.mafiaCards.push({ ...MAFIA_CARDS.find(c => c.id === 'massacre') });
+
+  const result = game.playMafiaCard('p1', 'massacre', 'p2');
+
+  assert.equal(result.error, 'У цілі немає помічників для Бійні.');
+  assert.equal(player.mafiaCards.length, 1);
+  assert.equal(game.mafiaDiscard.length, 0);
+});
