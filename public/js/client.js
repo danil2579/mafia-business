@@ -530,40 +530,40 @@ function handleCardResult(cardId, res) {
 }
 
 // ===== SVG ICONS for businesses =====
-const NOIR_ASSET_BASE = '/assets/generated/noir/';
+const NOIR_ASSET_BASE = '/assets/generated/player-noir/';
 const BIZ_ASSETS = {
-  kiosk: 'printing.png',
-  shawarma: 'restaurant.png',
-  lombard: 'lombard.png',
-  avto_moyka: 'garage.png',
-  barbershop: 'barbershop.png',
-  taksopark: 'garage.png',
-  pitseria: 'restaurant.png',
-  apteka: 'pharmacy.png',
-  supermarket: 'casino.png',
-  avtoservis: 'garage.png',
-  sklad: 'bank.png',
-  drukarnya: 'printing.png',
-  avtosalon: 'garage.png',
-  hotel: 'hotel.png',
-  telestudiya: 'photo-studio.png',
-  spa: 'restaurant.png',
-  restoran: 'restaurant.png',
-  yacht_club: 'bar.png',
-  night_club: 'bar.png',
-  lounge_bar: 'bar.png',
-  casino: 'casino.png',
-  bank: 'bank.png',
-  hedge_fund: 'bank.png',
-  skyscraper: 'hotel.png'
+  kiosk: 'business/kiosk.png',
+  shawarma: 'business/shawarma.png',
+  lombard: 'business/lombard.png',
+  avto_moyka: 'business/avto_moyka.png',
+  barbershop: 'business/barbershop.png',
+  taksopark: 'business/taksopark.png',
+  pitseria: 'business/pitseria.png',
+  apteka: 'business/apteka.png',
+  supermarket: 'business/supermarket.png',
+  avtoservis: 'business/avtoservis.png',
+  sklad: 'business/sklad.png',
+  drukarnya: 'business/drukarnya.png',
+  avtosalon: 'business/avtosalon.png',
+  hotel: 'business/hotel.png',
+  telestudiya: 'business/telestudiya.png',
+  spa: 'business/spa.png',
+  restoran: 'business/restoran.png',
+  yacht_club: 'business/yacht_club.png',
+  night_club: 'business/night_club.png',
+  lounge_bar: 'business/lounge_bar.png',
+  casino: 'business/casino.png',
+  bank: 'business/bank.png',
+  hedge_fund: 'business/hedge_fund.png',
+  skyscraper: 'business/skyscraper.png'
 };
 const SPECIAL_ASSETS = {
-  START: 'start.png',
-  POLICE: 'police.png',
-  PRISON: 'prison.png',
-  BAR: 'bar.png',
-  MAFIA: 'mafia.png',
-  EVENT: 'event.png'
+  START: 'special/start.png',
+  POLICE: 'special/police.png',
+  PRISON: 'special/prison.png',
+  BAR: 'special/bar.png',
+  MAFIA: 'special/mafia.png',
+  EVENT: 'special/event.png'
 };
 
 const BIZ_ICONS = {
