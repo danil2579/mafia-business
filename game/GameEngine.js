@@ -1966,6 +1966,7 @@ class GameEngine {
           p.stats.moneySpent += tax;
           totalCollected += tax;
         }
+        if (totalCollected <= 0) return { error: 'Ні в кого немає грошей для данини.' };
         player.money += totalCollected;
         player.stats.moneyEarned += totalCollected;
         this.addLog(`${player.name} зібрав данину: ${totalCollected}$ з усіх гравців!`);
@@ -2029,6 +2030,7 @@ class GameEngine {
       case 'blackmail':
         if (!target || !target.alive || target.id === player.id) return { error: 'Оберіть іншу живу ціль.' };
         const extortion = Math.floor(target.money * 0.3);
+        if (extortion <= 0) return { error: 'У цілі немає грошей для шантажу.' };
         target.money -= extortion;
         target.stats.moneySpent += extortion;
         player.money += extortion;

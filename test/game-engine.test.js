@@ -283,3 +283,33 @@ test('victory score includes cash, business value, and influence investments', (
   assert.equal(p2Score.total, 6800);
   assert.equal(game.getPlayerVictoryScore('p2') > game.getPlayerVictoryScore('p1'), true);
 });
+
+test('tax collector is not consumed when nobody has money to pay tribute', () => {
+  const game = createPlayingGame();
+  const player = game.getPlayer('p1');
+  const target = game.getPlayer('p2');
+
+  player.mafiaCards.push({ ...MAFIA_CARDS.find(c => c.id === 'tax_collector') });
+  target.money = 0;
+
+  const result = game.playMafiaCard('p1', 'tax_collector');
+
+  assert.equal(result.error, 'Ні в кого немає грошей для данини.');
+  assert.equal(player.mafiaCards.length, 1);
+  assert.equal(game.mafiaDiscard.length, 0);
+});
+
+test('blackmail is not consumed when target has no money', () => {
+  const game = createPlayingGame();
+  const player = game.getPlayer('p1');
+  const target = game.getPlayer('p2');
+
+  player.mafiaCards.push({ ...MAFIA_CARDS.find(c => c.id === 'blackmail') });
+  target.money = 0;
+
+  const result = game.playMafiaCard('p1', 'blackmail', 'p2');
+
+  assert.equal(result.error, 'У цілі немає грошей для шантажу.');
+  assert.equal(player.mafiaCards.length, 1);
+  assert.equal(game.mafiaDiscard.length, 0);
+});
