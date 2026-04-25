@@ -530,42 +530,6 @@ function handleCardResult(cardId, res) {
 }
 
 // ===== SVG ICONS for businesses =====
-const NOIR_ASSET_BASE = '/assets/generated/noir/';
-const BIZ_ASSETS = {
-  kiosk: 'printing.png',
-  shawarma: 'restaurant.png',
-  lombard: 'lombard.png',
-  avto_moyka: 'garage.png',
-  barbershop: 'barbershop.png',
-  taksopark: 'garage.png',
-  pitseria: 'restaurant.png',
-  apteka: 'pharmacy.png',
-  supermarket: 'casino.png',
-  avtoservis: 'garage.png',
-  sklad: 'bank.png',
-  drukarnya: 'printing.png',
-  avtosalon: 'garage.png',
-  hotel: 'hotel.png',
-  telestudiya: 'photo-studio.png',
-  spa: 'restaurant.png',
-  restoran: 'restaurant.png',
-  yacht_club: 'bar.png',
-  night_club: 'bar.png',
-  lounge_bar: 'bar.png',
-  casino: 'casino.png',
-  bank: 'bank.png',
-  hedge_fund: 'bank.png',
-  skyscraper: 'hotel.png'
-};
-const SPECIAL_ASSETS = {
-  START: 'start.png',
-  POLICE: 'police.png',
-  PRISON: 'prison.png',
-  BAR: 'bar.png',
-  MAFIA: 'mafia.png',
-  EVENT: 'event.png'
-};
-
 const BIZ_ICONS = {
   kiosk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h3M8 14h5"/><path d="M15 11h2v4h-2z"/></svg>`,
   shawarma: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 8c0 2 1 3.5 2 4.5V21h10v-8.5c1-1 2-2.5 2-4.5 0-3-3-6-7-6z"/><path d="M9 12h6M9 15h6M9 18h6"/></svg>`,
@@ -1281,15 +1245,6 @@ function renderCellInner(cell, sector, state, side) {
     if (owner?.character?.color) {
       cell.style.setProperty('--owner-color', owner.character.color);
     }
-    if (BIZ_ASSETS[bizId]) {
-      cell.classList.add('has-art');
-      const art = document.createElement('img');
-      art.className = 'cell-art';
-      art.src = NOIR_ASSET_BASE + BIZ_ASSETS[bizId];
-      art.alt = '';
-      art.loading = 'lazy';
-      cell.appendChild(art);
-    }
 
     // District color bar
     const distBar = document.createElement('div');
@@ -1356,15 +1311,6 @@ function renderCellInner(cell, sector, state, side) {
   } else {
     // Special cells (START, BAR, POLICE, PRISON, MAFIA, EVENT)
     const typeKey = sector.type;
-    if (SPECIAL_ASSETS[typeKey]) {
-      cell.classList.add('has-art');
-      const art = document.createElement('img');
-      art.className = 'cell-art';
-      art.src = NOIR_ASSET_BASE + SPECIAL_ASSETS[typeKey];
-      art.alt = '';
-      art.loading = 'lazy';
-      cell.appendChild(art);
-    }
     const content = document.createElement('div');
     content.className = 'cell-content special-content';
 
