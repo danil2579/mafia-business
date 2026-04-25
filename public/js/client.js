@@ -1519,7 +1519,7 @@ function renderPublicEventReveal(type, data) {
   `;
   boardArea.appendChild(overlay);
 
-  const duration = isCasino ? 5000 : 4000;
+  const duration = isCasino ? 5600 : 4600;
   setTimeout(() => overlay.classList.remove('active'), duration - 350);
   setTimeout(() => {
     overlay.remove();
