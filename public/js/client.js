@@ -1290,7 +1290,13 @@ function renderCellInner(cell, sector, state, side) {
     // Name
     const nameDiv = document.createElement('div');
     nameDiv.className = 'cell-name';
-    nameDiv.textContent = biz.name;
+    const bizWords = String(biz.name || '').trim().split(/\s+/).filter(Boolean);
+    if (bizWords.length === 2) {
+      nameDiv.classList.add('cell-name-stacked');
+      nameDiv.innerHTML = `<span>${escapeHtml(bizWords[0])}</span><span>${escapeHtml(bizWords[1])}</span>`;
+    } else {
+      nameDiv.textContent = biz.name;
+    }
     if (district.color) nameDiv.style.color = district.color;
     content.appendChild(nameDiv);
 
