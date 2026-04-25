@@ -697,6 +697,11 @@ class GameEngine {
     }
     const respect = this.getRespectData(player.respectLevel);
     const bribe = respect.policeBribe;
+    if (player.money < bribe) {
+      this.sendToPrison(player, 1);
+      this.addLog(`${player.name} не зміг заплатити хабар поліції (${bribe}$) і вирушив у в'язницю.`);
+      return [{ type: 'police_bribe_failed', amount: bribe, prisonTurns: 1 }];
+    }
     player.money -= bribe;
     player.stats.moneySpent += bribe;
     this.addLog(`${player.name} заплатив хабар поліції: ${bribe}$.`);
@@ -1980,7 +1985,7 @@ class GameEngine {
         if (!options.businessId) return { error: 'Оберіть бізнес.' };
         const sabBiz = this.businesses[options.businessId];
         if (!sabBiz || !sabBiz.owner || sabBiz.owner === player.id) return { error: 'Невірний бізнес.' };
-        if (sabBiz.influenceLevel <= 0) return { error: 'У бізнесу немає впливу.' };
+        if (sabBiz.influenceLevel <= 1) return { error: 'Не можна знищити базовий рівень впливу бізнесу.' };
         sabBiz.influenceLevel--;
         this.addLog(`${player.name} зруйнував вплив на ${this.getBusiness(options.businessId)?.name}!`);
         return finish({ type: 'sabotage_done', businessId: options.businessId });

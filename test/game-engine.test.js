@@ -326,3 +326,35 @@ test('massacre is not consumed when target has no helpers', () => {
   assert.equal(player.mafiaCards.length, 1);
   assert.equal(game.mafiaDiscard.length, 0);
 });
+
+test('passing police cannot drive balance below zero', () => {
+  const game = createPlayingGame();
+  const player = game.getPlayer('p1');
+
+  player.money = 50;
+  player.respectLevel = 1;
+
+  const events = game.handlePolice(player);
+
+  assert.equal(player.money, 50);
+  assert.equal(player.inPrison, 1);
+  assert.equal(events[0].type, 'police_bribe_failed');
+});
+
+test('sabotage is not consumed when target only has the base business star', () => {
+  const game = createPlayingGame();
+  const player = game.getPlayer('p1');
+  const target = game.getPlayer('p2');
+
+  player.mafiaCards.push({ ...MAFIA_CARDS.find(c => c.id === 'sabotage') });
+  target.businesses.push('kiosk');
+  game.businesses.kiosk.owner = 'p2';
+  game.businesses.kiosk.influenceLevel = 1;
+
+  const result = game.playMafiaCard('p1', 'sabotage', null, { businessId: 'kiosk' });
+
+  assert.equal(result.error, 'Не можна знищити базовий рівень впливу бізнесу.');
+  assert.equal(game.businesses.kiosk.influenceLevel, 1);
+  assert.equal(player.mafiaCards.length, 1);
+  assert.equal(game.mafiaDiscard.length, 0);
+});

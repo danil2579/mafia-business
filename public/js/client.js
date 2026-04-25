@@ -3658,6 +3658,7 @@ function handlePendingAction(state) {
 function showModal(title, description, buttons) {
   const overlay = $('#modal-overlay');
   const content = $('#modal-content');
+  content.className = 'modal-content';
   content.innerHTML = `
     <h2>${title}</h2>
     <p>${description}</p>
@@ -3689,6 +3690,8 @@ function showModal(title, description, buttons) {
 }
 
 function hideModal() {
+  const content = $('#modal-content');
+  if (content) content.className = 'modal-content';
   $('#modal-overlay').classList.remove('active');
 }
 
@@ -3715,21 +3718,54 @@ function showTargetSelectionModal(card, state) {
     desc += '<br><small style="color:var(--gold)">⚠ Потрібно бути в одному районі з ціллю</small>';
   }
 
-  const buttons = others.map(p => {
+  const overlay = $('#modal-overlay');
+  const content = $('#modal-content');
+  content.classList.add('target-select-modal');
+  content.innerHTML = `
+    <div class="target-select-header">
+      <h2>${ICON.gun} ${card.name}</h2>
+      <p>${desc}</p>
+    </div>
+    <div class="target-select-grid"></div>
+    <div class="modal-buttons target-select-actions">
+      <button class="btn btn-secondary" id="target-select-cancel">Скасувати</button>
+    </div>
+  `;
+
+  const grid = content.querySelector('.target-select-grid');
+  others.forEach(p => {
     const targetDistrict = getDistrict(p.position);
     const sameDistrict = card.requireSameDistrict
       ? ((myDistrict && targetDistrict && myDistrict === targetDistrict) || (me && me.position === p.position))
       : true;
     const inPrison = p.inPrison > 0 && card.id !== 'bribe_inmates';
     const canTarget = sameDistrict && !inPrison;
+    const districtName = (state.board || []).find(s => s.index === p.position && s.type === 'business')
+      ? (state.districts || []).find(d => d.id === targetDistrict)?.name || 'Район'
+      : ((state.board || []).find(s => s.index === p.position)?.name || 'Сектор');
 
-    let label = `${p.name} (${p.respectName})`;
-    if (!sameDistrict && card.requireSameDistrict) label += ' — інший район';
-    if (inPrison) label += " — у в'язниці";
-
-    return {
-      text: label,
-      action: canTarget ? () => {
+    const cardEl = document.createElement('button');
+    cardEl.className = `target-select-card ${canTarget ? 'is-available' : 'is-blocked'}`;
+    cardEl.disabled = !canTarget;
+    cardEl.innerHTML = `
+      <div class="target-select-top">
+        <span class="target-select-avatar" style="--target-color:${p.character?.color || '#888'}">
+          ${p.character?.id && PORTRAITS[p.character.id] ? PORTRAITS[p.character.id] : p.name[0]}
+        </span>
+        <div class="target-select-main">
+          <div class="target-select-name">${p.name}</div>
+          <div class="target-select-sub">${p.respectName || 'Шпана'} · ${p.money}$</div>
+        </div>
+      </div>
+      <div class="target-select-meta">
+        <span>${districtName}</span>
+        <span>${(p.businessCount || (p.businesses || []).length || 0)} бізнес.</span>
+        <span>${(p.helperCount || (p.helpers || []).length || 0)} пом.</span>
+      </div>
+      <div class="target-select-status">${canTarget ? 'Натисніть для замаху' : (inPrison ? "Ціль у в'язниці" : 'Недосяжна ціль')}</div>
+    `;
+    if (canTarget) {
+      cardEl.addEventListener('click', () => {
         SFX.attack();
         socket.emit('playMafiaCard', { cardId: card.id, targetId: p.id }, (res) => {
           if (res && res.error) {
@@ -3739,13 +3775,13 @@ function showTargetSelectionModal(card, state) {
             showCardPlayFX(card.id, res);
           }
         });
-      } : null,
-      cls: canTarget ? 'btn-danger' : 'btn-disabled',
-      disabled: !canTarget
-    };
-  }).concat([{ text: 'Скасувати', action: hideModal, cls: 'btn-secondary' }]);
+      });
+    }
+    grid.appendChild(cardEl);
+  });
 
-  showModal(`${ICON.gun} ${card.name}`, desc, buttons);
+  content.querySelector('#target-select-cancel')?.addEventListener('click', hideModal);
+  overlay.classList.add('active');
 }
 
 // ===== AUCTION (real-time bidding) =====
