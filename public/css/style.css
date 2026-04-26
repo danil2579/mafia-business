@@ -3202,35 +3202,86 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   background: var(--gold); opacity: 0.4;
 }
 
-/* My businesses cards — Premium owned asset cards */
+/* My businesses cards — match the warm glass right panel.
+   Light translucent body picking up the rose tint of the panel,
+   district-color dot doubles as a glowing left accent strip. */
 .my-biz-card {
-  padding: 12px 14px; border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(16,18,36,0.97), rgba(8,10,22,0.97));
-  border: 1px solid rgba(50,54,95,0.3); cursor: default;
-  transition: all 0.2s ease; position: relative; overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+  padding: 10px 12px; border-radius: 8px;
+  background:
+    linear-gradient(180deg,
+      rgba(255,200,210,0.06) 0%,
+      rgba(255,180,200,0.02) 30%,
+      rgba(40,16,28,0.55) 100%);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  border: 1px solid rgba(230,150,170,0.18);
+  cursor: default;
+  transition: all 0.25s ease; position: relative; overflow: hidden;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.40),
+    inset 0 1px 0 rgba(255,220,225,0.08);
 }
 .my-biz-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  content: ''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,220,225,0.20), transparent);
 }
-.my-biz-card::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.06), transparent);
+.my-biz-card:hover {
+  border-color: rgba(255,200,215,0.35);
+  background:
+    linear-gradient(180deg,
+      rgba(255,210,220,0.10) 0%,
+      rgba(255,180,200,0.04) 30%,
+      rgba(50,20,32,0.65) 100%);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.50),
+    0 0 14px rgba(230,150,170,0.18),
+    inset 0 1px 0 rgba(255,230,235,0.12);
 }
-.my-biz-card:hover { background: rgba(18,20,42,0.97); border-color: rgba(201,168,76,0.2); box-shadow: 0 6px 18px rgba(0,0,0,0.4), 0 0 10px rgba(201,168,76,0.05), inset 0 1px 0 rgba(255,255,255,0.06); }
 .biz-card-header { display: flex; align-items: center; gap: 8px; }
+/* District dot: solid swatch with strong color glow */
 .biz-card-dot {
-  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
-  box-shadow: 0 0 8px currentColor, 0 0 16px currentColor, 0 0 24px rgba(255,255,255,0.05);
+  width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  box-shadow:
+    0 0 6px currentColor,
+    0 0 14px currentColor,
+    inset 0 0 4px rgba(255,255,255,0.25);
 }
-.biz-card-name { font-weight: 700; color: var(--text); font-size: 12px; flex: 1; font-family: var(--font-display); letter-spacing: 0.3px; }
-.biz-card-stars { color: var(--gold-bright); font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 6px rgba(201,168,76,0.5); }
-.biz-card-info { color: var(--text-dim); font-size: 10px; margin-top: 4px; padding-left: 20px; }
+.biz-card-name {
+  font-weight: 700;
+  color: rgba(245,225,230,0.92);
+  font-size: 12px; flex: 1;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.6);
+}
+.biz-card-stars {
+  color: #f0d275;
+  font-size: 13px; letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(232,212,138,0.6), 0 1px 1px rgba(0,0,0,0.5);
+}
+.biz-card-info {
+  color: rgba(220,200,210,0.70);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 11px;
+  margin-top: 3px;
+  padding-left: 19px;
+  letter-spacing: 0.2px;
+}
 
 /* Influence bar for business cards */
-.biz-influence-bar { height: 3px; border-radius: 2px; margin-top: 6px; background: rgba(255,255,255,0.06); overflow: hidden; margin-left: 20px; }
-.biz-influence-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; background: linear-gradient(90deg, rgba(201,168,76,0.4), rgba(201,168,76,0.7)); box-shadow: 0 0 4px rgba(201,168,76,0.3); }
+.biz-influence-bar {
+  height: 3px; border-radius: 2px; margin-top: 6px;
+  background: rgba(255,200,210,0.08);
+  overflow: hidden; margin-left: 19px;
+}
+.biz-influence-fill {
+  height: 100%; border-radius: 2px;
+  transition: width 0.5s ease;
+  background: linear-gradient(90deg, rgba(232,212,138,0.55), rgba(255,200,140,0.85));
+  box-shadow: 0 0 6px rgba(232,212,138,0.4);
+}
 
 /* Game log — Newspaper-style chronicle */
 .game-log { max-height: 220px; overflow-y: auto; flex-shrink: 0; margin-top: 4px; }
