@@ -65,6 +65,15 @@ button svg.icon, .btn svg.icon { margin-right: 0.3em; vertical-align: -0.15em; }
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+
+  --neon-gold: rgba(232,212,138,0.42);
+  --neon-green: rgba(46,204,113,0.34);
+  --neon-blue: rgba(52,152,219,0.34);
+  --neon-purple: rgba(155,89,182,0.34);
+  --neon-red: rgba(212,38,38,0.34);
+  --glass-dark: rgba(6,8,18,0.62);
+  --glass-line: rgba(255,255,255,0.08);
+  --glass-shine: rgba(255,255,255,0.055);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -4154,6 +4163,219 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.2); }
 
 .btn-mobile-panel { display: none; }
+
+/* ============================================================
+   NEON GLASS POLISH — keep the current style, add premium depth
+   ============================================================ */
+.game-topbar,
+.side-panel,
+.right-panel,
+.center-panel,
+.center-info,
+.event-display,
+.public-event-card,
+.modal-content,
+.casino-container,
+.auction-container {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.055), transparent 18%),
+    linear-gradient(145deg, rgba(9,12,26,0.72), rgba(3,5,12,0.86)) !important;
+  border-color: rgba(201,168,76,0.18) !important;
+  box-shadow:
+    0 16px 50px rgba(0,0,0,0.34),
+    0 0 32px rgba(201,168,76,0.045),
+    inset 0 1px 0 var(--glass-line),
+    inset 0 -1px 0 rgba(0,0,0,0.35) !important;
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+}
+
+.game-topbar {
+  box-shadow:
+    0 10px 36px rgba(0,0,0,0.48),
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 0 28px rgba(201,168,76,0.06) !important;
+}
+
+.money-panel {
+  background:
+    radial-gradient(circle at 25% 0%, rgba(46,204,113,0.16), transparent 52%),
+    linear-gradient(180deg, rgba(8,24,19,0.78), rgba(4,10,11,0.9)) !important;
+  border-color: rgba(46,204,113,0.32) !important;
+  box-shadow:
+    0 0 20px rgba(46,204,113,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+.turn-phase-badge,
+.btn-topbar,
+.btn-secondary,
+.action-buttons .btn,
+.center-panel .center-buttons .btn {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)),
+    rgba(8,10,24,0.62) !important;
+  border-color: rgba(201,168,76,0.2) !important;
+  box-shadow:
+    0 0 14px rgba(201,168,76,0.035),
+    inset 0 1px 0 rgba(255,255,255,0.07) !important;
+}
+
+.btn-primary,
+.btn-roll,
+#btn-create {
+  box-shadow:
+    0 8px 34px rgba(201,168,76,0.24),
+    0 0 42px rgba(201,168,76,0.09),
+    inset 0 1px 0 rgba(255,255,255,0.32) !important;
+}
+
+.btn-roll {
+  border-color: rgba(255,218,104,0.46) !important;
+  text-shadow: 0 0 14px rgba(255,231,150,0.28);
+}
+
+.board-frame {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(201,168,76,0.055), transparent 38%),
+    radial-gradient(circle at 22% 20%, rgba(155,89,182,0.045), transparent 30%),
+    radial-gradient(circle at 80% 78%, rgba(52,152,219,0.04), transparent 32%),
+    linear-gradient(180deg, rgba(13,22,19,0.98), rgba(7,13,12,0.99)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(201,168,76,0.08),
+    inset 0 0 120px rgba(0,0,0,0.32),
+    0 0 28px rgba(201,168,76,0.035) !important;
+}
+
+.board-frame::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 18px;
+  pointer-events: none;
+  border: 1px solid rgba(201,168,76,0.045);
+  box-shadow: inset 0 0 46px rgba(201,168,76,0.025);
+  z-index: 1;
+}
+
+.felt-decor,
+.felt-corner {
+  opacity: 0.08;
+  filter: drop-shadow(0 0 8px rgba(201,168,76,0.12));
+}
+
+.board-cell {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), transparent 28%),
+    linear-gradient(145deg, rgba(12,15,31,0.84), rgba(5,7,15,0.94)) !important;
+  border-color: rgba(255,255,255,0.055);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.32),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -20px 34px rgba(0,0,0,0.18) !important;
+}
+
+.board-cell:not(.empty)::after {
+  box-shadow: inset 0 0 34px rgba(255,255,255,0.025);
+}
+
+.board-cell:hover {
+  border-color: rgba(232,212,138,0.62) !important;
+  box-shadow:
+    0 0 18px rgba(201,168,76,0.18),
+    0 0 36px rgba(201,168,76,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 0 28px rgba(201,168,76,0.06) !important;
+}
+
+.board-cell.business {
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--dist-color, #c9a84c) 12%, transparent), transparent 56%),
+    linear-gradient(160deg, rgba(18,17,13,0.88), rgba(6,7,12,0.95)) !important;
+  border-color: color-mix(in srgb, var(--dist-color, #c9a84c) 42%, rgba(255,255,255,0.05)) !important;
+}
+
+.board-cell.start { border-color: rgba(46,204,113,0.58) !important; box-shadow: 0 0 22px rgba(46,204,113,0.13), inset 0 0 24px rgba(46,204,113,0.06) !important; }
+.board-cell.police { border-color: rgba(52,152,219,0.58) !important; box-shadow: 0 0 22px rgba(52,152,219,0.13), inset 0 0 24px rgba(52,152,219,0.06) !important; }
+.board-cell.prison { border-color: rgba(212,38,38,0.58) !important; box-shadow: 0 0 22px rgba(212,38,38,0.13), inset 0 0 24px rgba(212,38,38,0.06) !important; }
+.board-cell.bar { border-color: rgba(201,168,76,0.58) !important; box-shadow: 0 0 22px rgba(201,168,76,0.13), inset 0 0 24px rgba(201,168,76,0.06) !important; }
+.board-cell.mafia { border-color: rgba(155,89,182,0.62) !important; box-shadow: 0 0 24px rgba(155,89,182,0.15), inset 0 0 24px rgba(155,89,182,0.07) !important; }
+.board-cell.event { border-color: rgba(74,111,165,0.58) !important; box-shadow: 0 0 22px rgba(74,111,165,0.13), inset 0 0 24px rgba(74,111,165,0.06) !important; }
+
+.cell-icon,
+.special-icon,
+.btn-topbar svg,
+.rc-icon {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.player-panel,
+.mafia-card,
+.my-biz-card,
+.log-entry,
+.helper-card,
+.room-list-item {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), transparent 24%),
+    rgba(8,10,24,0.58) !important;
+  border-color: rgba(255,255,255,0.065) !important;
+  box-shadow:
+    0 10px 26px rgba(0,0,0,0.24),
+    inset 0 1px 0 rgba(255,255,255,0.065),
+    inset 0 -1px 0 rgba(0,0,0,0.28) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.player-panel.current-turn {
+  border-color: rgba(232,212,138,0.68) !important;
+  box-shadow:
+    0 0 20px rgba(201,168,76,0.18),
+    0 0 46px rgba(201,168,76,0.07),
+    inset 0 0 28px rgba(201,168,76,0.055) !important;
+}
+
+.mafia-card.attack { border-left-color: var(--red-light) !important; box-shadow: -4px 0 16px rgba(212,38,38,0.13), 0 10px 26px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.065) !important; }
+.mafia-card.defense { border-left-color: var(--green-light) !important; box-shadow: -4px 0 16px rgba(46,204,113,0.13), 0 10px 26px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.065) !important; }
+.mafia-card.economic { border-left-color: var(--gold) !important; box-shadow: -4px 0 16px rgba(201,168,76,0.14), 0 10px 26px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.065) !important; }
+.mafia-card.utility { border-left-color: var(--blue-light) !important; box-shadow: -4px 0 16px rgba(52,152,219,0.13), 0 10px 26px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.065) !important; }
+
+.my-biz-card:hover,
+.mafia-card:hover,
+.log-entry:first-child {
+  border-color: rgba(201,168,76,0.22) !important;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.28),
+    0 0 18px rgba(201,168,76,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+.revealed-card {
+  box-shadow:
+    0 26px 72px rgba(0,0,0,0.6),
+    0 0 44px rgba(201,168,76,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+.revealed-card.mafia-type { box-shadow: 0 26px 72px rgba(0,0,0,0.6), 0 0 38px rgba(155,89,182,0.18), inset 0 1px 0 rgba(255,255,255,0.08) !important; }
+.revealed-card.event-type { box-shadow: 0 26px 72px rgba(0,0,0,0.6), 0 0 38px rgba(74,111,165,0.18), inset 0 1px 0 rgba(255,255,255,0.08) !important; }
+.revealed-card.helper-type { box-shadow: 0 26px 72px rgba(0,0,0,0.6), 0 0 38px rgba(90,201,140,0.16), inset 0 1px 0 rgba(255,255,255,0.08) !important; }
+
+@media (max-width: 900px) {
+  .game-topbar,
+  .side-panel,
+  .right-panel,
+  .center-panel,
+  .center-info {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .felt-decor,
+  .felt-corner {
+    opacity: 0.04;
+  }
+}
 
 /* ============================================================
    RESPONSIVE — Tablet
