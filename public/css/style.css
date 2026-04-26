@@ -1766,10 +1766,38 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   color: inherit;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)) drop-shadow(0 0 8px currentColor);
 }
+/* MAFIA ☠ / EVENT ★ glyph — match the card-reveal modal style.
+   Big, bold, glow drop-shadow, gentle pulse. */
+.cell-icon .cell-glyph {
+  font-size: 36px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+  color: inherit;
+  filter:
+    drop-shadow(0 1px 2px rgba(0,0,0,0.75))
+    drop-shadow(0 0 10px currentColor);
+  animation: cellGlyphPulse 2.4s ease-in-out infinite;
+}
+.board-cell.mafia .cell-icon { color: #c98ee0; }
+.board-cell.event .cell-icon { color: #7eb6ff; }
+@keyframes cellGlyphPulse {
+  0%, 100% {
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.75)) drop-shadow(0 0 10px currentColor);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.75)) drop-shadow(0 0 16px currentColor);
+    transform: scale(1.04);
+  }
+}
 .board-cell.side-top .cell-icon.special-icon,
 .board-cell.side-bottom .cell-icon.special-icon,
 .board-cell.side-left .cell-icon.special-icon,
 .board-cell.side-right .cell-icon.special-icon { width: 30px; height: 30px; }
+.board-cell.side-top .cell-icon .cell-glyph,
+.board-cell.side-bottom .cell-icon .cell-glyph,
+.board-cell.side-left .cell-icon .cell-glyph,
+.board-cell.side-right .cell-icon .cell-glyph { font-size: 26px; }
 
 /* Cell content */
 .cell-content {

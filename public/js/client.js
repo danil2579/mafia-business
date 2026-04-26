@@ -575,13 +575,17 @@ const BIZ_ICONS = {
 };
 
 // Special cell SVG icons
+// MAFIA / EVENT use the same Unicode glyphs as the card-reveal modal so the
+// player sees the same skull/star on the board and on the drawn card —
+// the linework SVGs we used to use looked clinical compared to the bold
+// reveal glyphs.
 const SPECIAL_ICONS = {
   START: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5,3 19,12 5,21"/></svg>`,
   POLICE: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1l2 5h5l-4 3 1.5 5L12 11l-4.5 3L9 9 5 6h5z"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>`,
   PRISON: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M12 3v18M16 3v18"/></svg>`,
   BAR: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2h8l-3 8v5h4v2H7v-2h4v-5L8 2z"/><path d="M6 2h12"/></svg>`,
-  MAFIA: ICON.skull,
-  EVENT: ICON.explosion
+  MAFIA: '<span class="cell-glyph">&#9760;</span>',
+  EVENT: '<span class="cell-glyph">&#9733;</span>'
 };
 
 // ===== SCREEN MANAGEMENT =====
