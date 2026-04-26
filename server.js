@@ -43,6 +43,11 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Per-connection trace logging — noisy at scale, off by default. Set
+// LOG_CONNECTIONS=1 to follow connect/disconnect events in dev/staging.
+const LOG_CONNECTIONS = process.env.LOG_CONNECTIONS === '1';
+const traceConn = (...args) => { if (LOG_CONNECTIONS) console.log(...args); };
+
 // API: list public rooms
 app.get('/api/rooms', (req, res) => {
   const publicRooms = [];
@@ -718,8 +723,19 @@ function resolveBotPendingAction(roomId, game, bot) {
       break;
     }
     case 'prison_visit_choice': {
-      // Bot strategy: always grab cash (simple, never frees opponents)
-      game.resolvePrisonVisitChoice(botId, 'grab_cash');
+      // Smarter strategy: usually grab the 500$, but occasionally free
+      // an imprisoned player if the bot can comfortably afford it AND
+      // an ally exists. Otherwise just grab cash.
+      const choices = action.choices || [];
+      const freeChoices = choices.filter(c => c.id && c.id.startsWith('free_'));
+      const canAffordRescue = bot.money >= 1500;
+      // 25% chance to free someone if we have rescue options + cash
+      if (freeChoices.length > 0 && canAffordRescue && Math.random() < 0.25) {
+        const pick = freeChoices[Math.floor(Math.random() * freeChoices.length)];
+        game.resolvePrisonVisitChoice(botId, pick.id);
+      } else {
+        game.resolvePrisonVisitChoice(botId, 'grab_cash');
+      }
       break;
     }
     case 'start_bonus_choice': {
@@ -1085,9 +1101,12 @@ function handleBotPendingParticipation(roomId, game) {
   const action = game.pendingAction;
   if (!action) return;
 
-  // Bots participate in real-time auctions
+  // Bots participate in real-time auctions — value-based bidding.
+  // Cap the bid at ~140% of the listed business price; raise more eagerly
+  // while bid is below sticker, hesitate as it climbs toward the cap.
   if (action.type === 'auction') {
-    // Schedule bot responses with random delay for natural feel
+    const sticker = action.minPrice || 0;
+    const hardCap = Math.round(sticker * 1.40);
     for (const p of game.getAlivePlayers()) {
       if (p.isBot && !action.passed.includes(p.id) && action.currentBidderId !== p.id) {
         const delay = 1500 + Math.floor(Math.random() * 2000);
@@ -1095,8 +1114,16 @@ function handleBotPendingParticipation(roomId, game) {
           if (!game.pendingAction || game.pendingAction.type !== 'auction') return;
           if (action.passed.includes(p.id)) return;
           const nextBid = action.currentBid === 0 ? action.minPrice : action.currentBid + action.bidStep;
-          const canAfford = p.money >= nextBid;
-          if (canAfford && Math.random() < 0.55) {
+          // Don't blow more than 60% of cash on a single property
+          const canAfford = p.money >= nextBid && nextBid <= p.money * 0.6;
+          // Probability of raising drops as we exceed sticker
+          let raiseProb = 0.85;
+          if (nextBid > sticker) {
+            const overpayRatio = (nextBid - sticker) / sticker;
+            raiseProb = Math.max(0.05, 0.85 - overpayRatio * 2);
+          }
+          if (nextBid > hardCap) raiseProb = 0;
+          if (canAfford && Math.random() < raiseProb) {
             processAuctionRaise(roomId, p.id);
           } else {
             processAuctionPass(roomId, p.id);
@@ -1104,7 +1131,6 @@ function handleBotPendingParticipation(roomId, game) {
         }, delay);
       }
     }
-    // Start auction timer if not already running
     if (!auctionTimers.has(roomId)) {
       startAuctionTimer(roomId);
     }
@@ -1136,25 +1162,43 @@ function handleBotPendingParticipation(roomId, game) {
     }
   }
 
-  // Bot auto-responds to trade offers
+  // Bot auto-responds to trade offers — accept if the deal favors the bot.
+  // Estimate value as money + sum of business prices on each side.
   if (action.type === 'trade_offer' && action.toId) {
     const target = game.getPlayer(action.toId);
     if (target && target.isBot) {
       setTimeout(() => {
         if (!game.pendingAction || game.pendingAction.type !== 'trade_offer') return;
-        game.executeTradeOffer(action.toId, false); // Bots decline trades
+        const offer = action.offer || {};
+        const bizValue = (ids) => (ids || []).reduce((sum, id) => {
+          const biz = game.getBusiness(id);
+          return sum + (biz ? biz.price : 0);
+        }, 0);
+        const botGets = (offer.giveMoney || 0) + bizValue(offer.giveBusiness);
+        const botGives = (offer.wantMoney || 0) + bizValue(offer.wantBusiness);
+        // Don't accept if bot can't pay the wantMoney
+        const canAfford = (offer.wantMoney || 0) <= target.money;
+        // Accept when getting at least 10% more value than giving up,
+        // and never if it leaves bot under 1000$.
+        const accept = canAfford
+          && botGets > 0
+          && botGets >= botGives * 1.10
+          && (target.money - (offer.wantMoney || 0)) >= 1000;
+        game.executeTradeOffer(action.toId, accept);
         broadcastState(roomId);
       }, 2000);
     }
   }
 
-  // Bot auto-responds to alliance offers
+  // Bot auto-responds to alliance offers — usually accept, sometimes refuse
+  // so behavior isn't 100% predictable for opponents.
   if (action.type === 'alliance_offer' && action.toId) {
     const target = game.getPlayer(action.toId);
     if (target && target.isBot) {
       setTimeout(() => {
         if (!game.pendingAction || game.pendingAction.type !== 'alliance_offer') return;
-        game.executeAllianceOffer(action.toId, true); // Bots accept alliances
+        const accept = Math.random() < 0.70;
+        game.executeAllianceOffer(action.toId, accept);
         broadcastState(roomId);
       }, 2000);
     }
@@ -1307,7 +1351,7 @@ function resetTurnTimer(roomId) {
 
 // --- Socket.IO ---
 io.on('connection', (socket) => {
-  console.log(`Connected: ${socket.id}`);
+  traceConn(`Connected: ${socket.id}`);
 
   // Tell the client whether cheat handlers are enabled on this server.
   // Client uses this to hide the cheat panel trigger in production.
@@ -1397,6 +1441,9 @@ io.on('connection', (socket) => {
     // Apply game settings
     if (data && data.mafiaCardMinRound) {
       game.mafiaCardMinRound = Math.max(1, Math.min(10, parseInt(data.mafiaCardMinRound) || 3));
+    }
+    if (data && data.maxRounds) {
+      game.maxRounds = Math.max(5, Math.min(100, parseInt(data.maxRounds) || 30));
     }
 
     const success = game.startGame();
@@ -2346,7 +2393,7 @@ io.on('connection', (socket) => {
         tvSet.delete(socket.id);
         if (tvSet.size === 0) tvSockets.delete(roomId);
         playerRooms.delete(socket.id);
-        console.log(`TV Disconnected: ${socket.id}`);
+        traceConn(`TV Disconnected: ${socket.id}`);
         return;
       }
       const game = rooms.get(roomId);
@@ -2430,7 +2477,7 @@ io.on('connection', (socket) => {
       }
       playerRooms.delete(socket.id);
     }
-    console.log(`Disconnected: ${socket.id}`);
+    traceConn(`Disconnected: ${socket.id}`);
   });
 });
 

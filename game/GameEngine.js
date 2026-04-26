@@ -2418,6 +2418,18 @@ class GameEngine {
       this.phase = 'finished';
       this.winner = alive[0];
       this.addLog(`🏆 ${alive[0].name} переміг! Він — справжній Дон!`);
+    } else if (alive.length === 0) {
+      // Chain-bomb / mutual-kill edge: nobody left alive. Pick the
+      // best score among all (now-dead) players so the game still
+      // ends instead of hanging in 'playing' forever.
+      this.phase = 'finished';
+      const ranked = (this.players || []).slice().sort((a, b) => {
+        const sa = this.getPlayerVictoryBreakdown(a).total || 0;
+        const sb = this.getPlayerVictoryBreakdown(b).total || 0;
+        return sb - sa;
+      });
+      this.winner = ranked[0] || null;
+      this.addLog('☠ Усі бійці загинули. За результатом капіталу перемагає сильніший.');
     }
   }
 
