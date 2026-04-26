@@ -1178,7 +1178,10 @@ function renderBoard(state) {
           token.style.background = pColor;
           token.style.color = pColor;
           token.title = pName;
-          token.textContent = pName[0];
+          const tokenMark = document.createElement('span');
+          tokenMark.className = 'token-mark';
+          tokenMark.textContent = pName[0];
+          token.appendChild(tokenMark);
           // Position: 1 token = center; 2+ = circle around center
           if (tokenCount === 1) {
             token.style.top = '50%';
@@ -1374,22 +1377,27 @@ function hideEventDisplay() {
 }
 
 // ===== CENTER INFO (dice, movement, events shown in board center) =====
+function buildDiceHtml(dice) {
+  const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
+  let diceHtml = '<div class="ci-dice ci-dice-3d">';
+  dice.forEach((d, index) => {
+    const tilt = index % 2 === 0 ? -8 : 7;
+    diceHtml += `<div class="ci-die ci-die-${d}" style="--die-tilt:${tilt}deg;--die-delay:${index * 90}ms">`;
+    for (let i = 1; i <= 9; i++) {
+      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div class="ci-slot"></div>';
+    }
+    diceHtml += '</div>';
+  });
+  diceHtml += '</div>';
+  return diceHtml;
+}
+
 function showCenterInfo(playerName, dice, total, oldPos, newPos, landingSector) {
   const info = $('#center-info');
   if (!info) return;
   info.classList.add('center-info-compact');
 
-  // Build dice display
-  const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
-  let diceHtml = '<div class="ci-dice">';
-  for (const d of dice) {
-    diceHtml += '<div class="ci-die">';
-    for (let i = 1; i <= 9; i++) {
-      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
-    }
-    diceHtml += '</div>';
-  }
-  diceHtml += '</div>';
+  const diceHtml = buildDiceHtml(dice);
 
   // Landing sector name
   let landingName = '';
@@ -1422,16 +1430,7 @@ function showOtherPlayerRoll(playerName, dice, total) {
   if (!info || !Array.isArray(dice) || dice.length < 2) return;
   info.classList.add('center-info-compact');
 
-  const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
-  let diceHtml = '<div class="ci-dice">';
-  for (const d of dice) {
-    diceHtml += '<div class="ci-die">';
-    for (let i = 1; i <= 9; i++) {
-      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
-    }
-    diceHtml += '</div>';
-  }
-  diceHtml += '</div>';
+  const diceHtml = buildDiceHtml(dice);
 
   info.innerHTML = `
     <div class="ci-title">${escapeHtml(playerName)}</div>
@@ -1572,7 +1571,7 @@ function animateTokenMovement(playerId, fromPos, toPos) {
   floater.className = 'floating-token';
   floater.style.background = player.character ? player.character.color : '#888';
   floater.style.color = player.character ? player.character.color : '#888';
-  floater.textContent = (player.name || '?')[0];
+  floater.innerHTML = `<span class="token-mark">${escapeHtml((player.name || '?')[0])}</span>`;
   board.appendChild(floater);
 
   // Calculate path (step by step around the board)
@@ -1762,12 +1761,15 @@ function showCardReveal(type, title, name, description, onDismiss) {
   const typeIcon = type === 'mafia' ? '&#9760;' : (type === 'helper' ? '&#10022;' : '&#9733;');
   reveal.innerHTML = `
     <div class="revealed-card ${typeClass}">
-      <div class="rc-icon">${typeIcon}</div>
-      <div class="rc-title">${typeLabel}</div>
-      <div class="rc-divider"></div>
-      <div class="rc-name">${name}</div>
-      <div class="rc-desc">${description}</div>
-      <button class="btn btn-primary" id="card-dismiss-btn">OK</button>
+      <div class="rc-card-edge"></div>
+      <div class="rc-inner-content">
+        <div class="rc-icon">${typeIcon}</div>
+        <div class="rc-title">${typeLabel}</div>
+        <div class="rc-divider"></div>
+        <div class="rc-name">${name}</div>
+        <div class="rc-desc">${description}</div>
+        <button class="btn btn-primary" id="card-dismiss-btn">OK</button>
+      </div>
     </div>
   `;
   reveal.classList.add('active');
@@ -2341,6 +2343,7 @@ function showCardDrawnEffect(data) {
   if (isMafia) {
     cardContent = `
       <div class="revealed-card mafia-type cde-reveal-card">
+        <div class="rc-card-edge"></div>
         <div class="rc-inner-content">
           <div class="rc-icon">&#9760;</div>
           <div class="rc-title">КАРТА MAFIA</div>
@@ -2354,6 +2357,7 @@ function showCardDrawnEffect(data) {
   } else if (isHelper) {
     cardContent = `
       <div class="revealed-card helper-type cde-reveal-card">
+        <div class="rc-card-edge"></div>
         <div class="rc-inner-content">
           <div class="rc-icon">&#10022;</div>
           <div class="rc-title">ПОМІЧНИК</div>
@@ -2366,6 +2370,7 @@ function showCardDrawnEffect(data) {
   } else {
     cardContent = `
       <div class="revealed-card event-type cde-reveal-card">
+        <div class="rc-card-edge"></div>
         <div class="rc-inner-content">
           <div class="rc-icon">&#9733;</div>
           <div class="rc-title">ПОДІЯ</div>
@@ -5560,7 +5565,10 @@ function renderBoardInto(state, selector) {
           token.style.background = pColor;
           token.style.color = pColor;
           token.title = p.name;
-          token.textContent = (p.name || '?')[0];
+          const tokenMark = document.createElement('span');
+          tokenMark.className = 'token-mark';
+          tokenMark.textContent = (p.name || '?')[0];
+          token.appendChild(tokenMark);
           if (tokens.length === 1) {
             token.style.top = '50%'; token.style.left = '50%';
             token.style.transform = 'translate(-50%, -50%)';
