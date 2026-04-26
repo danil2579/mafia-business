@@ -4288,6 +4288,12 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
     inset 0 0 28px rgba(201,168,76,0.06) !important;
 }
 
+.board-cell.empty {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .board-cell.business {
   background:
     radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--dist-color, #c9a84c) 12%, transparent), transparent 56%),
