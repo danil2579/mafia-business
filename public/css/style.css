@@ -1079,65 +1079,95 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 .game-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; flex: 1; overflow: hidden; }
 
 /* ============================================================
-   LEFT PANEL — Player panels
+   SIDE PANELS — Frosted glass slabs with color tint.
+   Left = cool teal/blue (observation, dossier of opponents)
+   Right = warm violet/red (your own info, action chronicle)
+   No more brass studs / heavy gold — the panels read as light, modern,
+   floating glass against the dark felt board.
    ============================================================ */
 .side-panel {
   overflow-y: auto; padding: 14px 12px;
+  /* Cool teal/blue glass — saturated enough to read against the
+     near-black felt board behind. */
   background:
-    /* faint diagonal grain */
-    repeating-linear-gradient(135deg,
-      rgba(201,168,76,0.008) 0 2px,
-      transparent 2px 4px),
-    /* main warm dark gradient */
-    linear-gradient(180deg, rgba(14,10,4,0.78) 0%, rgba(6,4,2,0.85) 100%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(201,168,76,0.20);
+    /* big top highlight */
+    radial-gradient(ellipse 70% 40% at 50% -10%,
+      rgba(140,210,240,0.28) 0%,
+      rgba(60,140,200,0.10) 40%,
+      transparent 80%),
+    /* main blue body */
+    linear-gradient(180deg,
+      rgba(40,90,150,0.32) 0%,
+      rgba(20,50,100,0.38) 50%,
+      rgba(10,22,46,0.55) 100%),
+    /* deep base */
+    linear-gradient(180deg,
+      rgba(6,12,22,0.78) 0%,
+      rgba(4,8,16,0.85) 100%);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border-right: 1px solid rgba(160,210,240,0.30);
   box-shadow:
-    inset -2px 0 16px rgba(0,0,0,0.5),
-    inset -1px 0 0 rgba(201,168,76,0.06);
+    inset 1px 0 0 rgba(200,230,250,0.12),
+    inset -1px 0 0 rgba(160,210,240,0.18),
+    inset 0 1px 0 rgba(220,240,255,0.10),
+    inset 0 -50px 90px rgba(30,70,140,0.20),
+    8px 0 32px rgba(0,0,0,0.55);
   position: relative;
 }
-/* Brass inner edge — vertical gold seam separating panel from center */
+/* Soft cyan glow seam on the inward edge — replaces the gold strip */
 .side-panel::before {
   content: ''; position: absolute;
-  top: 6%; bottom: 6%; right: 0;
-  width: 2px;
+  top: 0; bottom: 0; right: 0;
+  width: 1px;
   background: linear-gradient(180deg,
     transparent 0%,
-    rgba(201,168,76,0.35) 20%,
-    rgba(232,212,138,0.50) 50%,
-    rgba(201,168,76,0.35) 80%,
+    rgba(140,200,230,0.35) 25%,
+    rgba(180,230,255,0.50) 50%,
+    rgba(140,200,230,0.35) 75%,
     transparent 100%);
-  box-shadow: 0 0 8px rgba(201,168,76,0.20);
+  box-shadow: 0 0 12px rgba(140,200,230,0.28);
   pointer-events: none;
 }
+
 .right-panel {
-  border-right: none; border-left: 1px solid rgba(201,168,76,0.20);
+  border-right: none; border-left: 1px solid rgba(230,150,170,0.30);
   display: flex; flex-direction: column; gap: 4px;
   padding: 14px 12px;
+  /* Warm burgundy/rose glass — mirrored saturation with the left side */
   background:
-    repeating-linear-gradient(135deg,
-      rgba(201,168,76,0.008) 0 2px,
-      transparent 2px 4px),
-    linear-gradient(180deg, rgba(14,10,4,0.78) 0%, rgba(6,4,2,0.85) 100%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+    radial-gradient(ellipse 70% 40% at 50% -10%,
+      rgba(255,160,180,0.28) 0%,
+      rgba(180,60,100,0.10) 40%,
+      transparent 80%),
+    linear-gradient(180deg,
+      rgba(150,50,80,0.32) 0%,
+      rgba(90,25,50,0.38) 50%,
+      rgba(40,10,22,0.55) 100%),
+    linear-gradient(180deg,
+      rgba(18,8,14,0.78) 0%,
+      rgba(10,4,8,0.85) 100%);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
   box-shadow:
-    inset 2px 0 16px rgba(0,0,0,0.5),
-    inset 1px 0 0 rgba(201,168,76,0.06);
+    inset -1px 0 0 rgba(255,210,220,0.12),
+    inset 1px 0 0 rgba(230,150,170,0.18),
+    inset 0 1px 0 rgba(255,220,225,0.10),
+    inset 0 -50px 90px rgba(120,30,60,0.20),
+    -8px 0 32px rgba(0,0,0,0.55);
 }
+/* Warm pink/red glow seam on the inward edge */
 .right-panel::before {
   content: ''; position: absolute;
-  top: 6%; bottom: 6%; left: 0;
-  width: 2px;
+  top: 0; bottom: 0; left: 0;
+  width: 1px;
   background: linear-gradient(180deg,
     transparent 0%,
-    rgba(201,168,76,0.35) 20%,
-    rgba(232,212,138,0.50) 50%,
-    rgba(201,168,76,0.35) 80%,
+    rgba(230,150,170,0.35) 25%,
+    rgba(255,180,200,0.50) 50%,
+    rgba(230,150,170,0.35) 75%,
     transparent 100%);
-  box-shadow: 0 0 8px rgba(201,168,76,0.20);
+  box-shadow: 0 0 12px rgba(230,150,170,0.28);
   pointer-events: none;
 }
 
@@ -1163,86 +1193,67 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 @media (max-width: 800px)  { .felt-corner { display: none; } }
 
 /* ============================================================
-   PLAYER PANELS — "Dossier" cards: leather-folder feel, brass corners,
-   embossed name plate, vault-display for cash.
+   PLAYER PANELS — Glass cards inside the cool-tint left panel.
+   Slim, modern, no brass — relies on subtle highlights and glow.
+   Active player picks up a richer glow so it stands out.
    ============================================================ */
 .player-panel {
   background:
-    /* faint cross-hatch "leather grain" */
-    repeating-linear-gradient(45deg,
-      rgba(201,168,76,0.012) 0 2px,
-      transparent 2px 5px),
-    /* main body — warmer brown-black gradient */
-    linear-gradient(160deg,
-      rgba(28,22,12,0.92) 0%,
-      rgba(16,12,6,0.95) 50%,
-      rgba(10,7,3,0.97) 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 10px; padding: 12px 14px 10px; margin-bottom: 9px;
-  border: 1px solid rgba(201,168,76,0.20); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* top inner highlight */
+    linear-gradient(180deg,
+      rgba(180,210,230,0.10) 0%,
+      rgba(40,60,100,0.04) 25%,
+      rgba(10,16,28,0.55) 100%);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  border-radius: 10px; padding: 11px 13px 10px; margin-bottom: 9px;
+  border: 1px solid rgba(140,180,210,0.18);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative; overflow: hidden;
   box-shadow:
-    0 4px 14px rgba(0,0,0,0.55),
-    0 12px 30px rgba(0,0,0,0.30),
-    inset 0 0 0 1px rgba(201,168,76,0.05),
-    inset 0 1px 0 rgba(255,232,170,0.07);
+    0 6px 18px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(140,180,210,0.06);
 }
-/* Brass corner studs — small dots in the four corners */
+/* Subtle top sheen — reads as light catching the edge of glass */
 .player-panel::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background:
-    /* TL stud */
-    radial-gradient(circle at 6px 6px,
-      rgba(232,212,138,0.5) 0%,
-      rgba(201,168,76,0.25) 25%,
-      transparent 32%),
-    /* TR stud */
-    radial-gradient(circle at calc(100% - 6px) 6px,
-      rgba(232,212,138,0.5) 0%,
-      rgba(201,168,76,0.25) 25%,
-      transparent 32%),
-    /* BL stud */
-    radial-gradient(circle at 6px calc(100% - 6px),
-      rgba(232,212,138,0.5) 0%,
-      rgba(201,168,76,0.25) 25%,
-      transparent 32%),
-    /* BR stud */
-    radial-gradient(circle at calc(100% - 6px) calc(100% - 6px),
-      rgba(232,212,138,0.5) 0%,
-      rgba(201,168,76,0.25) 25%,
-      transparent 32%);
-  border-radius: inherit;
+  content: ''; position: absolute;
+  top: 0; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(90deg,
+    transparent, rgba(220,235,250,0.35), transparent);
+  pointer-events: none;
 }
 .player-panel.current-turn {
-  border-color: rgba(232,212,138,0.7);
-  box-shadow:
-    0 0 0 2px rgba(201,168,76,0.25),
-    0 0 24px rgba(201,168,76,0.22),
-    0 0 48px rgba(201,168,76,0.10),
-    inset 0 0 0 1px rgba(232,212,138,0.18),
-    inset 0 0 36px rgba(201,168,76,0.07);
+  border-color: rgba(180,220,255,0.45);
   background:
-    repeating-linear-gradient(45deg,
-      rgba(201,168,76,0.018) 0 2px,
-      transparent 2px 5px),
-    linear-gradient(160deg,
-      rgba(40,30,12,0.96) 0%,
-      rgba(22,16,8,0.98) 100%);
+    linear-gradient(180deg,
+      rgba(140,200,240,0.16) 0%,
+      rgba(60,110,180,0.08) 30%,
+      rgba(14,24,44,0.70) 100%);
+  box-shadow:
+    0 0 0 1px rgba(180,220,255,0.18),
+    0 0 24px rgba(140,200,240,0.30),
+    0 8px 24px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(220,240,255,0.12);
 }
-/* Bookmark-style "ВАШ ХІД" ribbon — diagonal corner accent */
+/* Active marker — thin glowing strip down the left edge instead of
+   the gold corner ribbon */
 .player-panel.current-turn::after {
   content: '';
-  position: absolute; top: -2px; right: -2px;
-  width: 0; height: 0;
-  border-style: solid;
-  border-width: 0 24px 24px 0;
-  border-color: transparent var(--gold) transparent transparent;
-  filter: drop-shadow(0 0 6px rgba(232,212,138,0.5));
-  z-index: 5;
-  animation: goldPulse 2s ease-in-out infinite;
+  position: absolute; top: 10%; bottom: 10%; left: 0;
+  width: 3px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(180,220,255,0.85) 50%,
+    transparent 100%);
+  box-shadow: 0 0 12px rgba(180,220,255,0.6);
+  border-radius: 2px;
+  animation: activePlayerPulse 2s ease-in-out infinite;
 }
-@keyframes goldPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes activePlayerPulse {
+  0%, 100% { opacity: 0.7; transform: scaleY(1); }
+  50%      { opacity: 1;   transform: scaleY(1.05); }
+}
 
 .player-panel.dead {
   opacity: 0.32; filter: grayscale(1) brightness(0.55);
@@ -1292,13 +1303,13 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   pointer-events: none;
 }
 .player-panel.current-turn .pp-avatar {
-  border-color: var(--gold);
+  border-color: rgba(180,220,255,0.85);
   box-shadow:
     inset 0 1px 2px rgba(255,255,255,0.25),
     inset 0 -2px 4px rgba(0,0,0,0.4),
     0 2px 8px rgba(0,0,0,0.6),
-    0 0 0 2px rgba(232,212,138,0.6),
-    0 0 16px rgba(201,168,76,0.4);
+    0 0 0 2px rgba(180,220,255,0.55),
+    0 0 18px rgba(140,200,240,0.45);
 }
 
 .pp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -3242,16 +3253,16 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 .log-entry {
   font-family: 'Cormorant Garamond', serif;
   font-size: 12px;
-  color: rgba(220,200,160,0.78);
+  color: rgba(220,210,220,0.80);
   padding: 6px 10px 6px 12px;
   border-radius: 3px;
   background:
-    linear-gradient(180deg, rgba(28,22,12,0.55), rgba(14,10,4,0.65));
-  border: 1px solid rgba(201,168,76,0.10);
-  border-left: 2px solid rgba(201,168,76,0.30);
+    linear-gradient(180deg, rgba(40,18,28,0.45), rgba(20,8,14,0.55));
+  border: 1px solid rgba(220,150,180,0.08);
+  border-left: 2px solid rgba(230,150,170,0.35);
   animation: logSlide 0.35s ease-out; transition: all 0.15s;
   line-height: 1.45;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(232,212,138,0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,200,210,0.04);
   font-weight: 500;
   font-style: italic;
 }
