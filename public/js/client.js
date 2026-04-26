@@ -1288,10 +1288,10 @@ function renderCellInner(cell, sector, state, side) {
       cell.style.setProperty('--owner-color', owner.character.color);
     }
 
-    // District color bar
+    // District color bar — feed the color to the CSS gradient via custom property
     const distBar = document.createElement('div');
     distBar.className = 'district-bar';
-    distBar.style.background = district.color;
+    distBar.style.setProperty('--bar-color', district.color);
     cell.appendChild(distBar);
 
     // Owner bar (opposite side)

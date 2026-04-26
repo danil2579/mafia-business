@@ -163,32 +163,74 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 
 .btn-disabled { background: linear-gradient(180deg, #181828, #0e0e18); color: #444; border-color: #1a1a2a; cursor: not-allowed; }
 
+/* КИНУТИ — massive brass-and-leather "push button" brooch */
 .btn-roll {
-  background: linear-gradient(180deg, #8f1f1f 0%, #651212 45%, #330909 100%);
-  color: var(--gold-light); font-size: 14px; padding: 15px 48px;
-  border: 1px solid rgba(212,38,38,0.28); border-radius: var(--radius-xl);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 rgba(232,212,138,0.0);
-  letter-spacing: 5px; white-space: nowrap;
-  text-shadow: 0 0 10px rgba(232,212,138,0.2), 0 1px 2px rgba(0,0,0,0.45);
+  background:
+    radial-gradient(ellipse at 30% 25%,
+      rgba(212,55,55,0.4) 0%,
+      transparent 60%),
+    linear-gradient(180deg,
+      #aa2424 0%,
+      #7a1414 45%,
+      #3a0808 100%);
+  color: #f5e7b8; font-size: 14px; padding: 18px 56px;
+  border: 2px solid rgba(232,212,138,0.40);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 2px 4px rgba(255,200,180,0.30),
+    inset 0 -3px 6px rgba(0,0,0,0.5),
+    0 4px 10px rgba(0,0,0,0.6),
+    0 8px 24px rgba(0,0,0,0.4),
+    0 0 0 0 rgba(232,212,138,0.0);
+  letter-spacing: 6px; white-space: nowrap;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 12px rgba(232,212,138,0.4);
   animation: rollBtnPulse 1.8s ease-in-out infinite;
-  transition: box-shadow 0.3s ease;
+  transition: transform 0.15s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+/* Inset brass ring inside the button */
+.btn-roll::before {
+  content: '';
+  position: absolute; inset: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(232,212,138,0.20);
+  pointer-events: none;
 }
 .btn-roll:hover {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 30px rgba(232,212,138,0.35);
+  transform: scale(1.04);
+  box-shadow:
+    inset 0 2px 4px rgba(255,200,180,0.35),
+    inset 0 -3px 6px rgba(0,0,0,0.5),
+    0 6px 14px rgba(0,0,0,0.65),
+    0 12px 30px rgba(0,0,0,0.4),
+    0 0 36px rgba(232,212,138,0.45);
   animation: none;
 }
-.btn-roll:disabled { animation: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+.btn-roll:active { transform: scale(0.98) translateY(1px); }
+.btn-roll:disabled { animation: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); transform: none; }
 
 /* Stronger pulse — gold glow ring breathes around the button so players
    visually catch "it's your turn" from across the screen. */
 @keyframes rollBtnPulse {
   0%, 100% {
     filter: saturate(1);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 rgba(232,212,138,0.45);
+    box-shadow:
+      inset 0 2px 4px rgba(255,200,180,0.30),
+      inset 0 -3px 6px rgba(0,0,0,0.5),
+      0 4px 10px rgba(0,0,0,0.6),
+      0 8px 24px rgba(0,0,0,0.4),
+      0 0 0 0 rgba(232,212,138,0.45);
   }
   50% {
-    filter: saturate(1.15) brightness(1.08);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 26px 6px rgba(232,212,138,0.20);
+    filter: saturate(1.18) brightness(1.10);
+    box-shadow:
+      inset 0 2px 4px rgba(255,200,180,0.35),
+      inset 0 -3px 6px rgba(0,0,0,0.5),
+      0 4px 10px rgba(0,0,0,0.6),
+      0 8px 24px rgba(0,0,0,0.4),
+      0 0 32px 8px rgba(232,212,138,0.25);
   }
 }
 
@@ -836,29 +878,67 @@ body.is-game-active .player-panel {
 }
 body.is-game-active .pp-name { font-size: 12px !important; }
 body.is-game-active .pp-money { font-size: 14px !important; }
-body.is-game-active .cell-name { font-size: 10px !important; }
-body.is-game-active .cell-price { font-size: 18px !important; }
-body.is-game-active .board-cell.side-left .cell-name,
-body.is-game-active .board-cell.side-right .cell-name,
-body.is-game-active .board-cell.side-top .cell-name,
-body.is-game-active .board-cell.side-bottom .cell-name { font-size: 10px !important; }
-body.is-game-active .board-cell.side-left .cell-price,
-body.is-game-active .board-cell.side-right .cell-price { font-size: 16px !important; }
+/* Cell typography — scoped to business cells so special tiles keep their
+   bigger Cinzel-stamp look. Override the older shrinking @media rules. */
+body.is-game-active .board-cell.business .cell-name { font-size: 10px !important; }
+body.is-game-active .board-cell.business .cell-price { font-size: 14px !important; }
+body.is-game-active .board-cell.business.side-top .cell-name,
+body.is-game-active .board-cell.business.side-bottom .cell-name { font-size: 9px !important; }
+body.is-game-active .board-cell.business.side-left .cell-price,
+body.is-game-active .board-cell.business.side-right .cell-price { font-size: 13px !important; }
+/* Special tiles — engraved stamp font, larger and bolder. */
+body.is-game-active .board-cell:not(.business) .cell-name {
+  font-family: 'Cinzel', serif !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1.2px !important;
+  text-transform: uppercase !important;
+}
+body.is-game-active .board-cell:not(.business).side-left .cell-name,
+body.is-game-active .board-cell:not(.business).side-right .cell-name,
+body.is-game-active .board-cell:not(.business).side-top .cell-name,
+body.is-game-active .board-cell:not(.business).side-bottom .cell-name { font-size: 11px !important; }
 body.is-game-active .btn-mobile-panel { display: none !important; }
 
+/* Topbar — brass-edged speakeasy header. Dual gold lines bottom + center
+   ornament, leather grain background, vintage console feel. */
 .game-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 18px;
-  background: linear-gradient(180deg, rgba(10,12,26,0.78) 0%, rgba(5,6,14,0.85) 100%);
+  padding: 0 22px;
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(201,168,76,0.012) 0 2px,
+      transparent 2px 5px),
+    linear-gradient(180deg,
+      rgba(20,15,8,0.92) 0%,
+      rgba(10,7,3,0.96) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(201,168,76,0.18); min-height: 56px; flex-shrink: 0; position: relative;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  border-bottom: 1px solid rgba(201,168,76,0.30); min-height: 60px; flex-shrink: 0; position: relative;
+  box-shadow:
+    0 4px 20px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(232,212,138,0.10);
   gap: 16px;
+  z-index: 10;
 }
+/* Bottom brass under-rule with center medallion */
 .game-topbar::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent 5%, rgba(201,168,76,0.18) 50%, transparent 95%);
+  content: '◆';
+  position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--gold);
+  background: linear-gradient(180deg, rgba(20,15,8,1), rgba(10,7,3,1));
+  padding: 1px 10px;
+  text-shadow: 0 0 8px rgba(201,168,76,0.6);
+  z-index: 2;
+}
+/* Double gold rule under the bar */
+.game-topbar::before {
+  content: '';
+  position: absolute; bottom: -2px; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 3%, rgba(201,168,76,0.45) 50%, transparent 97%);
+  box-shadow: 0 -2px 0 rgba(232,212,138,0.18);
 }
 .game-title-block {
   display: flex;
@@ -868,14 +948,17 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 }
 .game-kicker {
   font-size: 9px;
-  letter-spacing: 3px;
-  color: rgba(201,168,76,0.5);
+  letter-spacing: 4px;
+  color: rgba(201,168,76,0.7);
   text-transform: uppercase;
   margin-bottom: 2px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 600;
 }
 .game-title {
-  font-family: var(--font-display); font-size: 13px; color: var(--gold); font-weight: 700;
-  letter-spacing: 5px; text-shadow: 0 0 24px rgba(201,168,76,0.2);
+  font-family: 'Cinzel', serif; font-size: 16px; color: var(--gold); font-weight: 700;
+  letter-spacing: 6px; text-shadow: 0 0 24px rgba(201,168,76,0.35), 0 1px 1px rgba(0,0,0,0.7);
 }
 .turn-info {
   font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis;
@@ -942,28 +1025,55 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   border-color: rgba(230,126,34,0.34);
   background: rgba(230,126,34,0.1);
 }
+/* КАПІТАЛ vault display — gold cartouche with embossed digits */
 .money-panel {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  min-width: 110px;
-  padding: 6px 12px 7px;
-  border-radius: 12px;
-  border: 1px solid rgba(46,204,113,0.14);
-  background: linear-gradient(180deg, rgba(9,18,16,0.88), rgba(5,10,11,0.92));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 6px 18px rgba(0,0,0,0.25);
+  min-width: 130px;
+  padding: 5px 16px 6px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(201,168,76,0.40);
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(232,212,138,0.014) 0 2px,
+      transparent 2px 4px),
+    linear-gradient(180deg,
+      rgba(48,34,12,0.85) 0%,
+      rgba(20,12,4,0.95) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,170,0.18),
+    inset 0 -1px 1px rgba(0,0,0,0.6),
+    0 4px 14px rgba(0,0,0,0.55),
+    0 0 18px rgba(201,168,76,0.10);
+  position: relative;
+}
+/* Tiny brass studs in corners of the vault display */
+.money-panel::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 4px 4px, rgba(232,212,138,0.6) 0%, transparent 30%),
+    radial-gradient(circle at calc(100% - 4px) 4px, rgba(232,212,138,0.6) 0%, transparent 30%),
+    radial-gradient(circle at 4px calc(100% - 4px), rgba(232,212,138,0.6) 0%, transparent 30%),
+    radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), rgba(232,212,138,0.6) 0%, transparent 30%);
+  border-radius: inherit;
 }
 .money-label {
   font-size: 9px;
-  letter-spacing: 2px;
-  color: rgba(46,204,113,0.56);
+  letter-spacing: 4px;
+  color: rgba(232,212,138,0.65);
   text-transform: uppercase;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 600;
+  margin-bottom: 1px;
 }
 .money-display {
-  font-size: 17px; font-weight: 700; color: var(--green-light);
-  font-family: var(--font-display); white-space: nowrap;
-  text-shadow: 0 0 14px rgba(46,204,113,0.25);
+  font-size: 19px; font-weight: 700; color: #f0d275;
+  font-family: 'Cinzel', serif; white-space: nowrap;
+  letter-spacing: 0.8px;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.7), 0 0 14px rgba(232,212,138,0.4);
 }
 
 .game-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; flex: 1; overflow: hidden; }
@@ -972,21 +1082,63 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
    LEFT PANEL — Player panels
    ============================================================ */
 .side-panel {
-  overflow-y: auto; padding: 10px;
-  background: linear-gradient(180deg, rgba(8,10,24,0.72) 0%, rgba(4,5,14,0.78) 100%);
+  overflow-y: auto; padding: 14px 12px;
+  background:
+    /* faint diagonal grain */
+    repeating-linear-gradient(135deg,
+      rgba(201,168,76,0.008) 0 2px,
+      transparent 2px 4px),
+    /* main warm dark gradient */
+    linear-gradient(180deg, rgba(14,10,4,0.78) 0%, rgba(6,4,2,0.85) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(201,168,76,0.12);
-  box-shadow: inset -1px 0 12px rgba(0,0,0,0.35);
+  border-right: 1px solid rgba(201,168,76,0.20);
+  box-shadow:
+    inset -2px 0 16px rgba(0,0,0,0.5),
+    inset -1px 0 0 rgba(201,168,76,0.06);
+  position: relative;
+}
+/* Brass inner edge — vertical gold seam separating panel from center */
+.side-panel::before {
+  content: ''; position: absolute;
+  top: 6%; bottom: 6%; right: 0;
+  width: 2px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(201,168,76,0.35) 20%,
+    rgba(232,212,138,0.50) 50%,
+    rgba(201,168,76,0.35) 80%,
+    transparent 100%);
+  box-shadow: 0 0 8px rgba(201,168,76,0.20);
+  pointer-events: none;
 }
 .right-panel {
-  border-right: none; border-left: 1px solid rgba(201,168,76,0.12);
+  border-right: none; border-left: 1px solid rgba(201,168,76,0.20);
   display: flex; flex-direction: column; gap: 4px;
-  padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(8,10,24,0.72) 0%, rgba(4,6,14,0.78) 100%);
+  padding: 14px 12px;
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(201,168,76,0.008) 0 2px,
+      transparent 2px 4px),
+    linear-gradient(180deg, rgba(14,10,4,0.78) 0%, rgba(6,4,2,0.85) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: inset 1px 0 12px rgba(0,0,0,0.35);
+  box-shadow:
+    inset 2px 0 16px rgba(0,0,0,0.5),
+    inset 1px 0 0 rgba(201,168,76,0.06);
+}
+.right-panel::before {
+  content: ''; position: absolute;
+  top: 6%; bottom: 6%; left: 0;
+  width: 2px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(201,168,76,0.35) 20%,
+    rgba(232,212,138,0.50) 50%,
+    rgba(201,168,76,0.35) 80%,
+    transparent 100%);
+  box-shadow: 0 0 8px rgba(201,168,76,0.20);
+  pointer-events: none;
 }
 
 /* Felt decorations — kept only as barely-there gold ornaments at the corners.
@@ -1011,32 +1163,86 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 @media (max-width: 800px)  { .felt-corner { display: none; } }
 
 /* ============================================================
-   PLAYER PANELS — Premium player cards with depth
+   PLAYER PANELS — "Dossier" cards: leather-folder feel, brass corners,
+   embossed name plate, vault-display for cash.
    ============================================================ */
 .player-panel {
-  background: linear-gradient(145deg, rgba(12,14,30,0.78), rgba(6,8,18,0.82));
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px;
-  border: 1px solid rgba(201,168,76,0.18); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background:
+    /* faint cross-hatch "leather grain" */
+    repeating-linear-gradient(45deg,
+      rgba(201,168,76,0.012) 0 2px,
+      transparent 2px 5px),
+    /* main body — warmer brown-black gradient */
+    linear-gradient(160deg,
+      rgba(28,22,12,0.92) 0%,
+      rgba(16,12,6,0.95) 50%,
+      rgba(10,7,3,0.97) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 10px; padding: 12px 14px 10px; margin-bottom: 9px;
+  border: 1px solid rgba(201,168,76,0.20); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative; overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.55),
+    0 12px 30px rgba(0,0,0,0.30),
+    inset 0 0 0 1px rgba(201,168,76,0.05),
+    inset 0 1px 0 rgba(255,232,170,0.07);
 }
+/* Brass corner studs — small dots in the four corners */
 .player-panel::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    /* TL stud */
+    radial-gradient(circle at 6px 6px,
+      rgba(232,212,138,0.5) 0%,
+      rgba(201,168,76,0.25) 25%,
+      transparent 32%),
+    /* TR stud */
+    radial-gradient(circle at calc(100% - 6px) 6px,
+      rgba(232,212,138,0.5) 0%,
+      rgba(201,168,76,0.25) 25%,
+      transparent 32%),
+    /* BL stud */
+    radial-gradient(circle at 6px calc(100% - 6px),
+      rgba(232,212,138,0.5) 0%,
+      rgba(201,168,76,0.25) 25%,
+      transparent 32%),
+    /* BR stud */
+    radial-gradient(circle at calc(100% - 6px) calc(100% - 6px),
+      rgba(232,212,138,0.5) 0%,
+      rgba(201,168,76,0.25) 25%,
+      transparent 32%);
+  border-radius: inherit;
 }
 .player-panel.current-turn {
-  border-color: rgba(201,168,76,0.6);
-  box-shadow: 0 0 20px rgba(201,168,76,0.15), 0 0 40px rgba(201,168,76,0.06), inset 0 0 30px rgba(201,168,76,0.04);
-  background: linear-gradient(145deg, rgba(24,22,14,0.97), rgba(14,12,8,0.97));
+  border-color: rgba(232,212,138,0.7);
+  box-shadow:
+    0 0 0 2px rgba(201,168,76,0.25),
+    0 0 24px rgba(201,168,76,0.22),
+    0 0 48px rgba(201,168,76,0.10),
+    inset 0 0 0 1px rgba(232,212,138,0.18),
+    inset 0 0 36px rgba(201,168,76,0.07);
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(201,168,76,0.018) 0 2px,
+      transparent 2px 5px),
+    linear-gradient(160deg,
+      rgba(40,30,12,0.96) 0%,
+      rgba(22,16,8,0.98) 100%);
 }
+/* Bookmark-style "ВАШ ХІД" ribbon — diagonal corner accent */
 .player-panel.current-turn::after {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  content: '';
+  position: absolute; top: -2px; right: -2px;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 24px 24px 0;
+  border-color: transparent var(--gold) transparent transparent;
+  filter: drop-shadow(0 0 6px rgba(232,212,138,0.5));
+  z-index: 5;
   animation: goldPulse 2s ease-in-out infinite;
 }
-@keyframes goldPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes goldPulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
 
 .player-panel.dead {
   opacity: 0.32; filter: grayscale(1) brightness(0.55);
@@ -1059,27 +1265,108 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   50%      { box-shadow: inset 0 0 30px rgba(212,38,38,0.18), 0 0 18px 4px rgba(212,38,38,0.20); }
 }
 
-.pp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; position: relative; z-index: 1; }
+/* Avatar — bigger, brass-rim portrait disc */
 .pp-avatar {
-  width: 34px; height: 34px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 13px; color: #000;
-  border: 2px solid rgba(255,255,255,0.2);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 6px rgba(255,255,255,0.05);
+  font-weight: 700; font-size: 16px; color: #000;
+  font-family: 'Cinzel', serif;
+  border: 2px solid rgba(232,212,138,0.5);
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.25),
+    inset 0 -2px 4px rgba(0,0,0,0.4),
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(0,0,0,0.4),
+    0 0 8px color-mix(in srgb, currentColor 30%, transparent);
+  flex-shrink: 0;
+  position: relative;
+}
+/* Inner emboss ring around portrait */
+.pp-avatar::before {
+  content: '';
+  position: absolute; inset: 2px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.3);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+  pointer-events: none;
+}
+.player-panel.current-turn .pp-avatar {
+  border-color: var(--gold);
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.25),
+    inset 0 -2px 4px rgba(0,0,0,0.4),
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 0 2px rgba(232,212,138,0.6),
+    0 0 16px rgba(201,168,76,0.4);
+}
+
+.pp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700; font-size: 13px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  color: rgba(232,212,138,0.95);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.7);
+}
+.pp-respect {
+  font-size: 9px; color: rgba(201,168,76,0.85);
+  font-family: 'Cormorant Garamond', serif;
+  letter-spacing: 2px; text-transform: uppercase;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Cash display — recessed vault display, monospace digits, gold glow */
+.pp-money {
+  font-weight: 700;
+  color: #f0d275;
+  font-size: 14px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: linear-gradient(180deg,
+    rgba(48,34,12,0.7) 0%,
+    rgba(20,12,4,0.8) 100%);
+  border: 1px solid rgba(201,168,76,0.30);
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,170,0.12),
+    inset 0 -1px 1px rgba(0,0,0,0.5),
+    0 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.7), 0 0 8px rgba(232,212,138,0.25);
+  white-space: nowrap;
   flex-shrink: 0;
 }
-.pp-info { flex: 1; min-width: 0; }
-.pp-name { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; color: var(--text); }
-.pp-respect { font-size: 10px; color: var(--gold); font-family: var(--font-display); letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; }
-.pp-money { font-weight: 700; color: var(--green-light); font-size: 15px; font-family: var(--font-display); text-shadow: 0 0 10px rgba(46,204,113,0.2); }
 
-.pp-details { display: flex; flex-wrap: wrap; gap: 4px; font-size: 9px; margin-bottom: 4px; }
+.pp-details { display: flex; flex-wrap: wrap; gap: 5px; font-size: 9px; margin-bottom: 0; position: relative; z-index: 1; }
+/* Evidence chip — small label tags for status (prison/cards/businesses/helpers) */
 .pp-tag {
-  background: rgba(255,255,255,0.025); padding: 3px 8px; border-radius: 3px;
-  color: var(--text-dim); border: 1px solid rgba(255,255,255,0.04); font-size: 9px; letter-spacing: 0.3px;
+  background:
+    linear-gradient(180deg, rgba(40,30,12,0.5), rgba(18,12,4,0.65));
+  padding: 3px 8px; border-radius: 3px;
+  color: rgba(220,200,150,0.85);
+  border: 1px solid rgba(201,168,76,0.18);
+  font-size: 9px; letter-spacing: 0.4px;
+  font-family: 'Cinzel', serif; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+  box-shadow: inset 0 1px 0 rgba(255,232,170,0.05), 0 1px 0 rgba(0,0,0,0.3);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.5);
 }
-.pp-tag.prison { color: var(--red-light); border-color: rgba(212,38,38,0.2); background: rgba(212,38,38,0.06); }
-.pp-tag.cards { color: var(--purple-light); border-color: rgba(155,89,182,0.2); background: rgba(155,89,182,0.06); }
+.pp-tag svg { width: 10px; height: 10px; opacity: 0.85; }
+.pp-tag.prison {
+  color: #ff8a85;
+  border-color: rgba(212,38,38,0.45);
+  background: linear-gradient(180deg, rgba(60,12,12,0.7), rgba(28,5,5,0.75));
+  text-shadow: 0 0 6px rgba(212,38,38,0.4);
+}
+.pp-tag.cards {
+  color: #d8a3f5;
+  border-color: rgba(155,89,182,0.40);
+  background: linear-gradient(180deg, rgba(40,18,60,0.7), rgba(18,8,28,0.75));
+}
 
 .helper-card {
   display: flex; align-items: center; gap: 7px;
@@ -1166,25 +1453,52 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   50% { opacity: 1; }
 }
 
-/* Board watermark — center emblem */
+/* Board watermark — center compass-rose medallion + engraved title */
 .board-watermark {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   z-index: 0; pointer-events: none; text-align: center; user-select: none;
 }
+/* Bigger emblem with a slow spin and gold rings around it */
 .watermark-emblem {
-  width: 140px; height: 140px; margin: 0 auto 8px; opacity: 0.28;
-  animation: emblemSpin 60s linear infinite;
+  width: 240px; height: 240px; margin: 0 auto 18px; opacity: 0.35;
+  position: relative;
+  animation: emblemSpin 90s linear infinite;
+  filter: drop-shadow(0 0 30px rgba(201,168,76,0.20));
+}
+.watermark-emblem::before {
+  /* Outer concentric ring for a "stamped seal" feel */
+  content: '';
+  position: absolute; inset: -16px;
+  border: 1px solid rgba(201,168,76,0.18);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 30px rgba(201,168,76,0.04),
+    0 0 30px rgba(201,168,76,0.06);
+}
+.watermark-emblem::after {
+  /* Inner thin ring */
+  content: '';
+  position: absolute; inset: -6px;
+  border: 1px dashed rgba(201,168,76,0.10);
+  border-radius: 50%;
 }
 .watermark-emblem svg { width: 100%; height: 100%; }
 @keyframes emblemSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 .watermark-title {
-  font-family: var(--font-display); font-size: 80px; font-weight: 900;
-  letter-spacing: 18px; color: rgba(201,168,76,0.028); line-height: 1; text-transform: uppercase;
+  font-family: 'Cinzel', serif; font-size: 92px; font-weight: 900;
+  letter-spacing: 22px;
+  color: rgba(201,168,76,0.06);
+  line-height: 1; text-transform: uppercase;
+  text-shadow: 0 0 40px rgba(201,168,76,0.05);
 }
 .watermark-subtitle {
-  font-family: var(--font-display); font-size: 36px; font-weight: 700;
-  letter-spacing: 24px; color: rgba(201,168,76,0.018); text-transform: uppercase; margin-top: 2px;
+  font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600;
+  letter-spacing: 28px;
+  color: rgba(201,168,76,0.04);
+  font-style: italic;
+  text-transform: uppercase; margin-top: 6px;
+  padding-left: 28px; /* compensate the trailing letter-spacing */
 }
 
 /* Board grid */
@@ -1214,39 +1528,92 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 }
 .board-cell.empty { background: transparent; border: none; pointer-events: none; box-shadow: none; }
 
+/* Business cell — premium "collectible card": inset paper texture, brass
+   inner frame, district-color wash at the top fading down, gold halo. */
 .board-cell.business {
-  background: linear-gradient(160deg, rgba(18,16,10,0.97) 0%, rgba(10,10,18,0.98) 50%, rgba(6,5,8,0.99) 100%);
-  border-color: color-mix(in srgb, var(--dist-color, #c9a84c) 35%, transparent);
+  background:
+    /* faint diagonal "paper grain" */
+    repeating-linear-gradient(135deg,
+      rgba(201,168,76,0.014) 0 1px,
+      transparent 1px 3px),
+    /* district color wash at top */
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--dist-color, #c9a84c) 18%, transparent) 0%,
+      transparent 35%),
+    /* main vertical card body */
+    linear-gradient(180deg,
+      rgba(28,22,12,0.97) 0%,
+      rgba(16,12,6,0.98) 55%,
+      rgba(8,5,2,0.99) 100%);
+  border: 1px solid color-mix(in srgb, var(--dist-color, #c9a84c) 28%, rgba(60,46,18,0.5));
   box-shadow:
-    0 2px 10px rgba(0,0,0,0.4),
-    inset 0 0 15px color-mix(in srgb, var(--dist-color, #c9a84c) 5%, transparent);
+    /* outer drop */
+    0 3px 10px rgba(0,0,0,0.55),
+    /* deeper second drop for "lift" */
+    0 8px 22px rgba(0,0,0,0.32),
+    /* inner brass frame */
+    inset 0 0 0 1px rgba(201,168,76,0.06),
+    /* soft top highlight */
+    inset 0 1px 0 rgba(255,232,170,0.07),
+    /* subtle district color glow at edges */
+    inset 0 0 18px color-mix(in srgb, var(--dist-color, #c9a84c) 6%, transparent);
 }
-/* Rotating light sweep on business cells */
+/* Soft conic light sweep — kept but very subtle so paper grain reads */
 .board-cell.business::before {
-  content: ''; position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
+  content: ''; position: absolute; inset: 0;
   background: conic-gradient(from 0deg at 50% 50%,
     transparent 0deg,
-    color-mix(in srgb, var(--dist-color, #c9a84c) 8%, transparent) 45deg,
-    transparent 90deg,
-    color-mix(in srgb, var(--dist-color, #c9a84c) 4%, transparent) 200deg,
-    transparent 260deg
+    color-mix(in srgb, var(--dist-color, #c9a84c) 5%, transparent) 60deg,
+    transparent 120deg,
+    color-mix(in srgb, var(--dist-color, #c9a84c) 3%, transparent) 240deg,
+    transparent 300deg
   );
-  animation: cellShineSweep 6s linear infinite;
-  z-index: 0; pointer-events: none;
+  animation: cellShineSweep 9s linear infinite;
+  z-index: 0; pointer-events: none; mix-blend-mode: screen;
 }
-/* Inner glow on hover */
+/* Hover: lift, brighten, district-colored halo + gold inner frame */
 .board-cell.business:hover {
-  border-color: color-mix(in srgb, var(--dist-color, #c9a84c) 60%, transparent);
+  transform: translateY(-2px) scale(1.04);
+  border-color: color-mix(in srgb, var(--dist-color, #c9a84c) 70%, var(--gold) 30%);
   box-shadow:
-    0 0 20px color-mix(in srgb, var(--dist-color, #c9a84c) 20%, transparent),
-    0 0 40px color-mix(in srgb, var(--dist-color, #c9a84c) 8%, transparent),
-    inset 0 0 25px color-mix(in srgb, var(--dist-color, #c9a84c) 8%, transparent);
+    0 6px 18px rgba(0,0,0,0.55),
+    0 0 26px color-mix(in srgb, var(--dist-color, #c9a84c) 35%, transparent),
+    0 0 48px color-mix(in srgb, var(--dist-color, #c9a84c) 16%, transparent),
+    inset 0 0 0 1px rgba(232,212,138,0.18),
+    inset 0 0 28px color-mix(in srgb, var(--dist-color, #c9a84c) 14%, transparent);
 }
+/* Owned business — strong owner-color inner frame + owner-color flag
+   stripe along the cell's INWARD edge (opposite to the district ribbon).
+   The flag uses an ::after on the cell so it doesn't fight the icon medallion. */
 .board-cell.is-owned {
   box-shadow:
-    0 2px 8px rgba(0,0,0,0.35),
-    inset 0 0 0 1px color-mix(in srgb, var(--owner-color, var(--gold)) 26%, transparent),
-    inset 0 0 20px color-mix(in srgb, var(--owner-color, var(--gold)) 8%, transparent);
+    0 3px 10px rgba(0,0,0,0.45),
+    inset 0 0 0 2px color-mix(in srgb, var(--owner-color, var(--gold)) 50%, transparent),
+    inset 0 0 26px color-mix(in srgb, var(--owner-color, var(--gold)) 14%, transparent);
+}
+.board-cell.is-owned::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--owner-color, var(--gold)) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--owner-color, var(--gold)) 70%, black 30%) 100%);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--owner-color, var(--gold)) 60%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  z-index: 4;
+  pointer-events: none;
+}
+.board-cell.side-top.is-owned::after { left: 0; right: 0; bottom: 0; height: 4px; }
+.board-cell.side-bottom.is-owned::after { left: 0; right: 0; top: 0; height: 4px; }
+.board-cell.side-left.is-owned::after { top: 0; bottom: 0; right: 0; width: 4px;
+  background: linear-gradient(270deg,
+    color-mix(in srgb, var(--owner-color, var(--gold)) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--owner-color, var(--gold)) 70%, black 30%) 100%);
+}
+.board-cell.side-right.is-owned::after { top: 0; bottom: 0; left: 0; width: 4px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--owner-color, var(--gold)) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--owner-color, var(--gold)) 70%, black 30%) 100%);
 }
 .board-cell.owned-by-me {
   box-shadow:
@@ -1372,40 +1739,114 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 .board-cell.side-bottom.mafia .cell-name,
 .board-cell.side-bottom.event .cell-name { font-size: 10px; }
 
-/* Special icon sizing — bigger, more prominent */
-.special-icon { width: 40px; height: 40px; opacity: 0.9; color: #fff; }
-.board-cell.side-top .special-icon,
-.board-cell.side-bottom .special-icon { width: 28px; height: 28px; }
-.board-cell.side-left .special-icon,
-.board-cell.side-right .special-icon { width: 28px; height: 28px; }
+/* Special tile icons — bypass the brass-medallion treatment used on
+   business cells. They already sit on a strongly-colored, atmospheric tile,
+   so a competing badge fights for attention. Show the SVG as a clean stamp. */
+.cell-icon.special-icon {
+  width: 44px; height: 44px;
+  opacity: 0.95; color: #fff;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.cell-icon.special-icon::before { display: none; }
+.cell-icon.special-icon svg {
+  width: 100%; height: 100%;
+  color: inherit;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)) drop-shadow(0 0 8px currentColor);
+}
+.board-cell.side-top .cell-icon.special-icon,
+.board-cell.side-bottom .cell-icon.special-icon,
+.board-cell.side-left .cell-icon.special-icon,
+.board-cell.side-right .cell-icon.special-icon { width: 30px; height: 30px; }
 
 /* Cell content */
 .cell-content {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; width: 100%; height: 100%; z-index: 3; position: relative; padding: 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  gap: 4px; width: 100%; height: 100%; z-index: 3; position: relative; padding: 4px 3px;
 }
-.cell-icon { width: 28px; height: 28px; opacity: 0.85; color: #fff; flex-shrink: 0; }
-.cell-icon svg { width: 100%; height: 100%; }
+
+/* Icon medallion — circular brass-rim badge with embossed center.
+   Inherits district color via --dist-color set inline on the cell. */
+.cell-icon {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background:
+    radial-gradient(circle at 30% 25%,
+      color-mix(in srgb, var(--dist-color, #c9a84c) 22%, rgba(40,28,12,0.7)) 0%,
+      rgba(20,14,6,0.92) 70%);
+  border: 1.5px solid color-mix(in srgb, var(--dist-color, #c9a84c) 50%, var(--gold) 50%);
+  box-shadow:
+    /* inner highlight (top-left light) */
+    inset 0 1px 1px rgba(255,232,170,0.22),
+    /* inner deepening (bottom shadow) */
+    inset 0 -2px 5px rgba(0,0,0,0.55),
+    /* outer brass glow */
+    0 1px 3px rgba(0,0,0,0.55),
+    0 0 6px color-mix(in srgb, var(--dist-color, #c9a84c) 18%, transparent);
+}
+.cell-icon::before {
+  /* concentric inner ring — like an embossed coin edge */
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  border: 1px solid rgba(232,212,138,0.10);
+  pointer-events: none;
+}
+.cell-icon svg {
+  width: 56%; height: 56%;
+  color: rgba(232,212,138,0.92);
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
+  position: relative; z-index: 1;
+}
 
 .board-cell.side-top .cell-icon,
-.board-cell.side-bottom .cell-icon { width: 24px; height: 24px; }
+.board-cell.side-bottom .cell-icon { width: 28px; height: 28px; }
 
+/* Engraved name — Cinzel, uppercase, gold with subtle inset shadow */
 .cell-name {
-  font-weight: 600; font-size: 10px; letter-spacing: 0;
+  font-family: 'Cinzel', serif;
+  font-weight: 600; font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
   max-width: 100%; overflow: hidden;
   white-space: normal; word-break: normal; overflow-wrap: break-word; hyphens: auto;
-  line-height: 1.1; color: var(--text); padding: 0 2px; max-height: 2.4em; text-align: center;
+  line-height: 1.05; padding: 0 2px; max-height: 2.2em; text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  color: rgba(225,205,150,0.92);
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.6),
+    0 0 8px rgba(201,168,76,0.18);
 }
 .board-cell.side-top .cell-name,
 .board-cell.side-bottom .cell-name {
   font-size: 9px;
-  max-height: 2.2em;
+  max-height: 2em;
+  letter-spacing: 0.2px;
 }
+
+/* Price plate — recessed gold cartouche at the bottom of the cell */
 .cell-price {
-  font-size: 18px; color: var(--gold); font-weight: 700;
-  font-family: var(--font-display); letter-spacing: 0.5px;
-  text-shadow: 0 0 10px rgba(201,168,76,0.25);
+  font-size: 14px; color: #f0d275; font-weight: 700;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg,
+      rgba(48,34,12,0.55) 0%,
+      rgba(28,18,5,0.7) 60%,
+      rgba(18,10,2,0.75) 100%);
+  border: 1px solid rgba(201,168,76,0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,170,0.10),
+    inset 0 -1px 1px rgba(0,0,0,0.45),
+    0 1px 0 rgba(255,232,170,0.04);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.7), 0 0 8px rgba(232,212,138,0.18);
+  white-space: nowrap;
 }
 
 .board-cell.side-left .cell-content,
@@ -1420,11 +1861,29 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 .board-cell.side-right .cell-price { font-size: 16px; }
 
 /* District color bar */
-.district-bar { position: absolute; z-index: 2; }
-.board-cell.side-left .district-bar { left: 0; top: 0; bottom: 0; width: 4px; }
-.board-cell.side-right .district-bar { right: 0; top: 0; bottom: 0; width: 4px; }
-.board-cell.side-top .district-bar { top: 0; left: 0; right: 0; height: 4px; }
-.board-cell.side-bottom .district-bar { bottom: 0; left: 0; right: 0; height: 4px; }
+/* District ribbon — richer, embossed, sits on the inward edge of each cell */
+.district-bar {
+  position: absolute; z-index: 2;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bar-color, currentColor) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--bar-color, currentColor) 75%, black 25%) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 0 8px color-mix(in srgb, var(--bar-color, currentColor) 60%, transparent),
+    0 1px 2px rgba(0,0,0,0.6);
+}
+.board-cell.side-left .district-bar { left: 0; top: 0; bottom: 0; width: 5px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--bar-color, currentColor) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--bar-color, currentColor) 75%, black 25%) 100%);
+}
+.board-cell.side-right .district-bar { right: 0; top: 0; bottom: 0; width: 5px;
+  background: linear-gradient(270deg,
+    color-mix(in srgb, var(--bar-color, currentColor) 100%, white 0%) 0%,
+    color-mix(in srgb, var(--bar-color, currentColor) 75%, black 25%) 100%);
+}
+.board-cell.side-top .district-bar { top: 0; left: 0; right: 0; height: 5px; }
+.board-cell.side-bottom .district-bar { bottom: 0; left: 0; right: 0; height: 5px; }
 
 /* ============================================================
    PLAYER TOKENS — Premium glowing game pieces
@@ -2541,52 +3000,84 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
   overflow: visible;
   padding-right: 0;
 }
+/* "Where you are" — polaroid-style card with washi-tape corner accents.
+   Tone is set inline via --coach-tone (district color or special tile color). */
 .coach-card {
-  background: linear-gradient(145deg, rgba(16,18,36,0.97), rgba(8,10,22,0.97));
-  border: 1px solid rgba(72,78,128,0.28);
-  border-radius: var(--radius-xl);
-  padding: 12px 12px 10px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.03);
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(232,212,138,0.012) 0 2px,
+      transparent 2px 5px),
+    linear-gradient(160deg, rgba(28,22,12,0.97), rgba(14,10,4,0.98));
+  border: 1px solid color-mix(in srgb, var(--coach-tone, var(--gold)) 36%, rgba(201,168,76,0.22));
+  border-radius: 8px;
+  padding: 14px 14px 12px;
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.55),
+    0 14px 28px rgba(0,0,0,0.30),
+    inset 0 0 0 1px rgba(201,168,76,0.06),
+    inset 0 1px 0 rgba(255,232,170,0.07),
+    inset 0 0 24px color-mix(in srgb, var(--coach-tone, var(--gold)) 6%, transparent);
   position: relative;
   overflow: hidden;
+  margin-top: 6px;
 }
+/* Top "tape" accent — small gold strip above the kicker, centered */
 .coach-card::before {
   content: '';
   position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  top: -4px; left: 50%;
+  width: 60px; height: 8px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--coach-tone, var(--gold)) 70%, white 0%), color-mix(in srgb, var(--coach-tone, var(--gold)) 50%, black 30%));
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+  border-radius: 1px;
+  opacity: 0.7;
 }
 .coach-card-sector {
-  border-color: color-mix(in srgb, var(--coach-tone, var(--gold)) 34%, rgba(255,255,255,0.08));
-  box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+  border-color: color-mix(in srgb, var(--coach-tone, var(--gold)) 50%, rgba(201,168,76,0.30));
 }
 .coach-kicker {
-  color: rgba(255,255,255,0.42);
-  font-size: 9px;
-  letter-spacing: 2px;
+  color: color-mix(in srgb, var(--coach-tone, var(--gold)) 70%, rgba(232,212,138,0.7));
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 10px;
+  letter-spacing: 4px;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: 600;
 }
 .coach-title {
-  color: #f5eedb;
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.8px;
-  margin-bottom: 5px;
+  color: #f0e3c0;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 12px color-mix(in srgb, var(--coach-tone, var(--gold)) 30%, transparent);
 }
 .coach-subtitle {
-  color: var(--coach-tone, var(--gold));
-  font-size: 10px;
-  font-weight: 700;
-  margin-bottom: 5px;
+  color: color-mix(in srgb, var(--coach-tone, var(--gold)) 80%, white 0%);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 .coach-text {
-  color: rgba(255,255,255,0.72);
-  font-size: 10px;
-  line-height: 1.4;
+  color: rgba(220,200,160,0.80);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 12px;
+  line-height: 1.45;
   margin: 0;
+  text-align: center;
+  font-weight: 500;
+  border-top: 1px solid rgba(201,168,76,0.14);
+  padding-top: 8px;
 }
 
 /* ============================================================
@@ -2595,16 +3086,39 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 
 /* Cards panel */
 .cards-panel { flex: 1 1 0; overflow-y: auto; min-height: 140px; }
+/* Dossier section header — Cinzel uppercase, ornamental gold under-rule */
 .cards-panel h3 {
-  font-size: 12px; color: var(--purple-light); margin-bottom: 12px;
-  letter-spacing: 2px; text-transform: uppercase;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(155,89,182,0.12);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: rgba(232,212,138,0.85);
+  margin: 14px 0 10px;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: none;
   position: relative;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 0 10px rgba(201,168,76,0.20);
+}
+/* Decorative under-rule with diamond center — like a section divider in
+   a vintage menu */
+.cards-panel h3::before {
+  content: '';
+  position: absolute; left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 80%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.5) 50%, transparent);
 }
 .cards-panel h3::after {
-  content: ''; position: absolute; bottom: -1px; left: 0; width: 40px; height: 1px;
-  background: var(--purple-light); opacity: 0.5;
+  content: '◆';
+  position: absolute; left: 50%; bottom: -7px;
+  transform: translateX(-50%);
+  font-size: 8px;
+  color: var(--gold);
+  background: var(--bg, #050409);
+  padding: 0 6px;
+  text-shadow: 0 0 8px rgba(201,168,76,0.5);
 }
 .cards-list { display: flex; flex-direction: column; gap: 5px; }
 
@@ -2691,23 +3205,55 @@ body.is-game-active .btn-mobile-panel { display: none !important; }
 .biz-influence-bar { height: 3px; border-radius: 2px; margin-top: 6px; background: rgba(255,255,255,0.06); overflow: hidden; margin-left: 20px; }
 .biz-influence-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; background: linear-gradient(90deg, rgba(201,168,76,0.4), rgba(201,168,76,0.7)); box-shadow: 0 0 4px rgba(201,168,76,0.3); }
 
-/* Game log — Readable timeline */
-.game-log { max-height: 220px; overflow-y: auto; flex-shrink: 0; }
+/* Game log — Newspaper-style chronicle */
+.game-log { max-height: 220px; overflow-y: auto; flex-shrink: 0; margin-top: 4px; }
 .game-log h3 {
-  font-size: 11px; color: var(--text-muted); margin-bottom: 8px;
-  letter-spacing: 2px; text-transform: uppercase; padding-bottom: 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: rgba(232,212,138,0.85);
+  margin: 14px 0 10px;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: none;
+  position: relative;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.6), 0 0 10px rgba(201,168,76,0.20);
 }
-#log-entries { display: flex; flex-direction: column; gap: 3px; }
+.game-log h3::before {
+  content: '';
+  position: absolute; left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 80%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.5) 50%, transparent);
+}
+.game-log h3::after {
+  content: '◆';
+  position: absolute; left: 50%; bottom: -7px;
+  transform: translateX(-50%);
+  font-size: 8px;
+  color: var(--gold);
+  background: var(--bg, #050409);
+  padding: 0 6px;
+  text-shadow: 0 0 8px rgba(201,168,76,0.5);
+}
+#log-entries { display: flex; flex-direction: column; gap: 4px; }
 .log-entry {
-  font-size: 10px; color: var(--text-dim); padding: 7px 11px;
-  border-radius: var(--radius-md);
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.02);
-  border-left: 3px solid rgba(201,168,76,0.12);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 12px;
+  color: rgba(220,200,160,0.78);
+  padding: 6px 10px 6px 12px;
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(28,22,12,0.55), rgba(14,10,4,0.65));
+  border: 1px solid rgba(201,168,76,0.10);
+  border-left: 2px solid rgba(201,168,76,0.30);
   animation: logSlide 0.35s ease-out; transition: all 0.15s;
-  line-height: 1.4;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  line-height: 1.45;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(232,212,138,0.04);
+  font-weight: 500;
+  font-style: italic;
 }
 .log-entry:first-child { color: var(--text-secondary); background: rgba(201,168,76,0.04); border-left-color: rgba(201,168,76,0.4); border-color: rgba(201,168,76,0.06); box-shadow: 0 1px 4px rgba(0,0,0,0.15), 0 0 6px rgba(201,168,76,0.03); }
 .log-entry:hover { background: rgba(255,255,255,0.035); border-color: rgba(255,255,255,0.04); }
