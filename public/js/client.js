@@ -1379,11 +1379,12 @@ function hideEventDisplay() {
 // ===== CENTER INFO (dice, movement, events shown in board center) =====
 function buildDiceHtml(dice) {
   const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
-  let diceHtml = '<div class="ci-dice">';
-  dice.forEach((d) => {
-    diceHtml += '<div class="ci-die">';
+  let diceHtml = '<div class="ci-dice ci-dice-3d">';
+  dice.forEach((d, index) => {
+    const tilt = index % 2 === 0 ? -8 : 7;
+    diceHtml += `<div class="ci-die ci-die-${d}" style="--die-tilt:${tilt}deg;--die-delay:${index * 90}ms">`;
     for (let i = 1; i <= 9; i++) {
-      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
+      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div class="ci-slot"></div>';
     }
     diceHtml += '</div>';
   });
