@@ -1050,6 +1050,34 @@ function armHumanPendingActionTimeout(roomId, game) {
       }
     }, ms);
     pendingActionTimers.set(roomId, { timer, action });
+    return;
+  }
+
+  // bomb_choose_helper: AFK target loses a random helper and the deferred
+  // landing resumes. Without this the turn-timer just nukes pendingAction
+  // and the player's step never resolves (no rent paid, no card drawn, etc.).
+  if (action.type === 'bomb_choose_helper' && action.playerId) {
+    const victim = game.getPlayer(action.playerId);
+    if (!victim || victim.isBot) return;
+    const ms = victim.disconnected ? 2500 : 15000;
+    const timer = setTimeout(() => {
+      pendingActionTimers.delete(roomId);
+      if (!game.pendingAction || game.pendingAction !== action) return;
+      try {
+        if (victim.helpers && victim.helpers.length > 0) {
+          const helper = victim.helpers.shift();
+          game.returnHelperToDeck(helper);
+          game.addLog(`${helper.name} (${victim.name}) загинув від вибуху бомби — час на вибір вийшов.`);
+        }
+        game.pendingAction = null;
+        // Resume the landing that the bomb interrupted
+        try { game.resolveDeferredLanding(victim.id); } catch (_) {}
+        broadcastState(roomId);
+      } catch (err) {
+        console.error('bomb_choose_helper timeout error:', err.message, err.stack);
+      }
+    }, ms);
+    pendingActionTimers.set(roomId, { timer, action });
   }
 }
 
@@ -1240,6 +1268,17 @@ function startTurnTimer(roomId) {
           }
           else if (action.type === 'event_confirm') game.executeEventConfirm(current.id);
           else if (action.type === 'mafia_confirm') game.executeMafiaConfirm(current.id);
+          else if (action.type === 'bomb_choose_helper' && action.playerId === current.id) {
+            // Without this the deferred-landing chain is lost when turn timer
+            // beats armHumanPendingActionTimeout.
+            if (current.helpers && current.helpers.length > 0) {
+              const helper = current.helpers.shift();
+              game.returnHelperToDeck(helper);
+              game.addLog(`${helper.name} (${current.name}) загинув від вибуху бомби — час вийшов.`);
+            }
+            game.pendingAction = null;
+            try { game.resolveDeferredLanding(current.id); } catch (_) {}
+          }
           else game.pendingAction = null;
         }
         if (game.turnPhase === 'roll') {
@@ -2246,12 +2285,10 @@ io.on('connection', (socket) => {
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
 
-    const player = game.players.find(p => p.rejoinToken === rejoinToken)
-      || game.players.find(p => p.name === playerName);
-    if (!player) return cb({ error: 'Гравця не знайдено.' });
-    if (!player.rejoinToken || player.rejoinToken !== rejoinToken) {
-      return cb({ error: 'Невірний токен перепідключення.' });
-    }
+    // Match strictly by token. (A name-only fallback would be useless anyway —
+    // the token check below rejects it — but it makes the intent clearer.)
+    const player = game.players.find(p => p.rejoinToken === rejoinToken);
+    if (!player) return cb({ error: 'Невірний токен перепідключення.' });
 
     // Find disconnect record by direct key (O(1) — player.id still holds old socketId
     // at this point because rejoin hasn't run yet)
@@ -2334,6 +2371,9 @@ io.on('connection', (socket) => {
               }
               player.businesses = [];
               player.helpers = [];
+              if (Array.isArray(game.bombs) && game.bombs.length) {
+                game.bombs = game.bombs.filter(b => b.placedBy !== player.id);
+              }
               game.addLog(`${player.name} не повернувся. Вибуває з гри, його бізнеси повертаються на ринок.`);
               const alive = game.getAlivePlayers();
               if (alive.length === 1 && game.phase === 'playing') {
@@ -2375,6 +2415,9 @@ io.on('connection', (socket) => {
           }
           player.businesses = [];
           player.helpers = [];
+          if (Array.isArray(game.bombs) && game.bombs.length) {
+            game.bombs = game.bombs.filter(b => b.placedBy !== player.id);
+          }
           const alive = game.getAlivePlayers();
           if (alive.length === 1 && game.phase === 'playing') {
             game.phase = 'finished';

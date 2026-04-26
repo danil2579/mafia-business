@@ -37,7 +37,7 @@ const DISTRICTS = [
     id: 'trushchoby', name: 'Трущоби', color: '#4a6741',
     influenceCost: 300,
     businesses: [
-      { id: 'kiosk', name: 'Газетний кіоск', price: 900, rent: [400, 900, 1300] },
+      { id: 'kiosk', name: 'Газетний кіоск', shortName: 'Кіоск', price: 900, rent: [400, 900, 1300] },
       { id: 'shawarma', name: 'Шаурмічна', price: 950, rent: [450, 950, 1400] },
       { id: 'lombard', name: 'Ломбард', price: 1000, rent: [500, 1000, 1500] }
     ]
@@ -57,16 +57,16 @@ const DISTRICTS = [
     businesses: [
       { id: 'pitseria', name: 'Піцерія', price: 1400, rent: [700, 1400, 2100] },
       { id: 'apteka', name: 'Аптека', price: 1500, rent: [750, 1500, 2250] },
-      { id: 'supermarket', name: 'Супермаркет', price: 1600, rent: [800, 1600, 2400] }
+      { id: 'supermarket', name: 'Супермаркет', shortName: 'Маркет', price: 1600, rent: [800, 1600, 2400] }
     ]
   },
   {
     id: 'promzona', name: 'Промзона', color: '#7f8c8d',
     influenceCost: 900,
     businesses: [
-      { id: 'avtoservis', name: 'Автосервіс', price: 1700, rent: [850, 1700, 2550] },
-      { id: 'sklad', name: 'Склад контрабанди', price: 1800, rent: [900, 1800, 2700] },
-      { id: 'drukarnya', name: 'Друкарня грошей', price: 1900, rent: [950, 1900, 2850] }
+      { id: 'avtoservis', name: 'Автосервіс', shortName: 'Сервіс', price: 1700, rent: [850, 1700, 2550] },
+      { id: 'sklad', name: 'Склад контрабанди', shortName: 'Склад', price: 1800, rent: [900, 1800, 2700] },
+      { id: 'drukarnya', name: 'Друкарня грошей', shortName: 'Друкарня', price: 1900, rent: [950, 1900, 2850] }
     ]
   },
   {
@@ -91,9 +91,9 @@ const DISTRICTS = [
     id: 'red_light', name: 'Район Червоних Ліхтарів', color: '#c0392b',
     influenceCost: 1500,
     businesses: [
-      { id: 'night_club', name: 'Нічний клуб', price: 2500, rent: [1250, 2500, 3800] },
+      { id: 'night_club', name: 'Нічний клуб', shortName: 'Клуб', price: 2500, rent: [1250, 2500, 3800] },
       { id: 'lounge_bar', name: 'Лаунж-бар', price: 2600, rent: [1300, 2600, 3900] },
-      { id: 'casino', name: 'Казино Рояль', price: 2700, rent: [1350, 2700, 4050] }
+      { id: 'casino', name: 'Казино Рояль', shortName: 'Казино', price: 2700, rent: [1350, 2700, 4050] }
     ]
   },
   {

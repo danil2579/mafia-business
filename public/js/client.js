@@ -38,6 +38,23 @@ const socket = io();
   });
 })();
 
+// Money / number formatting — Ukrainian style: thin space thousands separator,
+// "$" suffix. Used everywhere instead of bare ${x}$ template literals.
+const MONEY_NF = new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 0 });
+function fmtNum(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '0';
+  return MONEY_NF.format(Math.round(v));
+}
+function fmtMoney(n) {
+  return fmtNum(n) + '$';
+}
+function fmtSignedMoney(n) {
+  const v = Number(n) || 0;
+  const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+  return sign + fmtNum(Math.abs(v)) + '$';
+}
+
 let myId = null;
 let myRoomId = null;
 let gameState = null;
@@ -455,7 +472,7 @@ function showCardPlayFX(cardId, res) {
   switch (cardId) {
     case 'tax_collector':
       FX.burst({ icon: '💰', title: 'ЗБИРАЧ ДАНИНИ',
-        subtitle: res.amount ? `Зібрано ${res.amount}$` : 'Усі платять',
+        subtitle: res.amount ? `Зібрано ${fmtMoney(res.amount)}` : 'Усі платять',
         color: '#f1c40f', duration: 2200, sound: () => SFX.payRent() });
       break;
     case 'sabotage':
@@ -465,7 +482,7 @@ function showCardPlayFX(cardId, res) {
       break;
     case 'blackmail':
       FX.burst({ icon: '✉', title: 'ШАНТАЖ',
-        subtitle: res.amount ? `Здобуто ${res.amount}$` : 'Жертва заплатила',
+        subtitle: res.amount ? `Здобуто ${fmtMoney(res.amount)}` : 'Жертва заплатила',
         color: '#9b59b6', duration: 2200, sound: () => SFX.payRent() });
       break;
     case 'rumors':
@@ -509,11 +526,11 @@ function showCardPlayFX(cardId, res) {
       FX.toast('🛡', '2 ходи недоторканності', '#3498db', 2400);
       break;
     case 'insurance':
-      FX.toast('🧾', res.amount ? `Повернуто ${res.amount}$` : 'Страховка спрацювала', '#2ecc71', 2400);
+      FX.toast('🧾', res.amount ? `Повернуто ${fmtMoney(res.amount)}` : 'Страховка спрацювала', '#2ecc71', 2400);
       break;
     case 'hostile_takeover':
       FX.burst({ icon: '🏢', title: 'ВОРОЖЕ ПОГЛИНАННЯ',
-        subtitle: res.cost ? `Сплачено ${res.cost}$` : 'Бізнес ваш',
+        subtitle: res.cost ? `Сплачено ${fmtMoney(res.cost)}` : 'Бізнес ваш',
         color: '#c9a84c', duration: 2400, sound: () => SFX.buy() });
       break;
     case 'lucky_shirt':
@@ -571,7 +588,32 @@ const SPECIAL_ICONS = {
 function showScreen(screen) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   screen.classList.add('active');
+  // Mark body when game screen is showing so the fit-to-window
+  // scaling CSS / overflow:hidden activates.
+  const isGame = screen && screen.id === 'game-screen';
+  document.body.classList.toggle('is-game-active', !!isGame);
+  if (isGame) updateGameScale();
 }
+
+// ===== FIT-TO-WINDOW SCALING =====
+// Game UI is laid out on a 1440×900 design canvas and scaled to fit the
+// viewport so panels + board shrink together (instead of squeezing only
+// the center board). At ≥ 1440×900 the scale is 1 (no upscale).
+const DESIGN_W = 1440;
+const DESIGN_H = 900;
+function updateGameScale() {
+  const root = document.documentElement;
+  // Available height excludes nothing — game-screen is fixed-positioned and
+  // covers full viewport, so it must fit window.innerHeight precisely.
+  const sw = window.innerWidth / DESIGN_W;
+  const sh = window.innerHeight / DESIGN_H;
+  const scale = Math.min(1, sw, sh);
+  root.style.setProperty('--game-scale', scale.toFixed(4));
+}
+window.addEventListener('resize', updateGameScale);
+window.addEventListener('orientationchange', updateGameScale);
+// Initial value before the user enters the game (in case CSS reads it earlier)
+updateGameScale();
 
 // ===== MODE SELECTOR =====
 if (!isTVMode && !isPhoneMode) {
@@ -915,7 +957,7 @@ socket.on('attackOutcome', (result) => {
       }
       break;
     case 'attack_bought_off':
-      showAttackEffect('money', 'ВІДКУП!', `Заплачено ${result.cost}$`, '#f1c40f');
+      showAttackEffect('money', 'ВІДКУП!', `Заплачено ${fmtMoney(result.cost)}`, '#f1c40f');
       break;
     case 'attack_survived':
       if (result.by === 'survivor_joe') {
@@ -1287,17 +1329,18 @@ function renderCellInner(cell, sector, state, side) {
     iconDiv.innerHTML = BIZ_ICONS[bizId] || '';
     content.appendChild(iconDiv);
 
-    // Name
+    // Name (use shortName for tight cells if defined, fall back to full name)
     const nameDiv = document.createElement('div');
     nameDiv.className = 'cell-name';
-    nameDiv.textContent = biz.name;
+    nameDiv.textContent = biz.shortName || biz.name;
+    nameDiv.title = biz.name; // tooltip with full name on hover
     if (district.color) nameDiv.style.color = district.color;
     content.appendChild(nameDiv);
 
     // Price
     const priceDiv = document.createElement('div');
     priceDiv.className = 'cell-price';
-    priceDiv.textContent = biz.price + '$';
+    priceDiv.textContent = fmtMoney(biz.price);
     content.appendChild(priceDiv);
 
     cell.appendChild(content);
@@ -1343,8 +1386,8 @@ function onCellClick(sector) {
     const ownerName = bizState.owner ? gameState.players.find(p => p.id === bizState.owner)?.name : 'Вільний';
     showEventDisplay(`
       <h3 style="color:${district.color}">${biz.name}</h3>
-      <p>${district.name} | Ціна: ${biz.price}$</p>
-      <p>Рента: ${biz.rent.join(' / ')}$</p>
+      <p>${district.name} | Ціна: ${fmtMoney(biz.price)}</p>
+      <p>Рента: ${biz.rent.map(r => fmtNum(r)).join(' / ')}$</p>
       <p>Власник: ${ownerName}</p>
     `);
   } else {
@@ -1374,20 +1417,28 @@ function hideEventDisplay() {
 }
 
 // ===== CENTER INFO (dice, movement, events shown in board center) =====
+// Pip layout used by both renderDieFace and the dice tumble loop.
+const DICE_PIP_LAYOUTS = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
+function renderDieFace(value) {
+  let html = '';
+  const layout = DICE_PIP_LAYOUTS[value] || [];
+  for (let i = 1; i <= 9; i++) {
+    html += layout.includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
+  }
+  return html;
+}
+
 function showCenterInfo(playerName, dice, total, oldPos, newPos, landingSector) {
   const info = $('#center-info');
   if (!info) return;
   info.classList.add('center-info-compact');
 
-  // Build dice display
-  const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
-  let diceHtml = '<div class="ci-dice">';
-  for (const d of dice) {
-    diceHtml += '<div class="ci-die">';
-    for (let i = 1; i <= 9; i++) {
-      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
-    }
-    diceHtml += '</div>';
+  // Build dice display — each die starts with a random face, the tumble
+  // animation cycles random faces during the spin, then settles on dice[i].
+  let diceHtml = '<div class="ci-dice rolling">';
+  for (let i = 0; i < dice.length; i++) {
+    const start = 1 + Math.floor(Math.random() * 6);
+    diceHtml += `<div class="ci-die" data-target="${dice[i]}">${renderDieFace(start)}</div>`;
   }
   diceHtml += '</div>';
 
@@ -1412,9 +1463,35 @@ function showCenterInfo(playerName, dice, total, oldPos, newPos, landingSector) 
   `;
   info.style.display = 'block';
 
+  // Tumble: cycle random faces during the spin, settle on real values.
+  startDiceTumble(info, dice);
+
   // Auto-hide after 4 seconds
   clearTimeout(info._hideTimer);
   info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 4000);
+}
+
+function startDiceTumble(infoEl, dice) {
+  const wrap = infoEl.querySelector('.ci-dice');
+  if (!wrap) return;
+  const dieEls = wrap.querySelectorAll('.ci-die');
+  let elapsed = 0;
+  const interval = setInterval(() => {
+    elapsed += 70;
+    for (const die of dieEls) {
+      die.innerHTML = renderDieFace(1 + Math.floor(Math.random() * 6));
+    }
+  }, 70);
+  // Settle when CSS tumble finishes
+  setTimeout(() => {
+    clearInterval(interval);
+    wrap.classList.remove('rolling');
+    dieEls.forEach((die, i) => {
+      die.innerHTML = renderDieFace(dice[i]);
+      die.classList.add('settled');
+      setTimeout(() => die.classList.remove('settled'), 380);
+    });
+  }, 620);
 }
 
 function showOtherPlayerRoll(playerName, dice, total) {
@@ -1422,14 +1499,10 @@ function showOtherPlayerRoll(playerName, dice, total) {
   if (!info || !Array.isArray(dice) || dice.length < 2) return;
   info.classList.add('center-info-compact');
 
-  const pipLayouts = { 1: [5], 2: [3,7], 3: [3,5,7], 4: [1,3,7,9], 5: [1,3,5,7,9], 6: [1,3,4,6,7,9] };
-  let diceHtml = '<div class="ci-dice">';
-  for (const d of dice) {
-    diceHtml += '<div class="ci-die">';
-    for (let i = 1; i <= 9; i++) {
-      diceHtml += (pipLayouts[d] || []).includes(i) ? '<div class="ci-pip"></div>' : '<div></div>';
-    }
-    diceHtml += '</div>';
+  let diceHtml = '<div class="ci-dice rolling">';
+  for (let i = 0; i < dice.length; i++) {
+    const start = 1 + Math.floor(Math.random() * 6);
+    diceHtml += `<div class="ci-die" data-target="${dice[i]}">${renderDieFace(start)}</div>`;
   }
   diceHtml += '</div>';
 
@@ -1439,8 +1512,9 @@ function showOtherPlayerRoll(playerName, dice, total) {
     <div class="ci-text">Кубики: ${dice[0]} + ${dice[1]} = ${total}</div>
   `;
   info.style.display = 'block';
+  startDiceTumble(info, dice);
   clearTimeout(info._hideTimer);
-  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 2200);
+  info._hideTimer = setTimeout(() => { info.style.display = 'none'; }, 2400);
 }
 
 function showPublicEventReveal(type, data) {
@@ -1487,12 +1561,12 @@ function renderPublicEventReveal(type, data) {
         ? 'Прохідний бонус'
         : (data.jackpot ? 'MAFIA JACKPOT' : `${data.colorName || 'Сектор'} рулетки`);
   const amount = isBusiness
-    ? `-${data.amount}$`
+    ? `−${fmtMoney(data.amount)}`
     : isBribe
-      ? `-${data.amount}$`
+      ? `−${fmtMoney(data.amount)}`
       : isStart
-        ? `+${data.amount}$`
-        : (data.jackpot ? 'JACKPOT' : (data.won ? `+${data.winnings}$` : `-${data.lost}$`));
+        ? `+${fmtMoney(data.amount)}`
+        : (data.jackpot ? 'JACKPOT' : (data.won ? `+${fmtMoney(data.winnings)}` : `−${fmtMoney(data.lost)}`));
   const tag = isBusiness
     ? (data.source === 'auction' ? 'АУКЦІОН' : (data.source === 'seize' ? 'ЗАХОПЛЕННЯ' : 'КУПІВЛЯ'))
     : isBribe
@@ -1654,6 +1728,53 @@ function hideCenterPanel() {
   }
 }
 
+// ===== ESC-TO-CLOSE & overlay click-to-close =====
+// Closes any dismissible UI: tooltip modals, player profile, center panel,
+// chat panel. Pending actions (buy, attack reaction, etc.) stay open because
+// dismissing them would silently break the turn flow — those have their own
+// timer-based fallbacks on the server.
+(function initEscClose() {
+  const closeDismissible = () => {
+    // Player profile overlay
+    const pp = document.querySelector('.player-profile-overlay.active');
+    if (pp) { pp.classList.remove('active'); setTimeout(() => pp.remove(), 250); return true; }
+    // Generic modal (target selection, multi-choice prompts)
+    const modal = document.getElementById('modal-overlay');
+    if (modal && modal.classList.contains('active')) {
+      // Only close if no pending action currently — if there's a pending
+      // action the modal IS the way to resolve it; closing it leaves the
+      // user stuck. Server timeouts will resolve eventually.
+      const hasPending = !!(window.gameState && gameState.pendingAction);
+      if (!hasPending) { hideModal(); return true; }
+    }
+    // Chat panel (toggle off)
+    const chat = document.getElementById('chat-panel');
+    if (chat && chat.classList.contains('open')) {
+      chat.classList.remove('open');
+      return true;
+    }
+    return false;
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      if (closeDismissible()) e.preventDefault();
+    }
+  });
+  // Click outside the modal box to close (overlay only, not the box itself)
+  document.addEventListener('click', (e) => {
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay && overlay.classList.contains('active') && e.target === overlay) {
+      const hasPending = !!(window.gameState && gameState.pendingAction);
+      if (!hasPending) hideModal();
+    }
+    const pp = document.querySelector('.player-profile-overlay.active');
+    if (pp && e.target === pp) {
+      pp.classList.remove('active');
+      setTimeout(() => pp.remove(), 250);
+    }
+  });
+})();
+
 // ===== JACKPOT CHOOSE BUSINESS OVERLAY =====
 function showJackpotChooseOverlay(state) {
   const overlay = document.createElement('div');
@@ -1692,7 +1813,7 @@ function showJackpotChooseOverlay(state) {
       card.innerHTML = `
         <div class="jbc-district" style="color:${district.color}">${district.name}</div>
         <div class="jbc-name">${biz.name}</div>
-        <div class="jbc-price">${biz.price}$</div>
+        <div class="jbc-price">${fmtMoney(biz.price)}</div>
         ${ownerPlayer ? `<div class="jbc-owner">${ownerPlayer.name}</div>` : '<div class="jbc-free">Вільний</div>'}
       `;
       card.addEventListener('click', () => {
@@ -1709,7 +1830,7 @@ function showJackpotChooseOverlay(state) {
 // ===== BUSINESS PURCHASE CARD =====
 function showBusinessCard(action) {
   const panel = $('#center-panel');
-  const rentStr = action.rent ? action.rent.join(' / ') + '$' : '';
+  const rentStr = action.rent ? action.rent.map(r => fmtNum(r)).join(' / ') + '$' : '';
   const color = action.districtColor || 'var(--gold)';
   panel.innerHTML = `
     <div class="biz-purchase-card" style="--bpc-color:${color}">
@@ -1718,12 +1839,12 @@ function showBusinessCard(action) {
       <div class="bpc-name">${action.name}</div>
       <div class="bpc-divider"></div>
       <div class="bpc-details">
-        <div class="bpc-row"><span>Вартість</span><span class="bpc-val">${action.price}$</span></div>
+        <div class="bpc-row"><span>Вартість</span><span class="bpc-val">${fmtMoney(action.price)}</span></div>
         ${rentStr ? `<div class="bpc-row"><span>Рента</span><span class="bpc-val">${rentStr}</span></div>` : ''}
-        ${action.influenceCost ? `<div class="bpc-row"><span>Вплив</span><span class="bpc-val">${action.influenceCost}$</span></div>` : ''}
+        ${action.influenceCost ? `<div class="bpc-row"><span>Вплив</span><span class="bpc-val">${fmtMoney(action.influenceCost)}</span></div>` : ''}
       </div>
       <div class="center-buttons">
-        <button class="btn btn-primary" id="bpc-buy">Купити (${action.price}$)</button>
+        <button class="btn btn-primary" id="bpc-buy">Купити (${fmtMoney(action.price)})</button>
         <button class="btn btn-secondary" id="bpc-auction">Аукціон</button>
       </div>
     </div>
@@ -2434,7 +2555,7 @@ function showRentPaymentEffect(payerName, payerChar, ownerName, ownerChar, amoun
       <div class="rent-money-coin rent-coin-3">$</div>
       <div class="rent-arrow">→</div>
     </div>
-    <div class="rent-amount">-${amount}$</div>
+    <div class="rent-amount">−${fmtMoney(amount)}</div>
   `;
 
   // Owner avatar (right)
@@ -2502,10 +2623,10 @@ function showVictoryScreen(state) {
   const breakdown = winner.victoryBreakdown || {};
   $('#victory-name').textContent = winner.name;
   $('#victory-stats').innerHTML = `
-    <div class="stat-row"><span class="stat-label">Гроші</span><span class="stat-value">${winner.money}$</span></div>
+    <div class="stat-row"><span class="stat-label">Гроші</span><span class="stat-value">${fmtMoney(winner.money)}</span></div>
     <div class="stat-row"><span class="stat-label">Бізнеси</span><span class="stat-value">${winner.businessCount || 0}</span></div>
-    <div class="stat-row"><span class="stat-label">Вплив</span><span class="stat-value">${breakdown.influenceValue || 0}$</span></div>
-    <div class="stat-row"><span class="stat-label">Підсумок</span><span class="stat-value">${winner.victoryScore || winner.money || 0}$</span></div>
+    <div class="stat-row"><span class="stat-label">Вплив</span><span class="stat-value">${fmtMoney(breakdown.influenceValue || 0)}</span></div>
+    <div class="stat-row"><span class="stat-label">Підсумок</span><span class="stat-value">${fmtMoney(winner.victoryScore || winner.money || 0)}</span></div>
     <div class="stat-row"><span class="stat-label">Повага</span><span class="stat-value">${winner.respectName || '???'} (Lv.${winner.respectLevel || 1})</span></div>
     <div class="stat-row"><span class="stat-label">Помічники</span><span class="stat-value">${winner.helpers ? winner.helpers.length : (winner.helperCount || 0)}</span></div>
   `;
@@ -2553,7 +2674,7 @@ function renderPlayerPanels(state) {
           <div class="pp-name">${p.name} ${isCurrent ? '◀' : ''} ${p.id === myId ? '(Ви)' : ''}</div>
           <div class="pp-respect">${p.respectName} (Lv.${p.respectLevel})</div>
         </div>
-        <div class="pp-money">${p.money}$</div>
+        <div class="pp-money">${fmtMoney(p.money)}</div>
       </div>
       <div class="pp-details">
         ${p.inPrison > 0 ? `<span class="pp-tag prison">${ICON.chain} ${p.inPrison} ходів</span>` : ''}
@@ -2595,12 +2716,12 @@ function showPlayerProfile(player, state) {
           ${isCurrent ? '<span class="ppr-badge">ЗАРАЗ</span>' : ''}
         </div>
         <div class="ppr-lvl-perks">
-          <span>Бонус START: ${lvl.startBonus}$</span>
+          <span>Бонус START: ${fmtMoney(lvl.startBonus)}</span>
           <span>Помічників: ${lvl.maxHelpers}</span>
-          ${lvl.attackDiscount ? `<span>Знижка атак: -${lvl.attackDiscount}$</span>` : ''}
+          ${lvl.attackDiscount ? `<span>Знижка атак: −${fmtMoney(lvl.attackDiscount)}</span>` : ''}
           ${lvl.canBuyOff ? '<span>Можна відкупитись від замахів</span>' : ''}
         </div>
-        ${!isPast && !isCurrent && lvl.upgradeCost ? `<div class="ppr-cost">Вартість: ${lvl.upgradeCost}$</div>` : ''}
+        ${!isPast && !isCurrent && lvl.upgradeCost ? `<div class="ppr-cost">Вартість: ${fmtMoney(lvl.upgradeCost)}</div>` : ''}
       </div>
     `;
   }
@@ -2664,7 +2785,7 @@ function showPlayerProfile(player, state) {
         <div>
           <div class="pp-profile-name">${player.name}</div>
           <div class="pp-profile-respect">${currentLvl.name || ''} · Рівень ${player.respectLevel}</div>
-          <div class="pp-profile-money">${player.money}$</div>
+          <div class="pp-profile-money">${fmtMoney(player.money)}</div>
         </div>
       </div>
 
@@ -2713,7 +2834,7 @@ function showMoneyAnimation(playerId, diff) {
 
   const floater = document.createElement('div');
   floater.className = `money-float ${diff > 0 ? 'money-gain' : 'money-loss'}`;
-  floater.textContent = `${diff > 0 ? '+' : ''}${diff}$`;
+  floater.textContent = fmtSignedMoney(diff);
   moneyEl.style.position = 'relative';
   moneyEl.appendChild(floater);
 
@@ -2723,7 +2844,7 @@ function showMoneyAnimation(playerId, diff) {
     if (topMoney) {
       const topFloater = document.createElement('div');
       topFloater.className = `money-float ${diff > 0 ? 'money-gain' : 'money-loss'}`;
-      topFloater.textContent = `${diff > 0 ? '+' : ''}${diff}$`;
+      topFloater.textContent = fmtSignedMoney(diff);
       topMoney.style.position = 'relative';
       topMoney.appendChild(topFloater);
       setTimeout(() => topFloater.remove(), 2000);
@@ -2737,7 +2858,7 @@ function showMoneyAnimation(playerId, diff) {
 function renderTopBar(state) {
   const me = state.players.find(p => p.id === myId);
   if (me) {
-    $('#my-money').textContent = `${me.money}$`;
+    $('#my-money').textContent = fmtMoney(me.money);
   }
   const current = state.players[state.currentPlayerIndex];
   if (current) {
@@ -2915,7 +3036,7 @@ function renderActionPanel(state) {
             const bs = state.businesses[bizId];
             const cost = dist ? dist.influenceCost : 0;
             return {
-              text: `${biz ? biz.name : bizId} (★${bs.influenceLevel || 0}) — ${cost}$`,
+              text: `${biz ? biz.name : bizId} (★${bs.influenceLevel || 0}) — ${fmtMoney(cost)}`,
               action: () => {
                 SFX.buy();
                 socket.emit('useHelperAbility', { ability: 'buyInfluenceAnywhere', data: { businessId: bizId } }, handleResult);
@@ -3072,7 +3193,7 @@ function renderMyBusinesses(state) {
         <span class="biz-card-name">${biz.name}</span>
         <span class="biz-card-stars">${stars}</span>
       </div>
-      <div class="biz-card-info">${district.name} · Рента: ${biz.rent.join('/')}</div>
+      <div class="biz-card-info">${district.name} · Рента: ${biz.rent.map(r => fmtNum(r)).join('/')}</div>
     `;
     list.appendChild(el);
   }
@@ -3092,7 +3213,7 @@ function renderMafiaCards(state) {
     el.className = `mafia-card ${card.type} ${locked ? 'locked' : ''}`;
     el.innerHTML = `
       <div class="mc-name">${card.name}</div>
-      ${card.cost > 0 ? `<div class="mc-cost">${card.cost}$</div>` : ''}
+      ${card.cost > 0 ? `<div class="mc-cost">${fmtMoney(card.cost)}</div>` : ''}
       <div class="mc-desc">${card.description}</div>
       ${locked ? `<div class="mc-locked">${ICON.lock} з ${state.mafiaCardMinRound}-го кола</div>` : ''}
     `;
@@ -3283,9 +3404,9 @@ function handlePendingAction(state) {
       SFX.event();
       showCenterPanel(
         `${ICON.lock} ${action.ownerName} у в'язниці!`,
-        `${action.name} без захисту. Купити за ${action.price}$?`,
+        `${action.name} без захисту. Купити за ${fmtMoney(action.price)}?`,
         [
-          { text: `Захопити (${action.price}$)`, action: () => {
+          { text: `Захопити (${fmtMoney(action.price)})`, action: () => {
             SFX.buy();
             socket.emit('resolveAction', { actionType: 'seize_prison_business', data: { businessId: action.businessId, buy: true } }, handleResult);
             hideCenterPanel();
@@ -3300,8 +3421,8 @@ function handlePendingAction(state) {
 
     case 'pay_rent':
       SFX.payRent();
-      showCenterPanel('Оплата рахунків', `${action.businessName}: ${action.amount}$`, [
-        { text: `Заплатити ${action.amount}$`, action: () => {
+      showCenterPanel('Оплата рахунків', `${action.businessName}: ${fmtMoney(action.amount)}`, [
+        { text: `Заплатити ${fmtMoney(action.amount)}`, action: () => {
           socket.emit('resolveAction', { actionType: 'pay_rent', data: { useRobbery: false } }, handleResult);
           hideCenterPanel();
         }},
@@ -3313,7 +3434,7 @@ function handlePendingAction(state) {
           }, cls: 'btn-danger'
         }] : []),
         ...(action.canBuyout ? [{
-          text: `${ICON.building} Викупити (${action.buyoutPrice}$)`, action: () => {
+          text: `${ICON.building} Викупити (${fmtMoney(action.buyoutPrice)})`, action: () => {
             SFX.buy();
             socket.emit('resolveAction', { actionType: 'buyout_business', data: { businessId: action.businessId } }, handleResult);
             hideCenterPanel();
@@ -3395,7 +3516,7 @@ function handlePendingAction(state) {
 
     case 'hire_another':
       showCenterPanel('Найняти ще?', 'Ви можете найняти ще одного помічника (1000$).', [
-        { text: 'Найняти (1000$)', action: () => {
+        { text: `Найняти (${fmtMoney(1000)})`, action: () => {
           SFX.buy();
           socket.emit('resolveAction', { actionType: 'hire_helper', data: {} }, handleResult);
           hideCenterPanel();
@@ -3415,8 +3536,8 @@ function handlePendingAction(state) {
 
     case 'pay_or_prison':
       SFX.prisonDoor();
-      showCenterPanel('Федерали!', `Заплатіть ${action.amount}$ або в'язниця на 2 ходи.`, [
-        { text: `Заплатити ${action.amount}$`, action: () => {
+      showCenterPanel('Федерали!', `Заплатіть ${fmtMoney(action.amount)} або в'язниця на 2 ходи.`, [
+        { text: `Заплатити ${fmtMoney(action.amount)}`, action: () => {
           SFX.payRent();
           socket.emit('resolveAction', { actionType: 'pay_or_prison', data: { pay: true } }, handleResult);
           hideCenterPanel();
@@ -3542,8 +3663,8 @@ function handlePendingAction(state) {
       if (action.playerId === myId) {
         SFX.event();
         const curLvl = action.currentLevel || 1;
-        showCenterPanel('Збільшити вплив?', `${action.businessName} (${action.districtName})\nПоточний рівень: ${'★'.repeat(curLvl)} → ${'★'.repeat(curLvl + 1)}\nВартість: ${action.cost}$`, [
-          { text: `Збільшити ★ (${action.cost}$)`, action: () => {
+        showCenterPanel('Збільшити вплив?', `${action.businessName} (${action.districtName})\nПоточний рівень: ${'★'.repeat(curLvl)} → ${'★'.repeat(curLvl + 1)}\nВартість: ${fmtMoney(action.cost)}`, [
+          { text: `Збільшити ★ (${fmtMoney(action.cost)})`, action: () => {
             SFX.buy();
             socket.emit('resolveAction', { actionType: 'upgrade_influence', data: { upgrade: true } }, handleResult);
             hideCenterPanel();
@@ -3613,8 +3734,8 @@ function handlePendingAction(state) {
     case 'trade_offer':
       if (action.playerId === myId) {
         const offerDesc = [];
-        if (action.offer.giveMoney) offerDesc.push(`${action.fromName} дає ${action.offer.giveMoney}$`);
-        if (action.offer.wantMoney) offerDesc.push(`Хоче ${action.offer.wantMoney}$`);
+        if (action.offer.giveMoney) offerDesc.push(`${action.fromName} дає ${fmtMoney(action.offer.giveMoney)}`);
+        if (action.offer.wantMoney) offerDesc.push(`Хоче ${fmtMoney(action.offer.wantMoney)}`);
         if (action.offer.giveBusiness?.length) offerDesc.push(`Дає бізнеси: ${action.offer.giveBusiness.length}`);
         if (action.offer.wantBusiness?.length) offerDesc.push(`Хоче бізнеси: ${action.offer.wantBusiness.length}`);
         SFX.event();
@@ -3754,7 +3875,7 @@ function showTargetSelectionModal(card, state) {
         </span>
         <div class="target-select-main">
           <div class="target-select-name">${p.name}</div>
-          <div class="target-select-sub">${p.respectName || 'Шпана'} · ${p.money}$</div>
+          <div class="target-select-sub">${p.respectName || 'Шпана'} · ${fmtMoney(p.money)}</div>
         </div>
       </div>
       <div class="target-select-meta">
@@ -3812,9 +3933,9 @@ function showAuctionPanel(action, state) {
     : `<span class="auction-no-bid">Ще немає ставок</span>`;
   const logItems = [];
   if (action.currentBidderName) {
-    logItems.push(`<div class="auction-log-entry"><span class="auction-log-badge">Лідер</span><span>${action.currentBidderName} тримає ${action.currentBid}$</span></div>`);
+    logItems.push(`<div class="auction-log-entry"><span class="auction-log-badge">Лідер</span><span>${action.currentBidderName} тримає ${fmtMoney(action.currentBid)}</span></div>`);
   } else {
-    logItems.push(`<div class="auction-log-entry"><span class="auction-log-badge">Старт</span><span>Початкова ціна: ${action.minPrice}$</span></div>`);
+    logItems.push(`<div class="auction-log-entry"><span class="auction-log-badge">Старт</span><span>Початкова ціна: ${fmtMoney(action.minPrice)}</span></div>`);
   }
   if (Array.isArray(action.passed) && action.passed.length) {
     action.passed.forEach(pid => {
@@ -3834,7 +3955,7 @@ function showAuctionPanel(action, state) {
       </div>
       <div class="auction-body">
         <div class="auction-stage-copy">
-          ${isLeader ? 'Утримуйте лідерство до кінця таймера.' : hasPassed ? 'Ви поза торгами до завершення аукціону.' : canAfford ? `Наступна ставка: ${nextBid}$` : 'Ваш капітал не дозволяє підвищити ставку.'}
+          ${isLeader ? 'Утримуйте лідерство до кінця таймера.' : hasPassed ? 'Ви поза торгами до завершення аукціону.' : canAfford ? `Наступна ставка: ${fmtMoney(nextBid)}` : 'Ваш капітал не дозволяє підвищити ставку.'}
         </div>
         <div class="auction-bid-display">
           <div class="auction-label">Поточна ставка</div>
@@ -3848,7 +3969,7 @@ function showAuctionPanel(action, state) {
         <div class="auction-timer-text" id="auction-timer-text">5с</div>
         <div class="auction-actions">
           <button class="btn btn-auction-raise" id="btn-auction-raise" ${hasPassed || isLeader || !canAfford ? 'disabled' : ''}>
-            ${ICON.money} Ставка ${nextBid}$
+            ${ICON.money} Ставка ${fmtMoney(nextBid)}
           </button>
           <button class="btn btn-auction-pass" id="btn-auction-pass" ${hasPassed ? 'disabled' : ''}>
             Пас
@@ -4024,7 +4145,7 @@ function showAttackAlert(data) {
   if (data.canBuyOff) {
     const btn = document.createElement('button');
     btn.className = 'btn btn-secondary';
-    btn.innerHTML = `${ICON.money} Відкупитись (${data.buyOffCost}$)`;
+    btn.innerHTML = `${ICON.money} Відкупитись (${fmtMoney(data.buyOffCost)})`;
     btn.addEventListener('click', () => {
       clearInterval(attackTimer);
       SFX.payRent();
@@ -4187,11 +4308,11 @@ $('#btn-spin').addEventListener('click', () => {
         resultEl.className = 'casino-result jackpot';
       } else if (res.won) {
         SFX.win();
-        resultEl.innerHTML = `${colorName} — Виграш +${res.winnings}$`;
+        resultEl.innerHTML = `${colorName} — Виграш +${fmtMoney(res.winnings)}`;
         resultEl.className = 'casino-result win';
       } else {
         SFX.lose();
-        resultEl.innerHTML = `${colorName} — Програш -${res.lost}$`;
+        resultEl.innerHTML = `${colorName} — Програш −${fmtMoney(res.lost)}`;
         resultEl.className = 'casino-result lose';
       }
       $('#btn-casino-close').style.display = 'inline-block';
@@ -4210,16 +4331,26 @@ $('#btn-casino-close').addEventListener('click', () => {
 });
 
 // ===== LOG =====
+let _lastLogKey = '';
 function renderLog(state) {
   const container = $('#log-entries');
   container.innerHTML = '';
   const entries = (state.log || []).slice(-20).reverse();
-  for (const entry of entries) {
+  // Detect a brand-new entry to flash so the eye catches it.
+  const newest = entries[0];
+  const newestKey = newest ? (newest.timestamp || '') + '|' + (newest.message || '') : '';
+  const isFresh = newestKey && newestKey !== _lastLogKey;
+  _lastLogKey = newestKey;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
     const el = document.createElement('div');
-    el.className = 'log-entry';
+    el.className = 'log-entry' + (i === 0 && isFresh ? ' fresh' : '');
     el.textContent = entry.message;
     container.appendChild(el);
   }
+  // Newest entries render at top, so scroll the container back to top in
+  // case the user had it scrolled.
+  container.scrollTop = 0;
 }
 
 // ===== SURRENDER (topbar, double-click) =====
@@ -4708,10 +4839,10 @@ function showEnhancedVictoryScreen(state) {
   const summaryEl = document.getElementById('victory-summary');
   if (summaryEl) {
     const summaryBits = [
-      `${ICON.money} ${winner.money}$`,
-      `${ICON.building} ${businessCount} бізнесів / ${winnerBreakdown.businessValue || 0}$`,
-      `★ Вплив ${winnerBreakdown.influenceValue || 0}$`,
-      `${ICON.medal_gold} Підсумок ${winner.victoryScore || 0}$`,
+      `${ICON.money} ${fmtMoney(winner.money)}`,
+      `${ICON.building} ${businessCount} бізнесів / ${fmtMoney(winnerBreakdown.businessValue || 0)}`,
+      `★ Вплив ${fmtMoney(winnerBreakdown.influenceValue || 0)}`,
+      `${ICON.medal_gold} Підсумок ${fmtMoney(winner.victoryScore || 0)}`,
       `${ICON.crown} Повага ${winner.respectLevel || 1}`
     ];
     if ((winnerStats.attacksMade || 0) > 0) summaryBits.push(`${ICON.swords} ${winnerStats.attacksMade} атак`);
@@ -4742,10 +4873,10 @@ function showEnhancedVictoryScreen(state) {
         <div class="vl-info">
           <div class="vl-name">${p.name} ${!p.alive ? '☠' : ''}</div>
           <div class="vl-stats-row">
-            <span>${ICON.medal_gold} ${p.victoryScore || 0}$</span>
-            <span>${ICON.money} ${p.money}$</span>
-            <span>${ICON.building} ${breakdown.businessValue || 0}$</span>
-            <span>★ ${breakdown.influenceValue || 0}$</span>
+            <span>${ICON.medal_gold} ${fmtMoney(p.victoryScore || 0)}</span>
+            <span>${ICON.money} ${fmtMoney(p.money)}</span>
+            <span>${ICON.building} ${fmtMoney(breakdown.businessValue || 0)}</span>
+            <span>★ ${fmtMoney(breakdown.influenceValue || 0)}</span>
             <span>${ICON.cards} ${s.mafiaCardsUsed || 0}</span>
             <span>${ICON.swords} ${s.attacksMade || 0}</span>
             <span>${ICON.casino_chip} ${(s.casinoWins||0)}W/${(s.casinoLosses||0)}L</span>
@@ -5004,7 +5135,7 @@ function onMafiaCardClickExtended(card, state) {
         const dist = state.districts.find(d => d.businesses.some(b => b.id === bizId));
         const biz = dist?.businesses.find(b => b.id === bizId);
         if (biz) {
-          htBiz.push({ text: `${biz.name} (${p.name}) — ${Math.round(biz.price * 1.5)}$`, bizId });
+          htBiz.push({ text: `${biz.name} (${p.name}) — ${fmtMoney(Math.round(biz.price * 1.5))}`, bizId });
         }
       }
     }
@@ -5616,7 +5747,7 @@ function renderTVPlayerPanels(state) {
         <div class="tv-pp-portrait">${portrait}</div>
         <div class="tv-pp-info">
           <div class="tv-pp-name" style="color:${color}">${p.name}</div>
-          <div class="tv-pp-money">$${(p.money || 0).toLocaleString()}</div>
+          <div class="tv-pp-money">${fmtMoney(p.money || 0)}</div>
         </div>
       </div>
       <div class="tv-pp-stats">
@@ -5655,7 +5786,7 @@ function renderTVVictory(state) {
     <div class="tv-victory-title" style="color:${color}">${w.name}</div>
     <div class="tv-victory-subtitle">ПЕРЕМОЖЕЦЬ!</div>
     <div class="tv-victory-stats">
-      <div>$${(w.money || 0).toLocaleString()}</div>
+      <div>${fmtMoney(w.money || 0)}</div>
       <div>${ICON.building} ${(w.businesses || []).length} бізнесів</div>
       <div>${ICON.crown} Повага: ${w.respectLevel || 1}</div>
     </div>
@@ -5820,7 +5951,7 @@ function renderPhoneGame(state) {
   const header = $('#phone-player-info');
   header.innerHTML = `
     <span style="color:${color}">${me.name}</span>
-    <span class="phone-money">$${(me.money || 0).toLocaleString()}</span>
+    <span class="phone-money">${fmtMoney(me.money || 0)}</span>
     <span class="phone-respect">${ICON.crown} ${me.respectLevel || 1}</span>
   `;
 
@@ -6296,7 +6427,7 @@ function renderPhoneAuction(state, container) {
 
   container.innerHTML = `
     <div class="phone-action-title">${ICON.money} Аукціон</div>
-    <div class="phone-action-desc">${action.businessName} — поточна ставка: $${action.currentBid || 0}${action.currentBidderName ? ' (' + action.currentBidderName + ')' : ''}</div>
+    <div class="phone-action-desc">${action.businessName} — поточна ставка: ${fmtMoney(action.currentBid || 0)}${action.currentBidderName ? ' (' + action.currentBidderName + ')' : ''}</div>
     ${hasPassed ? '<div class="phone-auction-passed">Ви спасували</div>' : isLeader ? '<div class="phone-auction-leader">Ви лідер ставки!</div>' : `
     <div class="phone-action-btns">
       <button class="phone-btn-action phone-btn-yes" id="pa-auction-raise">Підвищити</button>

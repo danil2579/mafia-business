@@ -1544,19 +1544,29 @@ class GameEngine {
     if (player.helpers.length >= respect.maxHelpers) return { error: 'Максимум помічників' };
     if (player.money < HELPER_HIRE_COST) return { error: 'Недостатньо коштів' };
 
+    // Verify deck has cards BEFORE charging the player.
+    // Otherwise (with all 15 helpers held by other players) the hire silently
+    // burns 1000$ and returns an error.
+    const cardsToDraw = Math.min(3, this.helperDeck.length);
+    if (cardsToDraw === 0) return { error: 'Колода помічників порожня' };
+
     player.money -= HELPER_HIRE_COST;
     player.stats.moneySpent += HELPER_HIRE_COST;
     player.stats.helpersHired++;
 
     // Draw up to 3 face-down helper cards for blind selection
     const drawnHelpers = [];
-    const cardsToDraw = Math.min(3, this.helperDeck.length);
-    if (cardsToDraw === 0) return { error: 'Колода помічників порожня' };
     for (let i = 0; i < cardsToDraw; i++) {
       const h = this.drawHelperCard();
       if (h) drawnHelpers.push(h);
     }
-    if (drawnHelpers.length === 0) return { error: 'Колода помічників порожня' };
+    if (drawnHelpers.length === 0) {
+      // Refund — should be unreachable now, but stay defensive
+      player.money += HELPER_HIRE_COST;
+      player.stats.moneySpent -= HELPER_HIRE_COST;
+      player.stats.helpersHired--;
+      return { error: 'Колода помічників порожня' };
+    }
 
     // If only 1 card available, auto-assign (no choice needed)
     if (drawnHelpers.length === 1) {
@@ -2397,6 +2407,10 @@ class GameEngine {
     }
     player.businesses = [];
     player.helpers = [];
+    // Remove bombs placed by this player — a dead don's traps shouldn't keep going off
+    if (Array.isArray(this.bombs) && this.bombs.length) {
+      this.bombs = this.bombs.filter(b => b.placedBy !== player.id);
+    }
 
     // Check win condition
     const alive = this.getAlivePlayers();
@@ -2421,6 +2435,9 @@ class GameEngine {
     }
     player.businesses = [];
     player.helpers = [];
+    if (Array.isArray(this.bombs) && this.bombs.length) {
+      this.bombs = this.bombs.filter(b => b.placedBy !== player.id);
+    }
     this.addLog(`\uD83D\uDCA8 ${player.name} здався та вибув з гри!`);
     // Check win condition
     const alive = this.getAlivePlayers();

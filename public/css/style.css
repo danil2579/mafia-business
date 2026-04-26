@@ -167,20 +167,29 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   background: linear-gradient(180deg, #8f1f1f 0%, #651212 45%, #330909 100%);
   color: var(--gold-light); font-size: 14px; padding: 15px 48px;
   border: 1px solid rgba(212,38,38,0.28); border-radius: var(--radius-xl);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 rgba(232,212,138,0.0);
   letter-spacing: 5px; white-space: nowrap;
   text-shadow: 0 0 10px rgba(232,212,138,0.2), 0 1px 2px rgba(0,0,0,0.45);
-  animation: rollBtnPulse 2.5s ease-in-out infinite;
+  animation: rollBtnPulse 1.8s ease-in-out infinite;
+  transition: box-shadow 0.3s ease;
 }
 .btn-roll:hover {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 30px rgba(232,212,138,0.35);
   animation: none;
 }
-.btn-roll:disabled { animation: none; }
+.btn-roll:disabled { animation: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
 
+/* Stronger pulse — gold glow ring breathes around the button so players
+   visually catch "it's your turn" from across the screen. */
 @keyframes rollBtnPulse {
-  0%, 100% { filter: saturate(1); }
-  50% { filter: saturate(1.08) brightness(1.05); }
+  0%, 100% {
+    filter: saturate(1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 rgba(232,212,138,0.45);
+  }
+  50% {
+    filter: saturate(1.15) brightness(1.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 26px 6px rgba(232,212,138,0.20);
+  }
 }
 
 .btn-casino {
@@ -770,6 +779,73 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
    ============================================================ */
 #game-screen { flex-direction: column; background: transparent; }
 
+/* Fit-to-window scaling: the game UI is laid out on a fixed 1440×900
+   "design canvas" and uniformly scaled down to fit smaller viewports.
+   Side panels, board cells, fonts and gaps all shrink together — so the
+   board never gets squeezed alone while the panels keep their width.
+   At viewports >= 1440×900 we cap scale at 1 (no upscaling). */
+body.is-game-active { overflow: hidden; }
+#game-screen.active {
+  position: fixed;
+  top: 50%; left: 50%;
+  width: 1440px;
+  height: 900px;
+  margin-left: -720px;
+  margin-top: -450px;
+  transform-origin: 50% 50%;
+  transform: scale(var(--game-scale, 1));
+  /* Fallback for browsers that ignore the inline JS-set var */
+  transition: transform 120ms ease-out;
+}
+
+/* Internal layout overrides — when the game canvas is active we always want
+   the full-design 1440×900 layout regardless of viewport. The @media rules
+   further down were shrinking panels at <1550 / <1200 / <900 which made
+   the board cramped; with scaling those breakpoints are obsolete on desktop.
+   We keep them disabled while is-game-active is set. */
+body.is-game-active .game-layout {
+  grid-template-columns: 300px minmax(0, 1fr) 340px !important;
+  display: grid !important;
+  flex-direction: row !important;
+  height: auto !important;
+}
+body.is-game-active .game-board {
+  grid-template-columns: 1.34fr repeat(10, 1.08fr) 1.34fr !important;
+  grid-template-rows: 1.34fr repeat(6, 1.08fr) 1.34fr !important;
+  gap: 3px !important;
+}
+body.is-game-active .left-panel,
+body.is-game-active .right-panel {
+  order: initial !important;
+  width: auto !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 10px !important;
+}
+body.is-game-active #player-panels {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  overflow: visible !important;
+}
+body.is-game-active .player-panel {
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+  padding: 8px 12px !important;
+}
+body.is-game-active .pp-name { font-size: 12px !important; }
+body.is-game-active .pp-money { font-size: 14px !important; }
+body.is-game-active .cell-name { font-size: 10px !important; }
+body.is-game-active .cell-price { font-size: 18px !important; }
+body.is-game-active .board-cell.side-left .cell-name,
+body.is-game-active .board-cell.side-right .cell-name,
+body.is-game-active .board-cell.side-top .cell-name,
+body.is-game-active .board-cell.side-bottom .cell-name { font-size: 10px !important; }
+body.is-game-active .board-cell.side-left .cell-price,
+body.is-game-active .board-cell.side-right .cell-price { font-size: 16px !important; }
+body.is-game-active .btn-mobile-panel { display: none !important; }
+
 .game-topbar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 18px;
@@ -913,34 +989,26 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   box-shadow: inset 1px 0 12px rgba(0,0,0,0.35);
 }
 
-/* Felt decorations — minimalist gold line-art inside the board */
-.felt-decor, .felt-corner {
+/* Felt decorations — kept only as barely-there gold ornaments at the corners.
+   The large center scene illustrations were dropped: they read as unfinished
+   placeholder art behind the dice/business panels. The single watermark
+   (.board-watermark) is now the only visual element in the empty middle. */
+.felt-decor { display: none; }
+
+.felt-corner {
   position: absolute; pointer-events: none; z-index: 1;
-  filter: drop-shadow(0 0 6px rgba(201,168,76,0.15));
+  width: 72px; height: 72px;
+  opacity: 0.45;
+  filter: drop-shadow(0 0 4px rgba(201,168,76,0.10));
 }
-.felt-decor svg, .felt-corner svg { width: 100%; height: 100%; display: block; }
-
-/* Four scene illustrations in the big empty zones inside the ring of cells */
-.felt-decor { width: 140px; height: 140px; }
-.felt-decor-tl { top: 15%; left: 17%; }
-.felt-decor-tr { top: 15%; right: 17%; }
-.felt-decor-bl { bottom: 15%; left: 17%; }
-.felt-decor-br { bottom: 15%; right: 17%; }
-
-/* Corner ornamental flourishes — small and tucked in just outside the ring */
-.felt-corner { width: 72px; height: 72px; }
+.felt-corner svg { width: 100%; height: 100%; display: block; }
 .felt-corner-tl { top: 8%; left: 10%; }
 .felt-corner-tr { top: 8%; right: 10%; }
 .felt-corner-bl { bottom: 8%; left: 10%; }
 .felt-corner-br { bottom: 8%; right: 10%; }
 
-@media (max-width: 1100px) {
-  .felt-decor { width: 110px; height: 110px; }
-  .felt-corner { width: 58px; height: 58px; }
-}
-@media (max-width: 800px) {
-  .felt-decor, .felt-corner { display: none; }
-}
+@media (max-width: 1100px) { .felt-corner { width: 58px; height: 58px; } }
+@media (max-width: 800px)  { .felt-corner { display: none; } }
 
 /* ============================================================
    PLAYER PANELS — Premium player cards with depth
@@ -970,8 +1038,26 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 @keyframes goldPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-.player-panel.dead { opacity: 0.2; filter: grayscale(1) brightness(0.6); }
-.player-panel.in-prison { border-color: rgba(212,38,38,0.35); box-shadow: inset 0 0 24px rgba(212,38,38,0.06); }
+.player-panel.dead {
+  opacity: 0.32; filter: grayscale(1) brightness(0.55);
+  position: relative;
+}
+.player-panel.dead::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  background:
+    linear-gradient(135deg, transparent 47%, rgba(212,38,38,0.55) 49%, rgba(212,38,38,0.55) 51%, transparent 53%),
+    linear-gradient(45deg, transparent 47%, rgba(212,38,38,0.55) 49%, rgba(212,38,38,0.55) 51%, transparent 53%);
+  border-radius: inherit;
+}
+.player-panel.in-prison {
+  border-color: rgba(212,38,38,0.5);
+  box-shadow: inset 0 0 24px rgba(212,38,38,0.10), 0 0 0 0 rgba(212,38,38,0.4);
+  animation: prisonPulse 1.6s ease-in-out infinite;
+}
+@keyframes prisonPulse {
+  0%, 100% { box-shadow: inset 0 0 24px rgba(212,38,38,0.10), 0 0 0 0 rgba(212,38,38,0.45); }
+  50%      { box-shadow: inset 0 0 30px rgba(212,38,38,0.18), 0 0 18px 4px rgba(212,38,38,0.20); }
+}
 
 .pp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .pp-avatar {
@@ -1305,14 +1391,16 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .board-cell.side-bottom .cell-icon { width: 24px; height: 24px; }
 
 .cell-name {
-  font-weight: 600; font-size: 11px; letter-spacing: 0.2px;
-  max-width: 100%; overflow: hidden; white-space: normal; word-break: break-word;
-  line-height: 1.15; color: var(--text); padding: 0 1px; max-height: 3.5em; text-align: center;
+  font-weight: 600; font-size: 10px; letter-spacing: 0;
+  max-width: 100%; overflow: hidden;
+  white-space: normal; word-break: normal; overflow-wrap: break-word; hyphens: auto;
+  line-height: 1.1; color: var(--text); padding: 0 2px; max-height: 2.4em; text-align: center;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .board-cell.side-top .cell-name,
 .board-cell.side-bottom .cell-name {
-  font-size: 10px; white-space: normal; word-break: break-word;
-  overflow: hidden; line-height: 1.15; max-height: 2.4em; text-align: center;
+  font-size: 9px;
+  max-height: 2.2em;
 }
 .cell-price {
   font-size: 18px; color: var(--gold); font-weight: 700;
@@ -1326,8 +1414,7 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .board-cell.side-right .cell-icon { width: 24px; height: 24px; }
 .board-cell.side-left .cell-name,
 .board-cell.side-right .cell-name {
-  white-space: normal; word-break: break-word; max-width: 100%; font-size: 11px;
-  overflow: hidden; font-weight: 600; line-height: 1.15; max-height: 3.5em; text-align: center;
+  font-size: 10px; max-height: 2.4em;
 }
 .board-cell.side-left .cell-price,
 .board-cell.side-right .cell-price { font-size: 16px; }
@@ -1510,6 +1597,26 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   padding: 5px; gap: 1px;
   border: 1px solid rgba(201,168,76,0.18);
   box-shadow: 0 4px 12px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
+  transform-origin: center;
+}
+/* Tumble animation. The .ci-dice.rolling wrapper spins both dice while a JS
+   loop swaps random pip layouts; .ci-die.settled provides the bounce-in. */
+.center-info .ci-dice.rolling .ci-die {
+  animation: diceTumble 0.55s cubic-bezier(0.4, 0.05, 0.35, 1) forwards;
+}
+.center-info .ci-dice.rolling .ci-die:nth-child(2) { animation-duration: 0.62s; animation-delay: 0.03s; }
+.center-info .ci-die.settled { animation: diceSettle 0.35s ease-out; }
+@keyframes diceTumble {
+  0%   { transform: translateY(-30px) rotate(-15deg) scale(0.8); }
+  35%  { transform: translateY(0)     rotate(180deg) scale(1.05); }
+  60%  { transform: translateY(-8px)  rotate(320deg) scale(1.0); }
+  85%  { transform: translateY(0)     rotate(355deg) scale(1.02); }
+  100% { transform: translateY(0)     rotate(360deg) scale(1); }
+}
+@keyframes diceSettle {
+  0%   { transform: scale(1.12); filter: brightness(1.15); }
+  60%  { transform: scale(0.97); }
+  100% { transform: scale(1);    filter: brightness(1); }
 }
 .center-info .ci-die .ci-pip {
   width: 6px; height: 6px; border-radius: 50%;
@@ -2604,6 +2711,12 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .log-entry:first-child { color: var(--text-secondary); background: rgba(201,168,76,0.04); border-left-color: rgba(201,168,76,0.4); border-color: rgba(201,168,76,0.06); box-shadow: 0 1px 4px rgba(0,0,0,0.15), 0 0 6px rgba(201,168,76,0.03); }
 .log-entry:hover { background: rgba(255,255,255,0.035); border-color: rgba(255,255,255,0.04); }
+.log-entry.fresh { animation: logFlash 1.4s ease-out; }
+@keyframes logFlash {
+  0%   { background: rgba(232,212,138,0.22); transform: translateX(-3px); }
+  20%  { background: rgba(232,212,138,0.18); transform: translateX(0); }
+  100% { background: rgba(201,168,76,0.04); transform: translateX(0); }
+}
 
 @keyframes logSlide { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
