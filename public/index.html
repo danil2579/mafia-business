@@ -8,6 +8,40 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Global SVG defs for gold gradients used in business icons -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- Polished gold gradient (light → mid → deep) for fill -->
+      <linearGradient id="goldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%"  stop-color="#fdecb0"/>
+        <stop offset="25%" stop-color="#e9c66a"/>
+        <stop offset="55%" stop-color="#c79f3e"/>
+        <stop offset="80%" stop-color="#8a6520"/>
+        <stop offset="100%" stop-color="#5d4413"/>
+      </linearGradient>
+      <!-- Stroke gradient — slightly darker for outline -->
+      <linearGradient id="goldStroke" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%"  stop-color="#b88a36"/>
+        <stop offset="100%" stop-color="#3d2b0c"/>
+      </linearGradient>
+      <!-- Highlight (top sheen) -->
+      <linearGradient id="goldHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%"  stop-color="#fff7d2" stop-opacity="0.85"/>
+        <stop offset="100%" stop-color="#fff7d2" stop-opacity="0"/>
+      </linearGradient>
+      <!-- Inner shadow for engraved look -->
+      <radialGradient id="goldDepth" cx="50%" cy="40%" r="60%">
+        <stop offset="0%"  stop-color="#f5d77a"/>
+        <stop offset="100%" stop-color="#6d4f15"/>
+      </radialGradient>
+      <!-- Drop-shadow filter for 3D pop -->
+      <filter id="goldShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="1" stdDeviation="0.6" flood-color="#000" flood-opacity="0.7"/>
+        <feDropShadow dx="0" dy="0" stdDeviation="0.4" flood-color="#fcd870" flood-opacity="0.35"/>
+      </filter>
+    </defs>
+  </svg>
+
   <!-- ===== LOBBY SCREEN ===== -->
   <div id="lobby-screen" class="screen active">
     <!-- Animated particle layer -->
@@ -335,13 +369,13 @@
       <!-- Center: Board -->
       <div class="board-area">
         <div class="board-frame">
-          <!-- Center emblem watermark -->
+          <!-- Center emblem watermark (baseline) -->
           <div class="board-watermark">
             <div class="watermark-emblem">
-              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="60" cy="60" r="56" stroke="rgba(201,168,76,0.08)" stroke-width="1"/>
-                <circle cx="60" cy="60" r="44" stroke="rgba(201,168,76,0.05)" stroke-width="0.5"/>
-                <path d="M60 15 L68 35 L90 35 L72 48 L78 68 L60 55 L42 68 L48 48 L30 35 L52 35 Z" fill="rgba(201,168,76,0.04)" stroke="rgba(201,168,76,0.06)" stroke-width="0.5"/>
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="60" cy="60" r="56" stroke="rgba(201,168,76,0.45)" stroke-width="1"/>
+                <circle cx="60" cy="60" r="44" stroke="rgba(201,168,76,0.30)" stroke-width="0.5"/>
+                <path d="M60 15 L68 35 L90 35 L72 48 L78 68 L60 55 L42 68 L48 48 L30 35 L52 35 Z" fill="rgba(201,168,76,0.25)" stroke="rgba(201,168,76,0.40)" stroke-width="0.5"/>
               </svg>
             </div>
             <div class="watermark-title">MAFIA</div>

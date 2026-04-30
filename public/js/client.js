@@ -3,6 +3,108 @@
 // ============================================================
 const socket = io();
 
+// Each character gets a thematic emoji token matching their nickname.
+// Rendered through CSS as text glyph (not the old fedora PNG).
+const TOKEN_EMOJI_BY_CHARACTER = {
+  eddie:   '🔫',  // Едді «Божевільний» — Street fighter
+  carlo:   '🪒',  // Карло «Бритва» — Old fox
+  vinnie:  '👊',  // Вінні «Кулак» — Green baron
+  sal:     '💰',  // Сальваторе «Золото» — Gold king
+  niko:    '🎭',  // Ніко «Тінь» — Shadow ruler
+  rosa:    '🌹',  // Донна Роза — Iron lady
+  tommy:   '🧨',  // Томмі «Динаміт» — Fiery
+  frankie: '❄️',  // Френкі «Лід» — Cold calculation
+};
+
+// Business IDs with full pre-rendered tile artwork (frame+illustration+name+price baked in).
+// When listed here, the cell uses /assets/businesses/{id}.png as full background
+// and skips the HTML icon/name/price overlay.
+// Currently empty — all cells use unified SVG icon + name + price.
+const TILE_BUSINESSES = new Set([]);
+
+// SVG-based full tiles drawn directly in code. Used as inline backgrounds
+// for businesses without a ChatGPT-generated PNG. Produces same Art Deco
+// frame + gold illustration + name + price as the PNG tiles.
+function makeSvgTile({ illustration, name, price }) {
+  // Names that wrap need a smaller font / two lines
+  const nameSize = name.length > 11 ? 11 : 13;
+  return `<svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="tBg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#1a140a"/>
+        <stop offset="100%" stop-color="#0a0805"/>
+      </linearGradient>
+      <linearGradient id="tGold" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#fdecb0"/>
+        <stop offset="40%" stop-color="#d4ae5a"/>
+        <stop offset="100%" stop-color="#6d4f15"/>
+      </linearGradient>
+      <linearGradient id="tStroke" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#e9c66a"/>
+        <stop offset="100%" stop-color="#3d2b0c"/>
+      </linearGradient>
+    </defs>
+    <!-- Background panel -->
+    <rect x="6" y="6" width="188" height="268" rx="3" fill="url(#tBg)" stroke="url(#tStroke)" stroke-width="1.2"/>
+    <!-- Inner pinstripe -->
+    <rect x="11" y="11" width="178" height="258" rx="2" fill="none" stroke="url(#tStroke)" stroke-width="0.5" opacity="0.6"/>
+    <!-- Stepped chevron corner ornaments (4 corners) -->
+    <g fill="url(#tGold)" stroke="#3d2b0c" stroke-width="0.4">
+      <path d="M6 6 L26 6 L26 10 L14 10 L14 14 L10 14 L10 26 L6 26 Z"/>
+      <path d="M194 6 L174 6 L174 10 L186 10 L186 14 L190 14 L190 26 L194 26 Z"/>
+      <path d="M6 274 L26 274 L26 270 L14 270 L14 266 L10 266 L10 254 L6 254 Z"/>
+      <path d="M194 274 L174 274 L174 270 L186 270 L186 266 L190 266 L190 254 L194 254 Z"/>
+    </g>
+    <!-- Illustration area (top 55%) -->
+    <g transform="translate(40 30) scale(2)">${illustration}</g>
+    <!-- Top divider with diamond -->
+    <g stroke="url(#tGold)" stroke-width="0.8" fill="url(#tGold)">
+      <line x1="22" y1="180" x2="92" y2="180"/>
+      <path d="M100 176 L106 180 L100 184 L94 180 Z" stroke-width="0.5"/>
+      <line x1="108" y1="180" x2="178" y2="180"/>
+    </g>
+    <!-- Name (Cinzel serif, solid gold for crispness at small sizes) -->
+    <text x="100" y="210" text-anchor="middle"
+          font-family="Cinzel, 'Cormorant Garamond', serif"
+          font-size="${nameSize + 2}" font-weight="700"
+          fill="#f0d275"
+          letter-spacing="0.6">${name}</text>
+    <!-- Bottom divider with diamond -->
+    <g stroke="url(#tGold)" stroke-width="0.8" fill="url(#tGold)">
+      <line x1="22" y1="228" x2="92" y2="228"/>
+      <path d="M100 224 L106 228 L100 232 L94 228 Z" stroke-width="0.5"/>
+      <line x1="108" y1="228" x2="178" y2="228"/>
+    </g>
+    <!-- Price (solid gold, bigger weight) -->
+    <text x="100" y="258" text-anchor="middle"
+          font-family="Cinzel, 'Cormorant Garamond', serif"
+          font-size="24" font-weight="800"
+          fill="#f0d275">${price}$</text>
+  </svg>`;
+}
+
+// Inline SVG illustrations for each business — drawn in 60×60 viewBox,
+// rendered inside makeSvgTile()'s 60×60 illustration area.
+const BIZ_ILLUSTRATIONS = {
+  kiosk: `
+    <path d="M0 14 L30 0 L60 14 L60 18 L0 18 Z" fill="url(#tGold)" stroke="#3d2b0c" stroke-width="0.5"/>
+    <path d="M22 12 L30 4 L38 12 M26 12 L30 7 L34 12" fill="none" stroke="#3d2b0c" stroke-width="0.4"/>
+    <rect x="4" y="22" width="52" height="4" fill="url(#tGold)" stroke="#3d2b0c" stroke-width="0.4"/>
+    <rect x="6" y="28" width="48" height="22" fill="#0d0805" stroke="url(#tGold)" stroke-width="0.6"/>
+    <g fill="url(#tGold)" stroke="#3d2b0c" stroke-width="0.2">
+      <rect x="10" y="32" width="14" height="2.5"/>
+      <rect x="10" y="36" width="14" height="2.5"/>
+      <rect x="10" y="40" width="14" height="2.5"/>
+      <rect x="36" y="32" width="14" height="2.5"/>
+      <rect x="36" y="36" width="14" height="2.5"/>
+      <rect x="36" y="40" width="14" height="2.5"/>
+    </g>
+    <path d="M24 44 L36 44 L37 50 L23 50 Z" fill="url(#tGold)" stroke="#3d2b0c" stroke-width="0.4"/>
+    <rect x="2" y="50" width="56" height="10" fill="url(#tGold)" stroke="#3d2b0c" stroke-width="0.5"/>
+    <path d="M30 53 L24 60 M30 53 L27 60 M30 53 L30 60 M30 53 L33 60 M30 53 L36 60" stroke="#3d2b0c" stroke-width="0.3"/>
+  `,
+};
+
 // ===== CONNECTION STATUS INDICATOR =====
 // Shows a persistent banner when the socket drops, removes it on reconnect.
 (function initConnectionIndicator() {
@@ -531,40 +633,366 @@ function handleCardResult(cardId, res) {
 
 // ===== SVG ICONS for businesses =====
 const BIZ_ICONS = {
-  kiosk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h3M8 14h5"/><path d="M15 11h2v4h-2z"/></svg>`,
-  shawarma: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 8c0 2 1 3.5 2 4.5V21h10v-8.5c1-1 2-2.5 2-4.5 0-3-3-6-7-6z"/><path d="M9 12h6M9 15h6M9 18h6"/></svg>`,
-  lombard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="7" r="4"/><circle cx="8" cy="14" r="3"/><circle cx="16" cy="14" r="3"/><path d="M4 21h16"/></svg>`,
-  avto_moyka: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14V9H5zM7 9l2-5h6l2 5M7.5 17v2M16.5 17v2"/><path d="M3 5l2 1M12 3v2M21 5l-2 1"/></svg>`,
-  barbershop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3v18M4 3c2 2 2 4 0 6s-2 4 0 6 2 4 0 6"/><path d="M8 6h8a4 4 0 010 8H8"/><circle cx="16" cy="10" r="1"/></svg>`,
-  taksopark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14v-5H5zM5 12l2-6h10l2 6M7.5 17v2M16.5 17v2M8 14h.01M16 14h.01"/><rect x="9" y="2" width="6" height="3"/></svg>`,
-  pitseria: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 20h20L12 2z"/><circle cx="10" cy="13" r="1.5"/><circle cx="14" cy="16" r="1.5"/><circle cx="12" cy="9" r="1"/></svg>`,
-  apteka: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg>`,
-  supermarket: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 8h14M10 21a1 1 0 100-2 1 1 0 000 2zM18 21a1 1 0 100-2 1 1 0 000 2z"/></svg>`,
-  avtoservis: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.6-3.6a5.5 5.5 0 01-7.6 7.6L6 21l-3-3 7.7-7.7a5.5 5.5 0 017.6-7.6L14.7 6.3z"/></svg>`,
-  sklad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 21V8l8-5 8 5v13H4z"/><path d="M4 8h16"/><rect x="8" y="12" width="8" height="4"/><path d="M12 12v4"/></svg>`,
-  drukarnya: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 9v6M9 12h6M6 12h.01M18 12h.01"/></svg>`,
-  avtosalon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17h14v-5H5zM5 12l2-6h10l2 6M7 17v2M17 17v2M8 14h.01M16 14h.01"/><path d="M9 6l1-4h4l1 4"/></svg>`,
-  hotel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V3h14v18"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-4h4v4"/></svg>`,
-  telestudiya: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 3l4 4 4-4"/><circle cx="12" cy="14" r="3"/></svg>`,
-  spa: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c-4-2-8-6-8-11a8 8 0 0116 0c0 5-4 9-8 11z"/><path d="M12 2v4M8 6l2 2M16 6l-2 2"/></svg>`,
-  restoran: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2c-2.5 0-5 2-5 5v6h3v7h2"/></svg>`,
-  yacht_club: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 20l2-2c2-2 4-2 6 0s4 2 6 0 4-2 6 0l2 2"/><path d="M12 16V4M12 4L6 16h12L12 4z"/></svg>`,
-  night_club: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M3 2l3 3M21 2l-3 3"/></svg>`,
-  lounge_bar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2h8l-3 8v5h4v2H7v-2h4v-5L8 2z"/><path d="M6 2h12"/><circle cx="17" cy="6" r="2"/></svg>`,
-  casino: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><circle cx="16" cy="9" r="1.5"/><circle cx="8" cy="15" r="1.5"/><circle cx="16" cy="15" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>`,
-  bank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M12 3l9 7H3l9-7zM5 10v8M9 10v8M15 10v8M19 10v8"/></svg>`,
-  hedge_fund: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/><path d="M17 9h3v3"/></svg>`,
-  skyscraper: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M7 21V6l5-4 5 4v15"/><path d="M10 10h4M10 14h4M10 18h4M10 7h4"/></svg>`
+  // ───── DETAILED ENGRAVED SVG ICONS (skull-and-crossbones style) ─────
+  // 32×32 viewBox, fill+stroke with currentColor, round corners, symmetric.
+  // Stroke 1.6, linecap/linejoin round. Filled silhouettes for body + strokes
+  // for outlines + small filled details (windows, dots, rivets).
+
+  kiosk: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 11 L16 4 L27 11 L27 13 L5 13 Z" fill="currentColor" fill-opacity="0.22"/>
+    <path d="M14 10 L16 7 L18 10" stroke-width="1.2"/>
+    <path d="M6 13 L26 13 L26 23 L6 23 Z" fill="currentColor" fill-opacity="0.08" rx="1"/>
+    <rect x="9" y="15.5" width="6" height="1.6" rx="0.5" fill="currentColor"/>
+    <rect x="9" y="18.2" width="6" height="1.6" rx="0.5" fill="currentColor"/>
+    <rect x="17" y="15.5" width="6" height="1.6" rx="0.5" fill="currentColor"/>
+    <rect x="17" y="18.2" width="6" height="1.6" rx="0.5" fill="currentColor"/>
+    <path d="M13 19.5 L19 19.5 L19.5 23 L12.5 23 Z" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="4" y="23" width="24" height="5" rx="1" fill="currentColor" fill-opacity="0.22"/>
+    <path d="M16 24.5 L13 27.5 M16 24.5 L16 27.5 M16 24.5 L19 27.5" stroke-width="1"/>
+  </svg>`,
+
+  shawarma: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="16" cy="6" rx="3" ry="1.6" fill="currentColor" fill-opacity="0.4"/>
+    <path d="M14 7 L13 24 L19 24 L18 7 Z" fill="currentColor" fill-opacity="0.32"/>
+    <path d="M13.6 11 L18.4 11 M13.4 14 L18.6 14 M13.2 17 L18.8 17 M13 20 L19 20 M13 22 L19 22" stroke-width="1.1" opacity="0.8"/>
+    <path d="M10 22 Q9 24 11 26 M22 22 Q23 24 21 26 M16 24 Q14 26 16 28 Q18 26 16 24 Z" fill="currentColor" fill-opacity="0.5" stroke-width="1.2"/>
+    <rect x="11" y="24" width="10" height="2.5" rx="0.6" fill="currentColor" fill-opacity="0.3"/>
+    <circle cx="13" cy="28" r="1.4" fill="currentColor" fill-opacity="0.3"/>
+    <circle cx="19" cy="28" r="1.4" fill="currentColor" fill-opacity="0.3"/>
+  </svg>`,
+
+  lombard: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 6 L18 6 Q24 6 27 11" stroke-width="1.8"/>
+    <path d="M5 6 L5 9" stroke-width="1.8"/>
+    <circle cx="9" cy="14" r="3.4" fill="currentColor" fill-opacity="0.32"/>
+    <circle cx="16" cy="14" r="3.4" fill="currentColor" fill-opacity="0.32"/>
+    <circle cx="23" cy="14" r="3.4" fill="currentColor" fill-opacity="0.32"/>
+    <circle cx="9" cy="14" r="3.4"/>
+    <circle cx="16" cy="14" r="3.4"/>
+    <circle cx="23" cy="14" r="3.4"/>
+    <path d="M9 10.6 L9 11.5 M16 10.6 L16 11.5 M23 10.6 L23 11.5"/>
+    <ellipse cx="8.2" cy="13" rx="0.9" ry="0.5" fill="currentColor" fill-opacity="0.6"/>
+    <ellipse cx="15.2" cy="13" rx="0.9" ry="0.5" fill="currentColor" fill-opacity="0.6"/>
+    <ellipse cx="22.2" cy="13" rx="0.9" ry="0.5" fill="currentColor" fill-opacity="0.6"/>
+  </svg>`,
+
+  avto_moyka: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 22 Q5 19 7 17 L9 13 Q10 11 12 11 L20 11 Q22 11 23 13 L25 17 Q27 19 27 22 L27 24 L5 24 Z" fill="currentColor" fill-opacity="0.25"/>
+    <path d="M9 17 L23 17" stroke-width="1.2" opacity="0.7"/>
+    <circle cx="10" cy="24" r="2.6" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="22" cy="24" r="2.6" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="10" cy="24" r="1" fill="none"/>
+    <circle cx="22" cy="24" r="1" fill="none"/>
+    <path d="M16 4 L16 7 M16 4 Q14 6 14 8 M16 4 Q18 6 18 8" stroke-width="1.2"/>
+    <circle cx="13" cy="9" r="0.5" fill="currentColor"/>
+    <circle cx="19" cy="9" r="0.5" fill="currentColor"/>
+    <circle cx="11" cy="7" r="0.4" fill="currentColor"/>
+    <circle cx="21" cy="7" r="0.4" fill="currentColor"/>
+  </svg>`,
+
+  barbershop: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="6" width="6" height="20" rx="2.8" fill="currentColor" fill-opacity="0.2"/>
+    <rect x="4" y="6" width="6" height="20" rx="2.8"/>
+    <path d="M5 8 Q7 11 9 8 M5 12 Q7 15 9 12 M5 16 Q7 19 9 16 M5 20 Q7 23 9 20" stroke-width="1.2"/>
+    <circle cx="7" cy="6" r="1.2" fill="currentColor"/>
+    <circle cx="7" cy="26" r="1.2" fill="currentColor"/>
+    <path d="M14 11 Q14 9 16 9 L24 9 Q26 9 26 11 L26 24 Q26 26 24 26 L16 26 Q14 26 14 24 Z" fill="currentColor" fill-opacity="0.18"/>
+    <path d="M14 14 L26 14"/>
+    <rect x="16" y="17" width="8" height="3" rx="0.6" fill="currentColor" fill-opacity="0.3"/>
+    <circle cx="22" cy="11.5" r="0.6" fill="currentColor"/>
+  </svg>`,
+
+  taksopark: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="11" y="4" width="10" height="3" rx="0.5" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="11" y="4" width="10" height="3" rx="0.5"/>
+    <rect x="12" y="4.6" width="1.6" height="1.6" fill="currentColor"/>
+    <rect x="15" y="4.6" width="1.6" height="1.6" fill="none" stroke-width="0.6"/>
+    <rect x="18" y="4.6" width="1.6" height="1.6" fill="currentColor"/>
+    <path d="M5 22 L5 19 Q5 17 6 16 L8 11 Q9 9 11 9 L21 9 Q23 9 24 11 L26 16 Q27 17 27 19 L27 22 L5 22 Z" fill="currentColor" fill-opacity="0.3"/>
+    <path d="M8 15 L24 15" opacity="0.7"/>
+    <circle cx="9" cy="22" r="2.6" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="23" cy="22" r="2.6" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="9" cy="22" r="1" fill="none"/>
+    <circle cx="23" cy="22" r="1" fill="none"/>
+    <circle cx="6.5" cy="18" r="0.6" fill="currentColor"/>
+    <circle cx="25.5" cy="18" r="0.6" fill="currentColor"/>
+  </svg>`,
+
+  pitseria: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 4 L4 26 Q4 28 6 28 L26 28 Q28 28 28 26 Z" fill="currentColor" fill-opacity="0.25"/>
+    <path d="M9 22 L23 22" opacity="0.5"/>
+    <circle cx="13" cy="20" r="1.5" fill="currentColor"/>
+    <circle cx="19" cy="22" r="1.5" fill="currentColor"/>
+    <circle cx="14" cy="14" r="1.3" fill="currentColor"/>
+    <circle cx="18" cy="17" r="1.1" fill="currentColor"/>
+    <circle cx="16" cy="10" r="0.9" fill="currentColor"/>
+    <circle cx="11" cy="24" r="0.7" fill="currentColor" fill-opacity="0.5"/>
+    <circle cx="21" cy="25" r="0.7" fill="currentColor" fill-opacity="0.5"/>
+    <path d="M11 19 L13 17 M19 18 L21 19" stroke-width="0.9" opacity="0.7"/>
+  </svg>`,
+
+  apteka: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="6" width="22" height="22" rx="2.5" fill="currentColor" fill-opacity="0.18"/>
+    <rect x="5" y="6" width="22" height="22" rx="2.5"/>
+    <path d="M5 11 L27 11"/>
+    <rect x="13.5" y="14" width="5" height="11" rx="0.5" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="9.5" y="18" width="13" height="3" rx="0.5" fill="currentColor" fill-opacity="0.45"/>
+    <circle cx="8" cy="8.5" r="0.8" fill="currentColor"/>
+    <circle cx="11" cy="8.5" r="0.8" fill="currentColor"/>
+    <circle cx="14" cy="8.5" r="0.8" fill="currentColor"/>
+    <path d="M22 8 L26 8" stroke-width="0.9"/>
+  </svg>`,
+
+  supermarket: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 5 L7 5 L9 9 L9 22 L26 22" stroke-width="1.8"/>
+    <path d="M9 9 L29 9 L26 19 L9 19 Z" fill="currentColor" fill-opacity="0.22"/>
+    <path d="M13 13 L13 17 M17 13 L17 17 M21 13 L21 17 M25 13 L25 17" stroke-width="1.1" opacity="0.7"/>
+    <circle cx="13" cy="26" r="2.2" fill="currentColor" fill-opacity="0.45"/>
+    <circle cx="13" cy="26" r="2.2"/>
+    <circle cx="13" cy="26" r="0.8" fill="currentColor"/>
+    <circle cx="24" cy="26" r="2.2" fill="currentColor" fill-opacity="0.45"/>
+    <circle cx="24" cy="26" r="2.2"/>
+    <circle cx="24" cy="26" r="0.8" fill="currentColor"/>
+  </svg>`,
+
+  avtoservis: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 4 L17.6 7.4 L21.2 6.4 L20.6 10 L24 11.6 L20.6 13.2 L21.2 16.8 L17.6 15.8 L16 19.2 L14.4 15.8 L10.8 16.8 L11.4 13.2 L8 11.6 L11.4 10 L10.8 6.4 L14.4 7.4 Z" fill="currentColor" fill-opacity="0.28"/>
+    <path d="M16 4 L17.6 7.4 L21.2 6.4 L20.6 10 L24 11.6 L20.6 13.2 L21.2 16.8 L17.6 15.8 L16 19.2 L14.4 15.8 L10.8 16.8 L11.4 13.2 L8 11.6 L11.4 10 L10.8 6.4 L14.4 7.4 Z"/>
+    <circle cx="16" cy="11.6" r="3.2" fill="currentColor" fill-opacity="0.4"/>
+    <circle cx="16" cy="11.6" r="3.2"/>
+    <circle cx="16" cy="11.6" r="1.2" fill="currentColor"/>
+    <path d="M21 18 L26 23 L24 25 L19 20 Z" fill="currentColor" fill-opacity="0.45"/>
+    <path d="M21 18 L26 23 L24 25 L19 20 Z"/>
+    <circle cx="20" cy="19" r="0.6" fill="currentColor"/>
+  </svg>`,
+
+  sklad: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 28 L4 12 L16 4 L28 12 L28 28 Z" fill="currentColor" fill-opacity="0.18"/>
+    <path d="M4 28 L4 12 L16 4 L28 12 L28 28 Z"/>
+    <path d="M4 12 L28 12"/>
+    <rect x="11" y="16" width="10" height="7" rx="0.6" fill="currentColor" fill-opacity="0.3"/>
+    <rect x="11" y="16" width="10" height="7" rx="0.6"/>
+    <path d="M11 19.5 L21 19.5" stroke-width="1"/>
+    <path d="M16 16 L16 23" stroke-width="1"/>
+    <circle cx="13.5" cy="17.8" r="0.5" fill="currentColor"/>
+    <circle cx="18.5" cy="17.8" r="0.5" fill="currentColor"/>
+    <circle cx="13.5" cy="21.2" r="0.5" fill="currentColor"/>
+    <circle cx="18.5" cy="21.2" r="0.5" fill="currentColor"/>
+    <path d="M16 4 L13 8 M16 4 L19 8" stroke-width="0.9" opacity="0.6"/>
+    <rect x="13" y="24" width="6" height="2" rx="0.4" fill="currentColor" fill-opacity="0.45"/>
+  </svg>`,
+
+  drukarnya: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="10" width="26" height="12" rx="2" fill="currentColor" fill-opacity="0.22"/>
+    <rect x="3" y="10" width="26" height="12" rx="2"/>
+    <rect x="7" y="13" width="18" height="6" rx="0.6" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="7" y="13" width="18" height="6" rx="0.6"/>
+    <text x="16" y="17.8" text-anchor="middle" font-family="serif" font-size="6" font-weight="900" stroke="none" fill="currentColor">$</text>
+    <rect x="11" y="22" width="10" height="6" rx="0.6" fill="currentColor" fill-opacity="0.18"/>
+    <rect x="11" y="22" width="10" height="6" rx="0.6"/>
+    <path d="M3 14 L1 14 M3 18 L1 18 M29 14 L31 14 M29 18 L31 18" stroke-width="0.9"/>
+    <circle cx="6" cy="11.5" r="0.5" fill="currentColor"/>
+    <circle cx="26" cy="11.5" r="0.5" fill="currentColor"/>
+  </svg>`,
+
+  avtosalon: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 5 L17 7 L19 7" stroke-width="1.2"/>
+    <circle cx="16" cy="5" r="1.5" fill="currentColor" fill-opacity="0.7"/>
+    <path d="M3 22 L3 19 Q3 17 4 16 L7 10 Q8 8 10 8 L22 8 Q24 8 25 10 L28 16 Q29 17 29 19 L29 22 L3 22 Z" fill="currentColor" fill-opacity="0.32"/>
+    <path d="M3 22 L3 19 Q3 17 4 16 L7 10 Q8 8 10 8 L22 8 Q24 8 25 10 L28 16 Q29 17 29 19 L29 22 L3 22 Z"/>
+    <path d="M7 14 L25 14" opacity="0.6"/>
+    <circle cx="9" cy="22" r="2.6" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="23" cy="22" r="2.6" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="9" cy="22" r="1" fill="none"/>
+    <circle cx="23" cy="22" r="1" fill="none"/>
+    <ellipse cx="16" cy="26" rx="9" ry="1" fill="currentColor" fill-opacity="0.18"/>
+  </svg>`,
+
+  hotel: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="5" width="22" height="23" rx="0.6" fill="currentColor" fill-opacity="0.18"/>
+    <rect x="5" y="5" width="22" height="23" rx="0.6"/>
+    <path d="M3 28 L29 28" stroke-width="1.8"/>
+    <rect x="7" y="2" width="18" height="3" rx="0.4" fill="currentColor" fill-opacity="0.35"/>
+    <rect x="8" y="8" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="14.5" y="8" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="21" y="8" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="8" y="13" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="14.5" y="13" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="21" y="13" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="8" y="18" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <rect x="21" y="18" width="3" height="3" rx="0.3" fill="currentColor"/>
+    <path d="M13 28 L13 22 Q13 20 15 20 L17 20 Q19 20 19 22 L19 28" fill="currentColor" fill-opacity="0.35"/>
+    <path d="M13 28 L13 22 Q13 20 15 20 L17 20 Q19 20 19 22 L19 28"/>
+    <circle cx="17.5" cy="24" r="0.5" fill="currentColor"/>
+  </svg>`,
+
+  telestudiya: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="9" width="26" height="17" rx="2" fill="currentColor" fill-opacity="0.2"/>
+    <rect x="3" y="9" width="26" height="17" rx="2"/>
+    <rect x="6" y="12" width="20" height="11" rx="0.5" fill="currentColor" fill-opacity="0.3"/>
+    <rect x="6" y="12" width="20" height="11" rx="0.5"/>
+    <path d="M9 4 L16 9 L23 4" stroke-width="1.4"/>
+    <circle cx="9" cy="4" r="0.7" fill="currentColor"/>
+    <circle cx="23" cy="4" r="0.7" fill="currentColor"/>
+    <circle cx="16" cy="17.5" r="3" fill="currentColor" fill-opacity="0.5"/>
+    <circle cx="16" cy="17.5" r="3"/>
+    <circle cx="16" cy="17.5" r="1" fill="currentColor"/>
+    <circle cx="22" cy="25" r="0.6" fill="currentColor"/>
+    <circle cx="6" cy="25" r="0.6" fill="currentColor"/>
+  </svg>`,
+
+  spa: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 16 L27 16 Q27 17 27 18 L25 23 Q24 26 22 26 L10 26 Q8 26 7 23 L5 18 Q5 17 5 16 Z" fill="currentColor" fill-opacity="0.3"/>
+    <path d="M5 16 L27 16 Q27 17 27 18 L25 23 Q24 26 22 26 L10 26 Q8 26 7 23 L5 18 Q5 17 5 16 Z"/>
+    <path d="M5 16 L27 16"/>
+    <circle cx="9" cy="13.5" r="2.2" fill="currentColor" fill-opacity="0.4"/>
+    <circle cx="9" cy="13.5" r="2.2"/>
+    <path d="M9 11.3 L9 7 Q9 5 11 5 L13 5" stroke-width="1.4"/>
+    <path d="M14 11 Q14 8 16 8 Q18 8 18 11 Q18 14 16 14 Q14 14 14 11" stroke-width="1.1" opacity="0.7"/>
+    <path d="M20 9 Q20 6 22 6 Q24 6 24 9 Q24 12 22 12 Q20 12 20 9" stroke-width="1.1" opacity="0.7"/>
+    <circle cx="6" cy="28.5" r="0.7" fill="currentColor" fill-opacity="0.6"/>
+    <circle cx="26" cy="28.5" r="0.7" fill="currentColor" fill-opacity="0.6"/>
+  </svg>`,
+
+  restoran: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 4 L8 12 Q8 14 10 14 L10 28" fill="currentColor" fill-opacity="0.2"/>
+    <path d="M8 4 L8 12 Q8 14 10 14 L10 28"/>
+    <path d="M5 4 L5 10 M11 4 L11 10" stroke-width="1.2"/>
+    <path d="M22 28 L22 17 L19 17 Q19 8 22 4 Q25 8 25 17 L22 17" fill="currentColor" fill-opacity="0.2"/>
+    <path d="M22 28 L22 17 L19 17 Q19 8 22 4 Q25 8 25 17 L22 17"/>
+    <ellipse cx="10" cy="6" rx="0.6" ry="1.4" fill="currentColor" fill-opacity="0.5"/>
+    <ellipse cx="22" cy="10" rx="0.6" ry="1.4" fill="currentColor" fill-opacity="0.5"/>
+  </svg>`,
+
+  yacht_club: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 3 L16 22" stroke-width="1.4"/>
+    <path d="M16 5 Q22 9 24 18 L16 18 Z" fill="currentColor" fill-opacity="0.32"/>
+    <path d="M16 5 Q22 9 24 18 L16 18 Z"/>
+    <path d="M16 7 Q11 11 9 18 L16 18 Z" fill="currentColor" fill-opacity="0.22"/>
+    <path d="M16 7 Q11 11 9 18 L16 18 Z"/>
+    <path d="M5 22 L27 22 L24 26 L8 26 Z" fill="currentColor" fill-opacity="0.45"/>
+    <path d="M5 22 L27 22 L24 26 L8 26 Z"/>
+    <path d="M3 28 Q6 26 9 28 T15 28 T21 28 T27 28 T29 28" stroke-width="1.2" opacity="0.7"/>
+    <circle cx="16" cy="3" r="1" fill="currentColor"/>
+  </svg>`,
+
+  night_club: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 26 Q5 24 6 19 Q7 13 13 11 L19 6 Q22 4 24 5 Q25 6 23 8 L17 14 Q14 19 11 21 Q9 23 9 26 Z" fill="currentColor" fill-opacity="0.3"/>
+    <path d="M9 26 Q5 24 6 19 Q7 13 13 11 L19 6 Q22 4 24 5 Q25 6 23 8 L17 14 Q14 19 11 21 Q9 23 9 26 Z"/>
+    <circle cx="14" cy="16" r="1.2" fill="currentColor" fill-opacity="0.6"/>
+    <circle cx="11" cy="19" r="1.2" fill="currentColor" fill-opacity="0.6"/>
+    <circle cx="9" cy="22" r="1" fill="currentColor" fill-opacity="0.6"/>
+    <path d="M22 9 L26 5" stroke-width="1.2"/>
+    <circle cx="27" cy="4" r="1.6" fill="currentColor" fill-opacity="0.5"/>
+    <circle cx="27" cy="4" r="1.6"/>
+  </svg>`,
+
+  lounge_bar: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 6 L26 6 L18 17 L18 24 L23 24 L23 27 L9 27 L9 24 L14 24 L14 17 Z" fill="currentColor" fill-opacity="0.3"/>
+    <path d="M6 6 L26 6 L18 17 L18 24 L23 24 L23 27 L9 27 L9 24 L14 24 L14 17 Z"/>
+    <path d="M9 9 L23 9" opacity="0.7"/>
+    <circle cx="22" cy="8" r="1.4" fill="currentColor" fill-opacity="0.7"/>
+    <circle cx="22" cy="8" r="1.4"/>
+    <path d="M11 7 L13 7" stroke-width="0.9"/>
+    <path d="M16 4 L16 6" stroke-width="1.2"/>
+  </svg>`,
+
+  casino: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="6" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.28" transform="rotate(-8 8.5 11.5)"/>
+    <rect x="3" y="6" width="11" height="11" rx="2" transform="rotate(-8 8.5 11.5)"/>
+    <circle cx="6.5" cy="9.5" r="1.1" fill="currentColor"/>
+    <circle cx="10.5" cy="13.5" r="1.1" fill="currentColor"/>
+    <circle cx="8.5" cy="11.5" r="1.1" fill="currentColor"/>
+    <rect x="18" y="15" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.28" transform="rotate(8 23.5 20.5)"/>
+    <rect x="18" y="15" width="11" height="11" rx="2" transform="rotate(8 23.5 20.5)"/>
+    <circle cx="21.5" cy="18.5" r="1.1" fill="currentColor"/>
+    <circle cx="25.5" cy="22.5" r="1.1" fill="currentColor"/>
+    <circle cx="21.5" cy="22.5" r="1.1" fill="currentColor"/>
+    <circle cx="25.5" cy="18.5" r="1.1" fill="currentColor"/>
+  </svg>`,
+
+  bank: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 11 L16 3 L29 11 L29 13 L3 13 Z" fill="currentColor" fill-opacity="0.32"/>
+    <path d="M3 11 L16 3 L29 11 L29 13 L3 13 Z"/>
+    <path d="M3 28 L29 28" stroke-width="1.8"/>
+    <rect x="3" y="25" width="26" height="3" rx="0.4" fill="currentColor" fill-opacity="0.35"/>
+    <rect x="3" y="25" width="26" height="3" rx="0.4"/>
+    <rect x="6" y="13" width="2.5" height="12" rx="0.4" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="11" y="13" width="2.5" height="12" rx="0.4" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="14.75" y="13" width="2.5" height="12" rx="0.4" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="18.5" y="13" width="2.5" height="12" rx="0.4" fill="currentColor" fill-opacity="0.45"/>
+    <rect x="23.5" y="13" width="2.5" height="12" rx="0.4" fill="currentColor" fill-opacity="0.45"/>
+    <text x="16" y="10.5" text-anchor="middle" font-family="serif" font-size="5" font-weight="900" stroke="none" fill="currentColor">$</text>
+  </svg>`,
+
+  hedge_fund: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 4 L4 28 L28 28" stroke-width="1.8"/>
+    <rect x="7" y="20" width="3" height="6" rx="0.4" fill="currentColor" fill-opacity="0.4"/>
+    <rect x="11" y="16" width="3" height="10" rx="0.4" fill="currentColor" fill-opacity="0.4"/>
+    <rect x="15" y="13" width="3" height="13" rx="0.4" fill="currentColor" fill-opacity="0.5"/>
+    <rect x="19" y="10" width="3" height="16" rx="0.4" fill="currentColor" fill-opacity="0.6"/>
+    <rect x="23" y="7" width="3" height="19" rx="0.4" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="7" y="20" width="3" height="6" rx="0.4"/>
+    <rect x="11" y="16" width="3" height="10" rx="0.4"/>
+    <rect x="15" y="13" width="3" height="13" rx="0.4"/>
+    <rect x="19" y="10" width="3" height="16" rx="0.4"/>
+    <rect x="23" y="7" width="3" height="19" rx="0.4"/>
+    <path d="M6 16 L13 13 L20 9 L26 5" stroke-width="1.2" opacity="0.7"/>
+    <path d="M22 5 L27 5 L27 10" stroke-width="1.2" opacity="0.7"/>
+  </svg>`,
+
+  skyscraper: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 28 L9 9 L13 5 L19 5 L23 9 L23 28 Z" fill="currentColor" fill-opacity="0.22"/>
+    <path d="M9 28 L9 9 L13 5 L19 5 L23 9 L23 28 Z"/>
+    <path d="M3 28 L29 28" stroke-width="1.8"/>
+    <path d="M16 5 L16 1" stroke-width="1.4"/>
+    <circle cx="16" cy="1.2" r="0.7" fill="currentColor"/>
+    <rect x="11" y="11" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="14.5" y="11" width="3" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="19" y="11" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="11" y="15" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="14.5" y="15" width="3" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="19" y="15" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="11" y="19" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="14.5" y="19" width="3" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="19" y="19" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="11" y="23" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="14.5" y="23" width="3" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <rect x="19" y="23" width="2" height="2.4" rx="0.2" fill="currentColor" fill-opacity="0.7"/>
+    <path d="M14 9 L18 9" stroke-width="0.8" opacity="0.6"/>
+  </svg>`
 };
 
-// Special cell SVG icons
+// Special cell icons — same line-art SVG style as business icons
 const SPECIAL_ICONS = {
-  START: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5,3 19,12 5,21"/></svg>`,
-  POLICE: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1l2 5h5l-4 3 1.5 5L12 11l-4.5 3L9 9 5 6h5z"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>`,
-  PRISON: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M12 3v18M16 3v18"/></svg>`,
-  BAR: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2h8l-3 8v5h4v2H7v-2h4v-5L8 2z"/><path d="M6 2h12"/></svg>`,
-  MAFIA: ICON.skull,
-  EVENT: ICON.explosion
+  START: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 8 Q8 4 16 4 Q24 4 24 8 L24 12 L8 12 Z"/>
+    <path d="M5 12 L27 12 L27 14 L5 14 Z"/>
+    <path d="M3 14 L29 14"/>
+    <path d="M10 18 L22 18" stroke-width="0.8"/>
+  </svg>`,
+  POLICE: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 3 L19 11 L27 11 L21 16 L23 24 L16 19 L9 24 L11 16 L5 11 L13 11 Z"/>
+    <rect x="9" y="22" width="14" height="6" rx="1"/>
+    <circle cx="13" cy="25" r="0.6" fill="currentColor"/>
+    <circle cx="19" cy="25" r="0.6" fill="currentColor"/>
+  </svg>`,
+  PRISON: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="4" width="24" height="24" rx="2"/>
+    <path d="M10 4 L10 28 M16 4 L16 28 M22 4 L22 28"/>
+    <circle cx="10" cy="16" r="1.5"/>
+    <circle cx="16" cy="16" r="1.5"/>
+    <circle cx="22" cy="16" r="1.5"/>
+  </svg>`,
+  BAR: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 4 L26 4 L18 16 L18 24 L23 24 L23 28 L9 28 L9 24 L14 24 L14 16 Z"/>
+    <path d="M9 8 L23 8"/>
+    <path d="M11 6 L13 6 M19 6 L21 6" stroke-width="0.8"/>
+  </svg>`,
+  // MAFIA & EVENT use the SAME Unicode glyphs as their cards
+  // (☠ U+2620 skull-and-crossbones, ✦ U+2726 four-pointed star)
+  MAFIA: `<span class="char-icon">&#9760;</span>`,
+  EVENT: `<span class="char-icon">&#10022;</span>`
 };
 
 // ===== SCREEN MANAGEMENT =====
@@ -1175,10 +1603,11 @@ function renderBoard(state) {
           token.dataset.pid = p.id;
           const pColor = p.character ? p.character.color : '#888';
           const pName = p.name || '?';
-          token.style.background = pColor;
+          const portrait = (p.character && PORTRAITS[p.character.id]) || '';
           token.style.color = pColor;
+          token.style.setProperty('--char-color', pColor);
           token.title = pName;
-          token.textContent = pName[0];
+          token.innerHTML = portrait || `<span style="font:700 11px serif;color:${pColor}">${pName[0]}</span>`;
           // Position: 1 token = center; 2+ = circle around center
           if (tokenCount === 1) {
             token.style.top = '50%';
@@ -1246,10 +1675,21 @@ function renderCellInner(cell, sector, state, side) {
       cell.style.setProperty('--owner-color', owner.character.color);
     }
 
-    // District color bar
+    // District color bar with short name banner
     const distBar = document.createElement('div');
     distBar.className = 'district-bar';
-    distBar.style.background = district.color;
+    distBar.style.background = `linear-gradient(180deg, ${district.color} 0%, color-mix(in srgb, ${district.color} 70%, black) 100%)`;
+    distBar.style.setProperty('--dist-color', district.color);
+    // Compact district name (single word where possible)
+    const shortName = (district.shortName || district.name || '')
+      .replace('Спальний район', 'Спальний')
+      .replace('Туристичний центр', 'Туристичний')
+      .replace('Район Червоних Ліхтарів', 'Червоний')
+      .replace('Діловий квартал', 'Діловий')
+      .replace('Елітний район', 'Елітний')
+      .toUpperCase();
+    distBar.dataset.name = shortName;
+    distBar.innerHTML = `<span class="district-bar-name">${shortName}</span>`;
     cell.appendChild(distBar);
 
     // Owner bar (opposite side)
@@ -1277,30 +1717,37 @@ function renderCellInner(cell, sector, state, side) {
       cell.appendChild(freeInd);
     }
 
-    // Content wrapper
-    const content = document.createElement('div');
-    content.className = 'cell-content';
+    // If a pre-rendered ChatGPT tile artwork exists for this business,
+    // use it as the full cell background and skip HTML overlay.
+    if (TILE_BUSINESSES.has(bizId)) {
+      cell.classList.add('has-tile-image');
+      cell.style.backgroundImage = `url('/assets/businesses/${bizId}.png')`;
+    } else {
+      // Content wrapper
+      const content = document.createElement('div');
+      content.className = 'cell-content';
 
-    // Icon
-    const iconDiv = document.createElement('div');
-    iconDiv.className = 'cell-icon';
-    iconDiv.innerHTML = BIZ_ICONS[bizId] || '';
-    content.appendChild(iconDiv);
+      // Icon
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'cell-icon';
+      iconDiv.innerHTML = BIZ_ICONS[bizId] || '';
+      content.appendChild(iconDiv);
 
-    // Name
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'cell-name';
-    nameDiv.textContent = biz.name;
-    if (district.color) nameDiv.style.color = district.color;
-    content.appendChild(nameDiv);
+      // Name (auto-shrink for long names)
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'cell-name';
+      if (biz.name.length > 10) nameDiv.classList.add('long-name');
+      nameDiv.textContent = biz.name;
+      content.appendChild(nameDiv);
 
-    // Price
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'cell-price';
-    priceDiv.textContent = biz.price + '$';
-    content.appendChild(priceDiv);
+      // Price
+      const priceDiv = document.createElement('div');
+      priceDiv.className = 'cell-price';
+      priceDiv.textContent = biz.price + '$';
+      content.appendChild(priceDiv);
 
-    cell.appendChild(content);
+      cell.appendChild(content);
+    }
 
   } else {
     // Special cells (START, BAR, POLICE, PRISON, MAFIA, EVENT)
@@ -1315,7 +1762,7 @@ function renderCellInner(cell, sector, state, side) {
 
     const nameDiv = document.createElement('div');
     nameDiv.className = 'cell-name';
-    const colorMap = { START: 'var(--green-light)', POLICE: 'var(--blue-light)', PRISON: 'var(--red-light)', BAR: 'var(--gold)', MAFIA: 'var(--purple-light)', EVENT: '#6688bb' };
+    const colorMap = { START: 'var(--green-light)', POLICE: 'var(--blue-light)', PRISON: 'var(--red-light)', BAR: 'var(--gold)', MAFIA: '#d44848', EVENT: '#6688bb' };
     nameDiv.style.color = colorMap[typeKey] || 'var(--text)';
     const nameMap = { START: 'START', POLICE: 'ПОЛІЦІЯ', PRISON: "В'ЯЗНИЦЯ", BAR: 'BAR', MAFIA: 'MAFIA', EVENT: 'ПОДІЯ' };
     nameDiv.textContent = nameMap[typeKey] || typeKey;
@@ -1567,12 +2014,14 @@ function animateTokenMovement(playerId, fromPos, toPos) {
   animatingPlayerId = playerId;
   document.querySelectorAll(`.player-token[data-pid="${playerId}"]`).forEach(t => t.style.display = 'none');
 
-  // Create floating token
+  // Create floating token (character portrait)
   const floater = document.createElement('div');
   floater.className = 'floating-token';
-  floater.style.background = player.character ? player.character.color : '#888';
-  floater.style.color = player.character ? player.character.color : '#888';
-  floater.textContent = (player.name || '?')[0];
+  const pColor = player.character ? player.character.color : '#888';
+  const portrait = (player.character && PORTRAITS[player.character.id]) || '';
+  floater.style.color = pColor;
+  floater.style.setProperty('--char-color', pColor);
+  floater.innerHTML = portrait;
   board.appendChild(floater);
 
   // Calculate path (step by step around the board)
@@ -1584,11 +2033,11 @@ function animateTokenMovement(playerId, fromPos, toPos) {
     steps.push(pos);
   }
 
-  // Start position
+  // Start position (centered on cell — 32px / 2 = 16)
   const startCenter = getCellCenter(fromPos);
   if (startCenter) {
-    floater.style.left = (startCenter.x - 11) + 'px';
-    floater.style.top = (startCenter.y - 11) + 'px';
+    floater.style.left = (startCenter.x - 18) + 'px';
+    floater.style.top = (startCenter.y - 18) + 'px';
   }
 
   // Animate step by step
@@ -1606,8 +2055,8 @@ function animateTokenMovement(playerId, fromPos, toPos) {
     }
     const center = getCellCenter(steps[stepIdx]);
     if (center) {
-      floater.style.left = (center.x - 11) + 'px';
-      floater.style.top = (center.y - 11) + 'px';
+      floater.style.left = (center.x - 18) + 'px';
+      floater.style.top = (center.y - 18) + 'px';
     }
     // Play tick sound for each step
     if (isOwnToken) SFX.tokenTick(); else SFX.tokenTickOther();
@@ -5557,10 +6006,11 @@ function renderBoardInto(state, selector) {
           token.className = 'player-token';
           token.dataset.pid = p.id;
           const pColor = p.character ? p.character.color : '#888';
-          token.style.background = pColor;
+          const portrait = (p.character && PORTRAITS[p.character.id]) || '';
           token.style.color = pColor;
+          token.style.setProperty('--char-color', pColor);
           token.title = p.name;
-          token.textContent = (p.name || '?')[0];
+          token.innerHTML = portrait || `<span style="font:700 11px serif;color:${pColor}">${p.name?.[0] || '?'}</span>`;
           if (tokens.length === 1) {
             token.style.top = '50%'; token.style.left = '50%';
             token.style.transform = 'translate(-50%, -50%)';
