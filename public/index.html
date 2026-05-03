@@ -1418,9 +1418,10 @@
 
     <!-- Phone Game Controller -->
     <div id="phone-game" class="phone-game" style="display:none;">
-      <!-- Compact top bar: name + money + respect + round -->
+      <!-- PlayerStatusHeader: name + stats (money/respect) + round/turn -->
       <div class="phone-topbar">
         <div class="phone-tb-left" id="phone-player-info"></div>
+        <div class="phone-tb-stats" id="phone-tb-stats"></div>
         <div class="phone-tb-right">
           <span class="phone-tb-round" id="phone-status"></span>
           <span class="phone-tb-turn" id="phone-turn-indicator"></span>
@@ -1435,12 +1436,12 @@
         <div class="phone-events" id="phone-events"></div>
       </div>
 
-      <!-- Sticky bottom tabs -->
+      <!-- ControllerTabBar — sticky bottom tabs with Art Deco icons -->
       <div class="phone-tabs" id="phone-tabs">
-        <button class="phone-tab" data-tab="actions">Дії</button>
-        <button class="phone-tab" data-tab="cards">Карти</button>
-        <button class="phone-tab" data-tab="businesses">Бізнес</button>
-        <button class="phone-tab" data-tab="helpers">Помічники</button>
+        <button class="phone-tab" data-tab="actions"><span class="pt-icon">◆</span><span>Дії</span></button>
+        <button class="phone-tab" data-tab="cards"><span class="pt-icon">♠</span><span>Карти</span></button>
+        <button class="phone-tab" data-tab="businesses"><span class="pt-icon">▲</span><span>Бізнес</span></button>
+        <button class="phone-tab" data-tab="helpers"><span class="pt-icon">✦</span><span>Помічники</span></button>
       </div>
 
       <!-- Bottom-sheet overlay (closed by default; opens when a tab is tapped) -->

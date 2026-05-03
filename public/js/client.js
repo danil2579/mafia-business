@@ -6292,27 +6292,62 @@ function renderPhoneRollOrder(state) {
   $('#phone-tab-content').innerHTML = '';
 }
 
+// =============================================================
+// PHONE CONTROLLER COMPONENTS
+//   ControllerShell      = #phone-game (HTML + base layout)
+//   PlayerStatusHeader   = renderPhonePlayerHeader (name/stats/turn)
+//   ActionPromptCard     = renderPhonePendingAction (case 'buy_business' etc.)
+//   ControllerTabBar     = .phone-tabs (HTML + tab handler)
+//   CardsPanel/BusinessesPanel/HelpersPanel = renderPhoneTabContent cases
+//   EmptyState           = renderPhoneEmptyState helper
+// =============================================================
+
+/** EmptyState — premium centered "no actions" / "no cards" placard. */
+function renderPhoneEmptyState(text, subtext) {
+  return `<div class="phone-empty-state">
+    <div class="pes-mark"></div>
+    <div class="pes-text">${text}</div>
+    ${subtext ? `<div class="pes-sub">${subtext}</div>` : ''}
+  </div>`;
+}
+
+/** PlayerStatusHeader — top card: name | stats | round/turn-badge. */
+function renderPhonePlayerHeader(state, me) {
+  const color = me.character?.color || 'var(--ad-cream)';
+  const header = $('#phone-player-info');
+  if (header) {
+    header.innerHTML = `<span class="ptb-name" style="color:${color}">${me.name}</span>`;
+  }
+  const stats = $('#phone-tb-stats');
+  if (stats) {
+    stats.innerHTML = `
+      <span class="ptb-money-stat">$${(me.money || 0).toLocaleString()}</span>
+      <span class="ptb-respect-stat">${me.respectLevel || 1}</span>
+    `;
+  }
+  const isMyTurn = state.players[state.currentPlayerIndex]?.id === myId;
+  const current = state.players[state.currentPlayerIndex];
+  const turnInd = $('#phone-turn-indicator');
+  if (turnInd) {
+    turnInd.innerHTML = isMyTurn
+      ? '<span class="phone-your-turn">ВАШ ХІД</span>'
+      : `<span class="ptb-other">Хід <b style="color:${current?.character?.color || 'var(--ad-cream)'}">${current?.name || '?'}</b></span>`;
+  }
+  const status = $('#phone-status');
+  if (status) {
+    const phaseLabel = state.turnPhase === 'roll' ? 'Кубики' : 'Дія';
+    status.textContent = `Коло ${state.currentRound || 1} · ${phaseLabel}`;
+  }
+}
+
 function renderPhoneGame(state) {
   const me = state.players.find(p => p.id === myId);
   if (!me) return;
 
-  const color = me.character?.color || '#fff';
-  const header = $('#phone-player-info');
-  header.innerHTML = `
-    <span class="ptb-name" style="color:${color}">${me.name}</span>
-    <span class="ptb-money">$${(me.money || 0).toLocaleString()}</span>
-    <span class="ptb-respect">${ICON.crown} ${me.respectLevel || 1}</span>
-  `;
+  // PlayerStatusHeader
+  renderPhonePlayerHeader(state, me);
 
   const isMyTurn = state.players[state.currentPlayerIndex]?.id === myId;
-  const current = state.players[state.currentPlayerIndex];
-  const turnInd = $('#phone-turn-indicator');
-  turnInd.innerHTML = isMyTurn ? '<span class="phone-your-turn">ВАШ ХІД</span>' :
-    `<span class="ptb-other">Хід: <b style="color:${current?.character?.color || '#fff'}">${current?.name || '?'}</b></span>`;
-
-  const status = $('#phone-status');
-  const phaseLabel = state.turnPhase === 'roll' ? 'Кубики' : 'Дія';
-  status.textContent = `Коло ${state.currentRound || 1} · ${phaseLabel}`;
 
   // New panels — cell card, players strip, events log
   if (me.alive && state.phase === 'playing') {
@@ -6433,13 +6468,17 @@ function renderPhonePendingAction(state, container) {
 
   switch (action.type) {
     case 'buy_business': {
-      // Server sends action.name (not action.businessName) for the business label
+      // ActionPromptCard for buy_business — Art Deco prompt with two big buttons
       container.innerHTML = `
-        <div class="phone-action-title">Купити бізнес?</div>
-        <div class="phone-action-desc">${action.name} — $${action.price}</div>
-        <div class="phone-action-btns">
-          <button class="phone-btn-action phone-btn-yes" id="pa-buy">Купити</button>
-          <button class="phone-btn-action phone-btn-no" id="pa-skip">Пропустити</button>
+        <div class="phone-action-prompt">
+          <div class="pap-title">Купити бізнес?</div>
+          <div class="pap-divider"><span class="pap-divider-mark">◆ ◆ ◆</span></div>
+          <div class="pap-name">${action.name}</div>
+          <div class="pap-meta">$${(action.price || 0).toLocaleString()}</div>
+          <div class="pap-buttons">
+            <button class="phone-btn-yes" id="pa-buy">Купити</button>
+            <button class="phone-btn-no" id="pa-skip">Пропустити</button>
+          </div>
         </div>
       `;
       document.getElementById('pa-buy')?.addEventListener('click', () => {
@@ -6962,7 +7001,7 @@ function renderPhoneTabContent(state) {
           tabContent.appendChild(el);
         });
       } else {
-        tabContent.innerHTML = '<div class="phone-section-empty">Немає доступних дій</div>';
+        tabContent.innerHTML = renderPhoneEmptyState('Немає доступних дій', 'Дочекайтесь свого ходу або події.');
       }
       break;
     }
@@ -6976,7 +7015,7 @@ function renderPhoneTabContent(state) {
           tabContent.appendChild(el);
         });
       } else {
-        tabContent.innerHTML = '<div class="phone-section-empty">Немає карт</div>';
+        tabContent.innerHTML = renderPhoneEmptyState('Немає карт', 'Карти приходять, коли ви потрапляєте на клітинку Мафії.');
       }
       break;
     }
@@ -7000,7 +7039,7 @@ function renderPhoneTabContent(state) {
           tabContent.appendChild(el);
         });
       } else {
-        tabContent.innerHTML = '<div class="phone-section-empty">Немає бізнесів</div>';
+        tabContent.innerHTML = renderPhoneEmptyState('Немає бізнесів', 'Купуйте бізнеси на ігровому полі, щоб збирати ренту.');
       }
       break;
     }
@@ -7015,7 +7054,7 @@ function renderPhoneTabContent(state) {
           tabContent.appendChild(el);
         });
       } else {
-        tabContent.innerHTML = '<div class="phone-section-empty">Немає помічників</div>';
+        tabContent.innerHTML = renderPhoneEmptyState('Немає помічників', 'Найміть помічників у Барі, щоб посилити ходи.');
       }
       break;
     }

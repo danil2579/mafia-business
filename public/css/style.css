@@ -65,6 +65,18 @@ button svg.icon, .btn svg.icon { margin-right: 0.3em; vertical-align: -0.15em; }
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+
+  /* --- Art Deco palette (used by phone controller) --- */
+  --ad-leather-deep: #07050a;
+  --ad-leather: #14100a;
+  --ad-leather-warm: #1d160d;
+  --ad-burgundy-deep: #2a0c0c;
+  --ad-burgundy: #5a1818;
+  --ad-burgundy-bright: #8a2828;
+  --ad-bronze-dark: #5a3a14;
+  --ad-bronze: #8a5a20;
+  --ad-bronze-light: #b88840;
+  --ad-cream: #f5e6c8;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -5887,268 +5899,525 @@ body.is-phone::before, body.is-phone::after,
 body:has(#phone-screen.active)::before,
 body:has(#phone-screen.active)::after { display: none !important; }
 
+/* ============================================================
+   ART DECO MAFIA CONTROLLER — premium phone remote
+   Palette: black leather + bronze + warm gold + burgundy accents.
+   No flat neon. Embossed surfaces, ornamental dividers, geometric.
+   Centred at max-width 480px so it looks intentional on tablets too.
+   ============================================================ */
 .phone-game {
-  display: flex; flex-direction: column; width: 100%; height: 100vh; overflow: hidden;
-  position: relative;
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 480px; margin: 0 auto;
+  height: 100vh; overflow: hidden; position: relative;
+  /* Black leather + warm vignette */
   background:
-    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 40%),
-    linear-gradient(180deg, #06070f 0%, #03040a 100%);
-  /* Respect notches / home indicator on iOS */
+    radial-gradient(ellipse 130% 50% at 50% 0%, rgba(184,136,64,0.08) 0%, transparent 45%),
+    radial-gradient(ellipse 100% 60% at 50% 100%, rgba(90,24,24,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 90% at 50% 50%, var(--ad-leather) 0%, var(--ad-leather-deep) 90%);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+  /* Subtle gold inner frame on tablets+desktop where the controller is centred */
+  box-shadow:
+    inset 0 0 0 1px rgba(184,136,64,0.10),
+    0 0 60px rgba(0,0,0,0.6);
+}
+@media (min-width: 481px) {
+  .phone-game {
+    margin-top: 12px; margin-bottom: 12px;
+    height: calc(100vh - 24px);
+    border-radius: 22px;
+    box-shadow:
+      inset 0 0 0 1px rgba(184,136,64,0.18),
+      inset 0 0 0 4px var(--ad-leather-deep),
+      inset 0 0 0 5px rgba(184,136,64,0.10),
+      0 24px 60px rgba(0,0,0,0.7);
+  }
 }
 
-/* --- TOPBAR --- */
+/* --- PLAYER STATUS HEADER (Art Deco card on top) --- */
 .phone-topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; gap: 10px;
-  background: linear-gradient(180deg, rgba(20,16,10,0.96), rgba(8,6,4,0.98));
-  border-bottom: 1px solid rgba(201,168,76,0.32);
-  flex-shrink: 0; min-height: 44px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(232,212,138,0.06);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name turn' 'stats round';
+  gap: 4px 14px; align-items: center;
+  padding: 14px 18px 12px;
+  flex-shrink: 0; min-height: 76px;
   position: relative;
+  background:
+    /* warm spotlight */
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(232,212,138,0.10) 0%, transparent 70%),
+    /* leather */
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border-bottom: 2px solid var(--ad-bronze-dark);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(232,212,138,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.5);
+}
+/* Double gold rule under the topbar — Art Deco "frame" */
+.phone-topbar::before {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: -2px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ad-bronze-light) 20%, var(--ad-cream) 50%, var(--ad-bronze-light) 80%, transparent);
+  box-shadow: 0 4px 8px rgba(184,136,64,0.18);
+  pointer-events: none;
 }
 .phone-topbar::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-  background: linear-gradient(90deg, transparent 5%, rgba(232,212,138,0.4) 50%, transparent 95%);
+  content: ''; position: absolute; left: 28px; right: 28px; bottom: -6px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.42), transparent);
   pointer-events: none;
 }
 .phone-tb-left {
-  display: flex; align-items: center; gap: 10px;
-  font-family: var(--font-display); font-size: 13px; font-weight: 700;
-  letter-spacing: 0.5px; min-width: 0;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  grid-area: name; min-width: 0;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
 }
 .phone-tb-left .ptb-name {
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
+  font-family: var(--font-display); font-size: 17px; font-weight: 900;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ad-cream);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.7), 0 0 12px rgba(232,212,138,0.18);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 200px;
 }
 .phone-tb-left .ptb-money {
-  color: var(--green-light); font-size: 13px; font-weight: 700;
-  text-shadow: 0 0 8px rgba(46,204,113,0.3);
+  display: none; /* moved to stats row for clearer hierarchy */
 }
-.phone-tb-left .ptb-respect {
-  color: var(--gold); display: flex; align-items: center; gap: 3px;
-  font-size: 12px;
+.phone-tb-left .ptb-respect { display: none; }
+
+.phone-topbar .phone-tb-stats {
+  grid-area: stats;
+  display: flex; align-items: center; gap: 14px;
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
 }
-.phone-tb-left .ptb-respect .icon { width: 13px; height: 13px; }
-.phone-tb-right {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
-  font-family: var(--font-display); font-size: 11px;
+.phone-topbar .ptb-money-stat {
+  color: #c8e8a8; /* aged green ledger ink */
+  text-shadow: 0 0 10px rgba(46,204,113,0.3), 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-topbar .ptb-respect-stat {
+  color: var(--ad-bronze-light);
+  display: flex; align-items: center; gap: 4px;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
-.phone-tb-round {
-  color: var(--text-dim); letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.phone-tb-turn { font-size: 12px; }
-.phone-tb-turn .ptb-other { color: var(--text-secondary); }
-.phone-your-turn {
-  color: var(--gold-light); font-weight: 900; letter-spacing: 2px;
-  font-size: 13px;
-  text-shadow: 0 0 10px rgba(232,212,138,0.5), 0 1px 2px rgba(0,0,0,0.7);
+.phone-topbar .ptb-respect-stat .icon { width: 16px; height: 16px; }
+.phone-topbar .ptb-respect-stat::before {
+  content: '✦'; color: var(--ad-bronze-light);
+  margin-right: 2px; font-size: 10px;
 }
 
-/* Backwards-compat: some legacy phone screens still use these */
+/* Right-side "ВАШ ХІД" badge / "ОЧІКУЙТЕ" muted label */
+.phone-tb-right {
+  grid-area: turn / turn / round / round;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  font-family: var(--font-display);
+  text-align: right;
+}
+.phone-tb-round {
+  color: var(--ad-bronze-light); opacity: 0.75;
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-tb-turn { font-size: 12px; }
+.phone-tb-turn .ptb-other {
+  display: inline-block;
+  padding: 5px 12px; border-radius: 4px;
+  background: linear-gradient(180deg, rgba(40,28,16,0.6), rgba(20,14,8,0.8));
+  border: 1px solid rgba(184,136,64,0.32);
+  color: var(--ad-bronze-light);
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-tb-turn .ptb-other b { color: var(--ad-cream); margin-left: 4px; }
+.phone-your-turn {
+  display: inline-block; padding: 6px 14px;
+  border-radius: 4px; /* Art Deco rectangular badge, not pill */
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%, rgba(255,250,210,0.32) 0%, transparent 70%),
+    linear-gradient(180deg, #f5e3a8 0%, #d4b25a 28%, #a87a2c 70%, #6a4a18 100%);
+  border: 1.5px solid var(--ad-bronze-dark);
+  color: #2a1a08;
+  font-family: var(--font-display); font-size: 12px; font-weight: 900;
+  letter-spacing: 3px; text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255,235,180,0.7);
+  box-shadow:
+    0 0 14px rgba(232,212,138,0.42),
+    0 3px 8px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,250,210,0.55),
+    inset 0 -2px 4px rgba(60,30,10,0.4),
+    inset 0 0 0 1px rgba(255,235,180,0.32);
+}
+/* Backwards-compat — these legacy IDs are now styled differently */
 .phone-header { display: none; }
 .phone-status { display: contents; }
 
 /* --- BODY (scrollable middle) --- */
 .phone-body {
   flex: 1; overflow-y: auto;
-  padding: 12px 14px 12px;
-  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 16px 18px;
+  display: flex; flex-direction: column; gap: 16px;
   position: relative;
   -webkit-overflow-scrolling: touch;
 }
 
-/* --- CELL CARD: "ВИ НА КЛІТИНЦІ" --- */
+/* Reusable Art Deco section label (used by players strip, events log) */
+.ad-section-label {
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 4px;
+  color: var(--ad-bronze-light); text-transform: uppercase;
+  padding: 0 2px;
+  display: flex; align-items: center; gap: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.ad-section-label::before, .ad-section-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.42), transparent);
+}
+
+/* --- CELL CARD: "ВИ НА КЛІТИНЦІ" --- Art Deco panel with chevron header */
 .phone-cell-card {
+  position: relative;
   border-radius: 14px; overflow: hidden;
   background:
-    radial-gradient(ellipse 90% 60% at 50% 0%,
-      color-mix(in srgb, var(--pcc-color, #c9a84c) 16%, transparent) 0%,
+    radial-gradient(ellipse 110% 60% at 50% 0%,
+      color-mix(in srgb, var(--pcc-color, #c9a84c) 18%, transparent) 0%,
       transparent 60%),
-    linear-gradient(180deg, rgba(28,22,14,0.85), rgba(10,8,5,0.95));
-  border: 1px solid color-mix(in srgb, var(--pcc-color, #c9a84c) 35%, transparent);
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid var(--ad-bronze-dark);
   box-shadow:
-    0 0 12px color-mix(in srgb, var(--pcc-color, #c9a84c) 18%, transparent),
-    0 6px 16px rgba(0,0,0,0.45),
-    inset 0 1px 0 rgba(255,225,160,0.08);
+    0 8px 22px rgba(0,0,0,0.55),
+    inset 0 0 0 1px rgba(184,136,64,0.20),
+    inset 0 -1px 0 rgba(0,0,0,0.4);
 }
 .phone-cell-card:empty { display: none; }
+/* Top chevron band tinted by district color */
 .pcc-band {
-  height: 4px;
-  box-shadow: 0 0 8px currentColor;
+  height: 6px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pcc-color, #c9a84c) 70%, white 20%) 0%,
+    var(--pcc-color, #c9a84c) 50%,
+    color-mix(in srgb, var(--pcc-color, #c9a84c) 65%, black 25%) 100%);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--pcc-color, #c9a84c) 60%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.32);
+  position: relative;
+}
+.pcc-band::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.6), transparent);
 }
 .pcc-body {
-  padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 4px;
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 6px;
 }
 .pcc-district {
-  font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
+  font-family: var(--font-display); font-size: 11px; letter-spacing: 4px;
   text-transform: uppercase; font-weight: 700;
-  color: color-mix(in srgb, var(--pcc-color, #c9a84c) 50%, white);
+  color: color-mix(in srgb, var(--pcc-color, #c9a84c) 60%, var(--ad-cream));
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
 .pcc-name {
-  font-family: var(--font-display); font-size: 18px; font-weight: 700;
-  color: #fff; letter-spacing: 1px;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  font-family: var(--font-display); font-size: 22px; font-weight: 900;
+  color: var(--ad-cream); letter-spacing: 1.5px;
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.7),
+    0 0 14px color-mix(in srgb, var(--pcc-color, #c9a84c) 30%, transparent);
 }
 .pcc-free {
-  display: inline-block; margin-top: 2px;
-  color: var(--green-light); font-weight: 700; font-size: 13px;
-  text-shadow: 0 0 8px rgba(46,204,113,0.4);
+  display: inline-block; margin-top: 4px; padding: 3px 10px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(46,180,90,0.18), rgba(0,30,10,0.32));
+  border: 1px solid rgba(46,204,113,0.5);
+  color: #c8e8a8; font-weight: 700; font-size: 14px;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
 .pcc-owner {
-  display: inline-block; margin-top: 2px;
-  color: var(--text-secondary); font-size: 13px;
+  display: inline-block; margin-top: 4px;
+  color: var(--ad-bronze-light); font-size: 14px;
+  font-family: var(--font-accent);
+}
+.pcc-owner b {
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 0.5px;
 }
 .pcc-rent {
-  margin-top: 4px; font-size: 12px;
-  color: color-mix(in srgb, var(--pcc-color, #c9a84c) 35%, white);
-  font-weight: 600;
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px dashed rgba(184,136,64,0.22);
+  font-family: var(--font-display); font-size: 14px;
+  color: color-mix(in srgb, var(--pcc-color, #c9a84c) 40%, var(--ad-cream));
+  font-weight: 700; letter-spacing: 0.5px;
 }
 .pcc-text {
-  margin-top: 4px; font-family: var(--font-accent);
-  font-size: 13px; color: var(--text-secondary); line-height: 1.4;
+  margin-top: 6px;
+  font-family: var(--font-accent);
+  font-size: 14px; color: var(--text-secondary); line-height: 1.5;
+  font-style: italic;
 }
 
-/* --- MAIN ACTION AREA --- */
+/* --- MAIN ACTION AREA --- ActionPromptCard */
 .phone-main {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 4px 0;
-  min-height: 80px; /* always reserve space for the action button */
+  display: flex; flex-direction: column; align-items: stretch; gap: 12px;
+  padding: 0;
+  min-height: 96px;
 }
-.phone-waiting-turn {
-  width: 100%; padding: 18px 16px; text-align: center;
-  background: linear-gradient(180deg, rgba(20,16,10,0.6), rgba(8,6,4,0.7));
-  border: 1px solid rgba(201,168,76,0.15); border-radius: 12px;
-  font-family: var(--font-display); font-size: 13px; letter-spacing: 1.5px;
-  color: var(--text-secondary); text-transform: uppercase;
+.phone-action-prompt {
+  position: relative;
+  padding: 22px 20px 18px; border-radius: 16px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(232,212,138,0.10) 0%, transparent 60%),
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid var(--ad-bronze-dark);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(184,136,64,0.18),
+    inset 0 1px 0 rgba(232,212,138,0.10);
+}
+/* Art Deco corner frame on the prompt card */
+.phone-action-prompt::before,
+.phone-action-prompt::after {
+  content: ''; position: absolute; width: 20px; height: 20px;
+  border-style: solid; border-color: var(--ad-bronze-light);
+  pointer-events: none;
+}
+.phone-action-prompt::before {
+  top: 8px; left: 8px;
+  border-width: 1.5px 0 0 1.5px;
+}
+.phone-action-prompt::after {
+  bottom: 8px; right: 8px;
+  border-width: 0 1.5px 1.5px 0;
+}
+.pap-title {
+  font-family: var(--font-display); font-size: 18px; font-weight: 900;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ad-cream);
+  text-shadow: 0 0 12px rgba(232,212,138,0.32), 0 2px 4px rgba(0,0,0,0.7);
+  margin-bottom: 6px;
+}
+.pap-divider {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin: 8px auto 12px; max-width: 220px;
+}
+.pap-divider::before, .pap-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ad-bronze-light), transparent);
+}
+.pap-divider-mark {
+  color: var(--ad-bronze-light); font-size: 10px; letter-spacing: 4px;
+}
+.pap-name {
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  color: var(--ad-cream); letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.pap-meta {
+  font-family: var(--font-display); font-size: 22px; font-weight: 900;
+  color: var(--ad-bronze-light); letter-spacing: 1.5px;
+  margin-bottom: 16px;
+  text-shadow: 0 0 14px rgba(184,136,64,0.32);
+}
+.pap-buttons {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* Status states (waiting / prison / dead / victory) — EmptyState styles */
+.phone-empty-state {
+  width: 100%; padding: 28px 18px; text-align: center;
+  position: relative;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(184,136,64,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(20,16,10,0.55), rgba(8,6,4,0.7));
+  border: 1px solid rgba(184,136,64,0.22);
+  box-shadow: inset 0 0 0 1px rgba(184,136,64,0.08);
+}
+.phone-empty-state .pes-mark {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin-bottom: 10px;
+  color: var(--ad-bronze-light); font-size: 14px; letter-spacing: 6px;
+}
+.phone-empty-state .pes-mark::before, .phone-empty-state .pes-mark::after {
+  content: ''; flex: 0 1 60px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ad-bronze-light), transparent);
+}
+.phone-empty-state .pes-text {
+  font-family: var(--font-display); font-size: 14px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ad-bronze-light);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-empty-state .pes-sub {
+  margin-top: 6px;
+  font-family: var(--font-accent); font-size: 14px;
+  color: var(--text-secondary); font-style: italic;
+}
+.phone-waiting-turn { /* legacy hook — make it look like an empty state */
+  width: 100%; padding: 22px 18px; text-align: center;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(20,16,10,0.55), rgba(8,6,4,0.7));
+  border: 1px solid rgba(184,136,64,0.22);
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 2px;
+  color: var(--ad-bronze-light); text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
 .phone-prison, .phone-dead, .phone-victory {
-  width: 100%; padding: 14px; text-align: center;
-  border-radius: 10px;
-  font-family: var(--font-display); font-size: 14px; letter-spacing: 1px;
+  width: 100%; padding: 18px; text-align: center;
+  border-radius: 14px;
+  font-family: var(--font-display); font-size: 16px;
+  letter-spacing: 2px; text-transform: uppercase;
 }
 .phone-prison {
-  background: linear-gradient(180deg, rgba(40,16,16,0.7), rgba(18,8,8,0.85));
-  border: 1px solid rgba(231,76,60,0.4); color: #ffd0d0;
+  background: linear-gradient(180deg, rgba(60,16,16,0.75), rgba(20,8,8,0.9));
+  border: 1.5px solid var(--ad-burgundy);
+  color: #ffd0d0;
+  text-shadow: 0 0 10px rgba(231,76,60,0.4), 0 1px 2px rgba(0,0,0,0.7);
 }
 .phone-dead {
   background: linear-gradient(180deg, rgba(20,14,10,0.7), rgba(10,6,4,0.85));
-  border: 1px solid rgba(80,60,40,0.5); color: var(--text-dim);
-  filter: grayscale(0.7);
+  border: 1px solid rgba(80,60,40,0.5);
+  color: var(--text-dim); filter: grayscale(0.7);
 }
 .phone-victory {
-  background: linear-gradient(180deg, rgba(40,32,18,0.85), rgba(20,14,6,0.95));
-  border: 1.5px solid var(--gold); color: var(--gold-light); font-size: 16px;
-  text-shadow: 0 0 12px rgba(232,212,138,0.4);
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(232,212,138,0.18) 0%, transparent 70%),
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 2px solid var(--ad-bronze-light);
+  color: var(--ad-cream); font-size: 18px;
+  text-shadow: 0 0 14px rgba(232,212,138,0.4);
 }
 
 /* --- PLAYERS STRIP --- */
-.phone-players-strip { display: flex; flex-direction: column; gap: 6px; }
+.phone-players-strip { display: flex; flex-direction: column; gap: 8px; }
 .phone-players-strip:empty { display: none; }
-.pps-label {
-  font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
-  color: var(--text-dim); text-transform: uppercase;
-  padding-left: 2px;
+.pps-label { /* keep selector for backwards compat */
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 4px;
+  color: var(--ad-bronze-light); text-transform: uppercase;
+  padding: 0 2px;
+  display: flex; align-items: center; gap: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.pps-label::before, .pps-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.42), transparent);
 }
 .pps-row {
-  display: flex; gap: 8px;
-  overflow-x: auto; padding: 2px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  display: flex; gap: 10px;
+  overflow-x: auto; padding: 4px 2px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .pps-row::-webkit-scrollbar { display: none; }
 .pps-card {
-  flex-shrink: 0; min-width: 110px;
-  display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 10px; border-radius: 10px;
-  background: linear-gradient(180deg, rgba(20,16,10,0.7), rgba(8,6,4,0.85));
-  border: 1px solid rgba(201,168,76,0.15);
-  font-size: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  flex-shrink: 0; min-width: 124px;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border-radius: 10px;
+  background: linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid rgba(184,136,64,0.22);
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(232,212,138,0.06);
+  font-size: 13px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
 }
 .pps-card.is-current {
-  border-color: var(--gold);
-  box-shadow: 0 0 12px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,225,160,0.12);
-  background: linear-gradient(180deg, rgba(40,32,18,0.7), rgba(20,14,6,0.85));
+  border-color: var(--ad-bronze-light);
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(232,212,138,0.16) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(50,38,20,0.85), rgba(20,14,8,0.95));
+  box-shadow:
+    0 0 16px rgba(184,136,64,0.4),
+    0 6px 14px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.18);
+  transform: translateY(-2px);
 }
 .pps-card.is-me {
-  border-left: 3px solid var(--gold);
+  border-left: 3px solid var(--ad-bronze-light);
 }
-.pps-card.is-dead { filter: grayscale(0.85); opacity: 0.55; }
-.pps-card.is-prison { border-color: rgba(231,76,60,0.5); }
+.pps-card.is-dead { filter: grayscale(0.85); opacity: 0.5; }
+.pps-card.is-prison { border-color: var(--ad-burgundy); }
 .pps-card .pps-dot {
-  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
   box-shadow: 0 0 6px currentColor;
+  margin-right: 2px;
 }
 .pps-card .pps-name {
-  display: block;
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.5px; color: var(--gold-light);
+  display: flex; align-items: center;
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.5px; color: var(--ad-cream);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 100px;
+  max-width: 110px;
 }
 .pps-card .pps-status {
   display: block;
-  font-size: 12px; font-weight: 700;
-  color: var(--green-light);
+  font-family: var(--font-display); font-size: 14px; font-weight: 800;
+  color: #c8e8a8;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
 .pps-card.is-prison .pps-status { color: #ff8a78; }
 .pps-card.is-dead .pps-status { color: var(--text-dim); }
+.pps-card.is-current .pps-status { color: var(--ad-cream); }
 
 /* --- EVENTS LOG --- */
-.phone-events { display: flex; flex-direction: column; gap: 6px; }
+.phone-events { display: flex; flex-direction: column; gap: 8px; }
 .phone-events:empty { display: none; }
 .pev-label {
-  font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
-  color: var(--text-dim); text-transform: uppercase;
-  padding-left: 2px;
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 4px;
+  color: var(--ad-bronze-light); text-transform: uppercase;
+  padding: 0 2px;
+  display: flex; align-items: center; gap: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.pev-label::before, .pev-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.42), transparent);
 }
 .pev-list {
-  display: flex; flex-direction: column; gap: 1px;
-  border-radius: 10px; overflow: hidden;
-  background: linear-gradient(180deg, rgba(8,6,4,0.6), rgba(4,2,1,0.8));
-  border: 1px solid rgba(201,168,76,0.12);
+  display: flex; flex-direction: column;
+  border-radius: 12px; overflow: hidden;
+  background: linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid rgba(184,136,64,0.22);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
 }
 .pev-item {
-  padding: 7px 12px;
-  font-size: 12px; line-height: 1.4;
-  color: var(--text-dim);
-  border-bottom: 1px solid rgba(201,168,76,0.05);
+  padding: 10px 14px;
+  font-family: var(--font-accent);
+  font-size: 14px; line-height: 1.45;
+  color: var(--text-secondary);
+  border-bottom: 1px dashed rgba(184,136,64,0.14);
 }
 .pev-item:last-child { border-bottom: none; }
 .pev-item.pev-latest {
-  color: var(--gold-light);
-  font-weight: 600;
-  background: linear-gradient(90deg, rgba(232,212,138,0.06), transparent);
+  color: var(--ad-cream); font-weight: 600;
+  background: linear-gradient(90deg, rgba(232,212,138,0.10), transparent);
   text-shadow: 0 0 8px rgba(232,212,138,0.18);
 }
 
-/* Phone Action Buttons — premium controllers (≥48px touch targets, no shimmer) */
+/* ====== ART DECO ACTION BUTTONS ======
+   60–66px tall, full-width, embossed gold/burgundy. Used for:
+   - .phone-btn-roll: hero gold pill (dice roll)
+   - .phone-btn-action: gold-bordered burgundy panel (default action)
+   - .phone-btn-yes: bright gold-green primary CTA
+   - .phone-btn-no / .phone-btn-danger: deep burgundy with gold trim
+   - .phone-btn-end: dark gold-bordered, like .phone-btn-action with gold text
+   ======================================= */
 .phone-btn-roll {
-  width: 100%; max-width: 320px; min-height: 60px; padding: 18px 28px;
+  width: 100%; max-width: 360px; min-height: 64px; padding: 20px 28px;
   font-family: var(--font-display); font-size: 16px; font-weight: 900;
-  letter-spacing: 4px; text-transform: uppercase; white-space: nowrap;
+  letter-spacing: 5px; text-transform: uppercase; white-space: nowrap;
   background:
     radial-gradient(ellipse 90% 60% at 50% 25%,
-      rgba(255,250,210,0.32) 0%, rgba(255,250,210,0) 60%),
+      rgba(255,250,210,0.36) 0%, rgba(255,250,210,0) 60%),
     linear-gradient(180deg, #fdecb0 0%, #e9c66a 25%, #c79f3e 55%, #8a6520 80%, #5d4413 100%);
-  border: 2px solid #8a6520; border-radius: 999px;
+  border: 2px solid var(--ad-bronze-dark); border-radius: 999px;
   color: #2a1a08;
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px;
   text-shadow:
-    0 1px 0 rgba(255,235,180,0.7),
+    0 1px 0 rgba(255,235,180,0.75),
     0 -1px 0 rgba(60,30,10,0.4);
   box-shadow:
-    0 0 16px rgba(232,212,138,0.32),
-    0 4px 10px rgba(0,0,0,0.5),
-    inset 0 2px 1px rgba(255,250,210,0.6),
+    0 0 18px rgba(232,212,138,0.4),
+    0 6px 14px rgba(0,0,0,0.55),
+    inset 0 2px 1px rgba(255,250,210,0.7),
     inset 0 -3px 6px rgba(60,30,10,0.45),
-    inset 0 0 0 1px rgba(255,235,180,0.35);
+    inset 0 0 0 1px rgba(255,235,180,0.42);
   transition: transform 0.15s ease, filter 0.2s ease;
 }
 .phone-btn-roll:active { transform: scale(0.97); filter: brightness(0.95); }
@@ -6157,37 +6426,84 @@ body:has(#phone-screen.active)::after { display: none !important; }
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
   pointer-events: none;
 }
-.phone-btn-roll .icon { width: 24px; height: 24px; }
+.phone-btn-roll .icon { width: 26px; height: 26px; }
 
+/* Default action button — burgundy/leather panel with gold trim */
 .phone-btn-action {
-  width: 100%; max-width: 320px; min-height: 48px; padding: 14px 22px;
-  font-family: var(--font-display); font-size: 13px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  background: linear-gradient(180deg, rgba(28,22,14,0.95), rgba(10,8,5,0.97));
-  border: 1.5px solid rgba(201,168,76,0.4);
-  color: var(--gold-light); border-radius: 12px; cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, transform 0.1s, box-shadow 0.2s;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  width: 100%; min-height: 60px; padding: 16px 22px;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%, rgba(232,212,138,0.10) 0%, transparent 70%),
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1.5px solid var(--ad-bronze);
+  color: var(--ad-cream); border-radius: 18px; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, transform 0.1s, box-shadow 0.2s, background 0.2s;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.75);
   box-shadow:
-    0 3px 10px rgba(0,0,0,0.45),
-    inset 0 1px 0 rgba(255,225,160,0.12),
-    inset 0 -1px 3px rgba(0,0,0,0.35);
+    0 0 14px rgba(184,136,64,0.18),
+    0 4px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.18),
+    inset 0 -2px 4px rgba(0,0,0,0.45),
+    inset 0 0 0 1px rgba(184,136,64,0.18);
 }
-.phone-btn-action:active { transform: scale(0.97); }
-.phone-btn-action:hover { border-color: var(--gold); color: #fff5d8; }
-.phone-btn-action:disabled { opacity: 0.35; pointer-events: none; }
+.phone-btn-action:active { transform: scale(0.98); filter: brightness(0.92); }
+.phone-btn-action:hover { border-color: var(--ad-bronze-light); color: #fff; }
+.phone-btn-action:disabled { opacity: 0.4; pointer-events: none; }
 
-.phone-btn-end { border-color: var(--gold); color: #fff5d8; }
+/* End-turn button — gold-emphasised */
+.phone-btn-end {
+  border-color: var(--ad-bronze-light); color: var(--ad-cream);
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(232,212,138,0.20) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(50,36,18,0.85) 0%, rgba(24,16,8,0.95) 100%);
+  box-shadow:
+    0 0 18px rgba(184,136,64,0.32),
+    0 4px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.28),
+    inset 0 -2px 4px rgba(0,0,0,0.45),
+    inset 0 0 0 1px rgba(184,136,64,0.28);
+}
+
+/* Primary CTA — engraved gold-green for "yes" / "buy" / confirm */
 .phone-btn-yes {
-  border-color: rgba(46,204,113,0.55); color: #c8ffd8;
-  background: linear-gradient(180deg, rgba(20,40,28,0.95), rgba(8,18,12,0.97));
+  border: 2px solid #2a5520;
+  color: #0a1d08;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%, rgba(220,255,180,0.34) 0%, transparent 70%),
+    linear-gradient(180deg, #d8e89a 0%, #9ec660 22%, #5e9028 55%, #2e5818 80%, #1a3508 100%);
+  text-shadow:
+    0 1px 0 rgba(220,255,180,0.7),
+    0 -1px 0 rgba(8,30,8,0.4);
+  box-shadow:
+    0 0 16px rgba(140,200,80,0.32),
+    0 6px 14px rgba(0,0,0,0.5),
+    inset 0 2px 1px rgba(220,255,180,0.55),
+    inset 0 -3px 6px rgba(8,30,8,0.4),
+    inset 0 0 0 1px rgba(220,255,180,0.32);
 }
-.phone-btn-yes:hover { border-color: var(--green-light); color: #f0fff4; }
+.phone-btn-yes:hover { filter: brightness(1.05); color: #0a1d08; border-color: #1a3508; }
+.phone-btn-yes:active { filter: brightness(0.94); }
+
+/* Burgundy CTA — for "skip" / "no" / refuse */
 .phone-btn-no, .phone-btn-danger {
-  border-color: rgba(231,76,60,0.55); color: #ffd8d8;
-  background: linear-gradient(180deg, rgba(40,16,16,0.95), rgba(18,8,8,0.97));
+  border: 2px solid var(--ad-bronze);
+  color: var(--ad-cream);
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%, rgba(255,180,180,0.18) 0%, transparent 70%),
+    linear-gradient(180deg, var(--ad-burgundy-bright) 0%, var(--ad-burgundy) 35%, var(--ad-burgundy-deep) 80%, #1a0606 100%);
+  text-shadow:
+    0 1px 0 rgba(255,200,200,0.4),
+    0 -1px 0 rgba(40,4,4,0.5);
+  box-shadow:
+    0 0 14px rgba(138,40,40,0.42),
+    0 6px 14px rgba(0,0,0,0.55),
+    inset 0 2px 1px rgba(255,200,200,0.32),
+    inset 0 -3px 6px rgba(20,4,4,0.5),
+    inset 0 0 0 1px rgba(184,136,64,0.32);
 }
-.phone-btn-no:hover, .phone-btn-danger:hover { border-color: #e74c3c; color: #fff; }
+.phone-btn-no:hover, .phone-btn-danger:hover { filter: brightness(1.06); border-color: var(--ad-bronze-light); }
+.phone-btn-no:active, .phone-btn-danger:active { filter: brightness(0.94); }
 
 .phone-action-title {
   font-size: 18px; font-weight: 700; color: var(--text); text-align: center;
@@ -6212,85 +6528,139 @@ body:has(#phone-screen.active)::after { display: none !important; }
 }
 .phone-casino-amt.selected { border-color: var(--gold); color: var(--gold); }
 
-/* Phone Tabs — 44px touch target, golden underline on active */
+/* ====== ART DECO BOTTOM TAB BAR ======
+   60px touch zone + safe-area inset. Each tab is a faux Art Deco
+   panel; active tab raised with golden top arc and bronze underline.
+   ======================================= */
 .phone-tabs {
-  display: flex; border-top: 1px solid rgba(201,168,76,0.18);
-  background: linear-gradient(180deg, rgba(20,16,10,0.96), rgba(8,6,4,0.99));
-  flex-shrink: 0;
-  box-shadow: 0 -10px 24px rgba(0,0,0,0.28);
+  display: flex; align-items: stretch;
+  flex-shrink: 0; padding: 0 6px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background:
+    radial-gradient(ellipse 60% 100% at 50% 100%, rgba(232,212,138,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(20,16,10,0.98), rgba(6,4,2,1));
+  border-top: 2px solid var(--ad-bronze-dark);
+  box-shadow:
+    0 -8px 22px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.08);
+  position: relative;
+}
+/* Double gold line ON TOP of the tab bar — Art Deco frame */
+.phone-tabs::before {
+  content: ''; position: absolute; left: 14px; right: 14px; top: -2px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ad-bronze-light) 18%, var(--ad-cream) 50%, var(--ad-bronze-light) 82%, transparent);
+  pointer-events: none;
+}
+.phone-tabs::after {
+  content: ''; position: absolute; left: 28px; right: 28px; top: -6px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.42), transparent);
+  pointer-events: none;
 }
 .phone-tab {
-  flex: 1; padding: 14px 4px; min-height: 48px;
-  text-align: center;
-  font-family: var(--font-display); font-size: 12px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--text-dim); background: none; border: none;
-  border-top: 2px solid transparent;
-  cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s;
+  flex: 1; min-height: 60px; padding: 8px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(184,136,64,0.55);
+  background: none; border: none;
+  cursor: pointer; transition: color 0.2s, background 0.2s;
+  position: relative;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
-.phone-tab:active { color: var(--gold-light); }
+.phone-tab .pt-icon {
+  font-size: 18px; line-height: 1; color: inherit;
+  transition: text-shadow 0.2s, transform 0.2s;
+}
+.phone-tab:active { color: var(--ad-cream); }
 .phone-tab.active {
-  color: var(--gold-light);
-  border-top-color: var(--gold);
-  background: linear-gradient(180deg, rgba(232,212,138,0.10) 0%, transparent 100%);
+  color: var(--ad-cream);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(232,212,138,0.18) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(50,36,18,0.6) 0%, rgba(20,14,8,0.85) 60%, transparent 100%);
+}
+.phone-tab.active .pt-icon {
+  color: var(--ad-bronze-light);
+  text-shadow: 0 0 10px rgba(232,212,138,0.55);
+  transform: translateY(-1px);
+}
+/* Inverted-T golden bracket at the top of the active tab */
+.phone-tab.active::before {
+  content: ''; position: absolute; top: -2px; left: 18%; right: 18%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ad-bronze-light), transparent);
+  box-shadow: 0 0 10px rgba(232,212,138,0.55);
+}
+.phone-tab.active::after {
+  content: ''; position: absolute; top: -2px; left: 30%; right: 30%; height: 4px;
+  background: var(--ad-cream);
+  box-shadow: 0 0 10px rgba(255,235,180,0.6);
+  border-radius: 0 0 2px 2px;
 }
 
-/* --- BOTTOM SHEET (replaces the old cramped 200px tab-content) --- */
+/* ====== ART DECO BOTTOM SHEET ====== */
 .phone-sheet-backdrop {
   position: fixed; inset: 0; z-index: 80;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+  background: rgba(0,0,0,0.62); backdrop-filter: blur(3px);
   opacity: 0; pointer-events: none;
   transition: opacity 0.25s ease;
 }
 .phone-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
 .phone-sheet {
-  position: fixed; left: 0; right: 0; bottom: 0;
+  position: fixed; left: 50%; right: auto; bottom: 0;
+  transform: translate(-50%, 100%);
+  width: 100%; max-width: 480px;
   z-index: 90;
-  max-height: 70vh; min-height: 240px;
+  max-height: 75vh; min-height: 280px;
   display: flex; flex-direction: column;
   background:
-    radial-gradient(ellipse 100% 40% at 50% 0%,
-      rgba(232,212,138,0.10) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(20,16,10,0.98), rgba(6,4,2,1));
-  border-top: 1.5px solid rgba(201,168,76,0.55);
-  border-radius: 18px 18px 0 0;
+    radial-gradient(ellipse 90% 30% at 50% 0%, rgba(232,212,138,0.14) 0%, transparent 60%),
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border-top: 2px solid var(--ad-bronze);
+  border-radius: 22px 22px 0 0;
   box-shadow:
-    0 -16px 40px rgba(0,0,0,0.7),
-    0 -2px 0 rgba(232,212,138,0.18) inset;
-  padding-bottom: calc(56px + env(safe-area-inset-bottom)); /* leave room for tabs underneath */
-  transform: translateY(100%);
+    0 -20px 50px rgba(0,0,0,0.75),
+    inset 0 0 0 1px rgba(184,136,64,0.18);
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
   transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.phone-sheet.open { transform: translateY(0); }
+.phone-sheet.open { transform: translate(-50%, 0); }
+/* Double gold rule under the sheet top edge — Art Deco frame */
+.phone-sheet::before {
+  content: ''; position: absolute; left: 18px; right: 18px; top: 8px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ad-bronze-light) 30%, var(--ad-cream) 50%, var(--ad-bronze-light) 70%, transparent);
+  pointer-events: none;
+}
 .phone-sheet-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 14px 6px;
+  padding: 16px 18px 10px;
   position: relative; flex-shrink: 0;
 }
 .phone-sheet-handle {
-  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
-  width: 40px; height: 4px; border-radius: 2px;
-  background: rgba(232,212,138,0.35);
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 48px; height: 4px; border-radius: 2px;
+  background: var(--ad-bronze-light);
+  box-shadow: 0 0 8px rgba(232,212,138,0.32);
 }
 .phone-sheet-title {
-  margin-top: 14px;
-  font-family: var(--font-display); font-size: 13px; font-weight: 700;
-  letter-spacing: 3px; text-transform: uppercase;
-  color: var(--gold-light);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  margin-top: 6px;
+  font-family: var(--font-display); font-size: 14px; font-weight: 900;
+  letter-spacing: 5px; text-transform: uppercase;
+  color: var(--ad-cream);
+  text-shadow: 0 0 12px rgba(232,212,138,0.32), 0 1px 2px rgba(0,0,0,0.7);
 }
 .phone-sheet-close {
-  margin-top: 12px;
-  width: 36px; height: 36px; min-width: 36px;
-  border-radius: 50%; border: none;
-  background: rgba(201,168,76,0.12);
-  color: var(--gold-light); font-size: 22px; line-height: 1;
+  margin-top: 4px;
+  width: 40px; height: 40px; min-width: 40px;
+  border-radius: 6px; /* Art Deco rectangular */
+  background: linear-gradient(180deg, rgba(60,40,20,0.6), rgba(30,20,10,0.8));
+  border: 1px solid var(--ad-bronze);
+  color: var(--ad-cream); font-size: 22px; line-height: 1;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: inset 0 1px 0 rgba(232,212,138,0.18);
 }
-.phone-sheet-close:active { background: rgba(201,168,76,0.28); }
+.phone-sheet-close:active { background: rgba(184,136,64,0.32); transform: scale(0.95); }
 .phone-sheet-content {
-  flex: 1; overflow-y: auto; padding: 12px 16px 20px;
+  flex: 1; overflow-y: auto; padding: 8px 16px 24px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -6312,34 +6682,124 @@ body:has(#phone-screen.active)::after { display: none !important; }
   .phone-sheet { max-height: 85vh; }
 }
 
-/* Phone Tab Items */
+/* ====== ART DECO SHEET PANELS ======
+   Cards / Businesses / Helpers list items — premium gold-bronze cards.
+   ======================================= */
 .phone-section-title {
-  font-size: 12px; letter-spacing: 2px; color: var(--text-dim);
-  margin-bottom: 8px; text-transform: uppercase;
+  font-family: var(--font-display); font-size: 11px; letter-spacing: 4px;
+  color: var(--ad-bronze-light); text-transform: uppercase;
+  margin: 4px 2px 12px;
+  display: flex; align-items: center; gap: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
-.phone-section-empty { font-size: 13px; color: var(--text-dim); text-align: center; padding: 20px; }
+.phone-section-title::before, .phone-section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,136,64,0.42), transparent);
+}
+.phone-section-empty {
+  font-family: var(--font-accent); font-style: italic; font-size: 15px;
+  color: var(--text-secondary); text-align: center; padding: 32px 20px;
+  position: relative;
+}
+.phone-section-empty::before, .phone-section-empty::after {
+  content: '◆'; display: block; margin: 8px auto;
+  color: var(--ad-bronze-light); font-size: 12px; letter-spacing: 8px;
+  opacity: 0.55;
+}
+
+/* Mafia card item — gold-trimmed dark playing card */
 .phone-mafia-card-item {
-  padding: 10px; margin-bottom: 6px; background: rgba(155,89,182,0.06);
-  border: 1px solid rgba(155,89,182,0.2); border-radius: 8px; cursor: pointer;
+  padding: 14px 16px; margin-bottom: 10px;
+  position: relative; cursor: pointer;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(232,212,138,0.10) 0%, transparent 60%),
+    linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid var(--ad-bronze);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.12),
+    inset 0 0 0 1px rgba(184,136,64,0.18);
+  transition: border-color 0.2s, transform 0.1s, box-shadow 0.2s;
 }
-.phone-mc-name { font-size: 14px; font-weight: 600; color: #bb86fc; display: block; }
-.phone-mc-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.phone-mafia-card-item:active {
+  transform: scale(0.99);
+  border-color: var(--ad-bronze-light);
+  box-shadow:
+    0 0 16px rgba(184,136,64,0.32),
+    0 4px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.18);
+}
+.phone-mc-name {
+  display: block;
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ad-cream);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-mc-desc {
+  display: block; margin-top: 6px;
+  font-family: var(--font-accent); font-size: 14px; line-height: 1.45;
+  color: var(--text-secondary); font-style: italic;
+}
+
+/* Business item — left-banded panel with influence badge */
 .phone-biz-item {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 10px; margin-bottom: 4px; background: rgba(46,204,113,0.04);
-  border: 1px solid rgba(46,204,113,0.15); border-radius: 6px;
+  padding: 12px 14px; margin-bottom: 8px;
+  background: linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid var(--ad-bronze-dark);
+  border-left: 3px solid var(--ad-bronze-light);
+  border-radius: 10px;
+  box-shadow:
+    0 3px 10px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(232,212,138,0.08);
 }
-.phone-biz-name { font-size: 13px; color: var(--text); }
-.phone-biz-inf { font-size: 12px; color: var(--gold); display: flex; align-items: center; gap: 3px; }
-.phone-biz-inf .icon { width: 12px; height: 12px; }
+.phone-biz-name {
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  letter-spacing: 0.5px; color: var(--ad-cream);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-biz-inf {
+  font-family: var(--font-display); font-size: 14px; font-weight: 800;
+  color: var(--ad-bronze-light);
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 4px;
+  background: linear-gradient(180deg, rgba(60,40,20,0.6), rgba(30,20,10,0.8));
+  border: 1px solid var(--ad-bronze);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-biz-inf .icon { width: 14px; height: 14px; }
+
+/* Helper item — portrait + Art Deco frame */
 .phone-helper-item {
-  display: flex; gap: 10px; align-items: center; padding: 8px; margin-bottom: 6px;
-  background: rgba(52,152,219,0.04); border: 1px solid rgba(52,152,219,0.15); border-radius: 8px;
+  display: flex; gap: 12px; align-items: center;
+  padding: 12px 14px; margin-bottom: 10px;
+  background: linear-gradient(180deg, var(--ad-leather-warm) 0%, var(--ad-leather-deep) 100%);
+  border: 1px solid var(--ad-bronze);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(232,212,138,0.10);
 }
-.phone-helper-portrait { width: 36px; height: 36px; flex-shrink: 0; }
+.phone-helper-portrait {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: 6px; padding: 4px;
+  background: linear-gradient(180deg, rgba(60,40,20,0.5), rgba(20,12,6,0.7));
+  border: 1px solid var(--ad-bronze);
+  box-shadow: inset 0 1px 0 rgba(232,212,138,0.18);
+}
 .phone-helper-portrait svg { width: 100%; height: 100%; }
-.phone-helper-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.phone-helper-desc { font-size: 11px; color: var(--text-dim); }
+.phone-helper-name {
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  letter-spacing: 1px; color: var(--ad-cream);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.phone-helper-desc {
+  display: block; margin-top: 3px;
+  font-family: var(--font-accent); font-size: 13px; line-height: 1.4;
+  color: var(--text-secondary); font-style: italic;
+}
 
 @media (max-width: 960px) {
   .waiting-grid {
