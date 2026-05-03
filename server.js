@@ -295,6 +295,12 @@ function broadcastState(roomId) {
   const game = rooms.get(roomId);
   if (!game) return;
   try {
+    // If the current seat belongs to an eliminated player (e.g. they died
+    // mid-turn from a bomb) and nothing is pending, advance the turn before
+    // emitting state. Otherwise the game would freeze on the corpse.
+    if (game.phase === 'playing' && typeof game.advanceTurnIfCurrentDead === 'function') {
+      game.advanceTurnIfCurrentDead();
+    }
     // State integrity check — catches ownership desync bugs
     if (game.phase === 'playing') {
       for (const [bizId, bs] of Object.entries(game.businesses || {})) {
@@ -2251,6 +2257,13 @@ io.on('connection', (socket) => {
     if (!player) return cb({ error: 'Гравця не знайдено.' });
     if (!player.rejoinToken || player.rejoinToken !== rejoinToken) {
       return cb({ error: 'Невірний токен перепідключення.' });
+    }
+    // Once a player is dead (eliminated in-game OR disconnected past the
+    // grace period) the seat is gone — businesses were freed, helpers wiped.
+    // Refusing the rejoin prevents revived "ghost" players whose state has
+    // already been distributed back to the table.
+    if (!player.alive) {
+      return cb({ error: 'Ви вибули з гри і не можете повернутися.' });
     }
 
     // Find disconnect record by direct key (O(1) — player.id still holds old socketId

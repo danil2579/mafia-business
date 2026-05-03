@@ -2657,6 +2657,36 @@ class GameEngine {
     return { type: 'mad_dog_attack', pendingReaction: true };
   }
 
+  /**
+   * If the current player has been eliminated (e.g. stepped on a bomb during
+   * their own move) but the turn was never explicitly ended, advance the
+   * index to the next alive player. Returns true if the turn was advanced.
+   *
+   * Safe to call from anywhere — does nothing unless the situation matches.
+   */
+  advanceTurnIfCurrentDead() {
+    if (this.phase !== 'playing') return false;
+    if (this.pendingAction) return false;
+    if (this._deferredLanding) return false;
+    const current = this.getCurrentPlayer();
+    if (!current || current.alive) return false;
+    // Current seat is occupied by a dead player and nothing is pending.
+    // Move to the next alive player. Mirrors the tail of endTurn().
+    this.turnPhase = 'roll';
+    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+    let safety = 0;
+    while (!this.getCurrentPlayer().alive && safety < this.players.length) {
+      this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+      safety++;
+    }
+    this.turnNumber++;
+    if (this.turnNumber % this.players.length === 0) this.tickAlliances();
+    for (const p of this.getAlivePlayers()) {
+      p.stats.roundsSurvived = this.getCurrentRound();
+    }
+    return true;
+  }
+
   // --- END TURN ---
   endTurn(playerId) {
     if (this.getCurrentPlayer().id !== playerId) return { error: 'Не ваш хід.' };

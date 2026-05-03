@@ -112,6 +112,41 @@ test('diplomat cancels an active attack reaction against the player', () => {
   assert.equal(target._tommyUsed, true);
 });
 
+test('pass-through bomb without helpers kills the player and frees the turn', () => {
+  // Regression: previously the dead player remained currentPlayer and the
+  // game froze because nothing called endTurn / advanced the index.
+  // Need 3 players — with only 2 the game ends on death and there is no
+  // next turn to advance to.
+  const game = new GameEngine('TEST');
+  game.addPlayer('p1', 'Alice');
+  game.addPlayer('p2', 'Bob');
+  game.addPlayer('p3', 'Carol');
+  game.startGame();
+  game.phase = 'playing';
+  game.turnPhase = 'roll';
+  game.currentPlayerIndex = 0;
+  game.mafiaCardMinRound = 1;
+
+  const victim = game.getPlayer('p1');
+  victim.position = 0;
+  victim.helpers = [];
+  victim.mafiaCards = [];
+  game.bombs.push({ sector: 1, placedBy: 'p2' });
+
+  const moveResult = game.movePlayer(victim, 4);
+
+  assert.equal(moveResult.bombExploded, true);
+  assert.equal(victim.alive, false);
+  assert.equal(game.pendingAction, null);
+  assert.equal(game.phase, 'playing');
+
+  // Simulates what broadcastState now does after each engine mutation.
+  const advanced = game.advanceTurnIfCurrentDead();
+  assert.equal(advanced, true);
+  assert.equal(game.getCurrentPlayer().id, 'p2');
+  assert.equal(game.turnPhase, 'roll');
+});
+
 test('pass-through bomb with helpers stops movement and waits for helper choice', () => {
   const game = createPlayingGame();
   const player = game.getPlayer('p1');
