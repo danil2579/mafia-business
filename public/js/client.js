@@ -6119,10 +6119,33 @@ function renderTVVictory(state) {
 // PHONE CONTROLLER MODE
 // ============================================================
 let phoneSelectedCharacterId = null;
-let phoneActiveTab = 'actions';
+let phoneActiveTab = null; // null when sheet is closed; 'actions'|'cards'|'businesses'|'helpers' when open
+
+function phoneCloseSheet() {
+  phoneActiveTab = null;
+  const sheet = $('#phone-sheet'); const back = $('#phone-sheet-backdrop');
+  if (sheet) sheet.classList.remove('open');
+  if (back) back.classList.remove('open');
+  document.querySelectorAll('.phone-tab').forEach(t => t.classList.remove('active'));
+}
+function phoneOpenSheet(tab) {
+  phoneActiveTab = tab;
+  const sheet = $('#phone-sheet'); const back = $('#phone-sheet-backdrop');
+  if (sheet) sheet.classList.add('open');
+  if (back) back.classList.add('open');
+  document.querySelectorAll('.phone-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  const titleMap = { actions: 'Дії', cards: 'Карти', businesses: 'Мої бізнеси', helpers: 'Помічники' };
+  const titleEl = $('#phone-sheet-title');
+  if (titleEl) titleEl.textContent = titleMap[tab] || '';
+  if (gameState) renderPhoneTabContent(gameState);
+}
 
 if (isPhoneMode) {
+  document.documentElement.classList.add('is-phone');
   document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('is-phone');
     // Show phone screen
     $$('.screen').forEach(s => s.classList.remove('active'));
     $('#phone-screen').classList.add('active');
@@ -6167,15 +6190,19 @@ if (isPhoneMode) {
       });
     });
 
-    // Tab switching
+    // Tab switching — bottom-sheet model. Tap a tab to open its sheet,
+    // tap the same tab (or backdrop / close button) to dismiss.
     document.querySelectorAll('.phone-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.phone-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        phoneActiveTab = tab.dataset.tab;
-        if (gameState) renderPhoneTabContent(gameState);
+        const which = tab.dataset.tab;
+        if (phoneActiveTab === which) phoneCloseSheet();
+        else phoneOpenSheet(which);
       });
     });
+    const backdrop = $('#phone-sheet-backdrop');
+    if (backdrop) backdrop.addEventListener('click', phoneCloseSheet);
+    const closeBtn = $('#phone-sheet-close');
+    if (closeBtn) closeBtn.addEventListener('click', phoneCloseSheet);
 
     // Reconnection
     socket.on('connect', () => {
@@ -6272,21 +6299,29 @@ function renderPhoneGame(state) {
   const color = me.character?.color || '#fff';
   const header = $('#phone-player-info');
   header.innerHTML = `
-    <span style="color:${color}">${me.name}</span>
-    <span class="phone-money">$${(me.money || 0).toLocaleString()}</span>
-    <span class="phone-respect">${ICON.crown} ${me.respectLevel || 1}</span>
+    <span class="ptb-name" style="color:${color}">${me.name}</span>
+    <span class="ptb-money">$${(me.money || 0).toLocaleString()}</span>
+    <span class="ptb-respect">${ICON.crown} ${me.respectLevel || 1}</span>
   `;
 
   const isMyTurn = state.players[state.currentPlayerIndex]?.id === myId;
   const current = state.players[state.currentPlayerIndex];
   const turnInd = $('#phone-turn-indicator');
-  turnInd.innerHTML = isMyTurn ? '<span class="phone-your-turn">ВАШ ХІД!</span>' :
-    `Хід: <span style="color:${current?.character?.color || '#fff'}">${current?.name || '?'}</span>`;
+  turnInd.innerHTML = isMyTurn ? '<span class="phone-your-turn">ВАШ ХІД</span>' :
+    `<span class="ptb-other">Хід: <b style="color:${current?.character?.color || '#fff'}">${current?.name || '?'}</b></span>`;
 
   const status = $('#phone-status');
   const phaseLabel = state.turnPhase === 'roll' ? 'Кубики' : 'Дія';
-  const pendingLabel = !isMyTurn ? describePendingAction(state.pendingAction, state) : '';
-  status.textContent = `Коло ${state.currentRound || 1} | ${phaseLabel}${pendingLabel ? ` | ${pendingLabel}` : ''}`;
+  status.textContent = `Коло ${state.currentRound || 1} · ${phaseLabel}`;
+
+  // New panels — cell card, players strip, events log
+  if (me.alive && state.phase === 'playing') {
+    renderPhoneCellCard(state, me);
+  } else {
+    const cc = $('#phone-cell-card'); if (cc) cc.innerHTML = '';
+  }
+  renderPhonePlayersStrip(state, me);
+  renderPhoneEvents(state);
 
   // Main action area
   const main = $('#phone-main');
@@ -6375,8 +6410,8 @@ function renderPhoneGame(state) {
     main.innerHTML = `<div class="phone-waiting-turn">${describePendingAction(state.pendingAction, state) || 'Очікуйте наступний хід...'}</div>`;
   }
 
-  // Render tab content
-  renderPhoneTabContent(state);
+  // Refresh sheet content if open
+  if (phoneActiveTab) renderPhoneTabContent(state);
 }
 
 function phonePendingBelongsToPlayer(action, playerId) {
@@ -6798,9 +6833,116 @@ function renderPhoneAttackReaction(state, container) {
   });
 }
 
+// ============================================================
+// Phone controller — cell card, players strip, events log
+// ============================================================
+
+/**
+ * Render the "you are on" card showing the current cell with full
+ * context (district color, business owner/price/rent, special-cell info).
+ */
+function renderPhoneCellCard(state, me) {
+  const el = $('#phone-cell-card');
+  if (!el) return;
+  const sector = (state.board || []).find(s => s.index === me.position);
+  if (!sector) { el.innerHTML = ''; return; }
+
+  // Business cell — show district color, name, owner, price/rent
+  if (sector.type === 'business') {
+    const district = state.districts?.find(d => d.id === sector.districtId);
+    const biz = district?.businesses?.[sector.businessIndex];
+    const bizState = biz ? state.businesses?.[biz.id] : null;
+    const color = district?.color || 'var(--gold)';
+    const owner = bizState?.owner ? state.players.find(p => p.id === bizState.owner) : null;
+    const ownerLine = !bizState?.owner
+      ? `<span class="pcc-free">${ICON.crown ? ICON.crown : ''} ВІЛЬНО — $${biz?.price ?? ''}</span>`
+      : owner
+        ? `<span class="pcc-owner">Власник: <b style="color:${owner.character?.color || '#fff'}">${owner.name}</b> · впл. ${bizState.influenceLevel || 0}</span>`
+        : '';
+    const rentLine = bizState?.owner && biz?.rent
+      ? `<div class="pcc-rent">Рента: $${biz.rent[Math.min((bizState.influenceLevel || 1) - 1, biz.rent.length - 1)]}</div>`
+      : '';
+    el.innerHTML = `
+      <div class="pcc-band" style="background:${color}"></div>
+      <div class="pcc-body" style="--pcc-color:${color}">
+        <div class="pcc-district">${district?.name || 'Район'}</div>
+        <div class="pcc-name">${biz?.name || 'Бізнес'}</div>
+        ${ownerLine}
+        ${rentLine}
+      </div>`;
+    return;
+  }
+
+  // Special cells — get coach info text and render with type icon
+  const coach = getSectorCoachData(state, me);
+  const tone = coach?.tone || 'var(--gold)';
+  const typeLabel = {
+    START: 'СТАРТ', POLICE: 'ПОЛІЦІЯ', PRISON: 'В\'ЯЗНИЦЯ',
+    BAR: 'БАР', MAFIA: 'МАФІЯ', EVENT: 'ПОДІЯ'
+  }[sector.type] || sector.type;
+  el.innerHTML = `
+    <div class="pcc-band" style="background:${tone}"></div>
+    <div class="pcc-body" style="--pcc-color:${tone}">
+      <div class="pcc-district">${typeLabel}</div>
+      <div class="pcc-name">${coach?.title || sector.name || typeLabel}</div>
+      ${coach?.text ? `<div class="pcc-text">${coach.text}</div>` : ''}
+    </div>`;
+}
+
+/**
+ * Horizontally scrollable strip of all players — name + money + status.
+ * Lets the player on the controller see who's still in, who's dead, who
+ * is in prison, and whose turn it is, without looking at the TV.
+ */
+function renderPhonePlayersStrip(state, me) {
+  const el = $('#phone-players-strip');
+  if (!el) return;
+  if (!state.players || state.players.length === 0) { el.innerHTML = ''; return; }
+  const currentId = state.players[state.currentPlayerIndex]?.id;
+  el.innerHTML = `
+    <div class="pps-label">Гравці</div>
+    <div class="pps-row">
+      ${state.players.map(p => {
+        const isMe = p.id === myId;
+        const isCurrent = p.id === currentId;
+        const cls = ['pps-card'];
+        if (isMe) cls.push('is-me');
+        if (isCurrent) cls.push('is-current');
+        if (!p.alive) cls.push('is-dead');
+        else if (p.inPrison > 0) cls.push('is-prison');
+        const dotColor = p.character?.color || '#888';
+        const status = !p.alive ? '✕'
+          : p.inPrison > 0 ? `🔒${p.inPrison}`
+          : `$${(p.money || 0).toLocaleString()}`;
+        return `<div class="${cls.join(' ')}">
+          <span class="pps-dot" style="background:${dotColor}"></span>
+          <span class="pps-name">${p.name}${isMe ? ' (Ви)' : ''}</span>
+          <span class="pps-status">${status}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/**
+ * Last few events from state.log, newest first.
+ */
+function renderPhoneEvents(state) {
+  const el = $('#phone-events');
+  if (!el) return;
+  const log = Array.isArray(state.log) ? state.log : [];
+  if (log.length === 0) { el.innerHTML = ''; return; }
+  const last = log.slice(-5).reverse();
+  el.innerHTML = `
+    <div class="pev-label">Останні події</div>
+    <div class="pev-list">
+      ${last.map((entry, i) => `<div class="pev-item${i === 0 ? ' pev-latest' : ''}">${entry}</div>`).join('')}
+    </div>`;
+}
+
 function renderPhoneTabContent(state) {
   const tabContent = $('#phone-tab-content');
   if (!tabContent) return;
+  if (!phoneActiveTab) { tabContent.innerHTML = ''; return; }
   const me = state.players.find(p => p.id === myId);
   if (!me) { tabContent.innerHTML = ''; return; }
 

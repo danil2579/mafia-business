@@ -1418,19 +1418,41 @@
 
     <!-- Phone Game Controller -->
     <div id="phone-game" class="phone-game" style="display:none;">
-      <div class="phone-header">
-        <div class="phone-player-info" id="phone-player-info"></div>
-        <div class="phone-turn-indicator" id="phone-turn-indicator"></div>
+      <!-- Compact top bar: name + money + respect + round -->
+      <div class="phone-topbar">
+        <div class="phone-tb-left" id="phone-player-info"></div>
+        <div class="phone-tb-right">
+          <span class="phone-tb-round" id="phone-status"></span>
+          <span class="phone-tb-turn" id="phone-turn-indicator"></span>
+        </div>
       </div>
-      <div class="phone-status" id="phone-status"></div>
-      <div class="phone-main" id="phone-main"></div>
-      <div class="phone-tabs">
-        <button class="phone-tab active" data-tab="actions">Дії</button>
+
+      <!-- Scrollable body: cell card → action area → players strip → events log -->
+      <div class="phone-body">
+        <div class="phone-cell-card" id="phone-cell-card"></div>
+        <div class="phone-main" id="phone-main"></div>
+        <div class="phone-players-strip" id="phone-players-strip"></div>
+        <div class="phone-events" id="phone-events"></div>
+      </div>
+
+      <!-- Sticky bottom tabs -->
+      <div class="phone-tabs" id="phone-tabs">
+        <button class="phone-tab" data-tab="actions">Дії</button>
         <button class="phone-tab" data-tab="cards">Карти</button>
         <button class="phone-tab" data-tab="businesses">Бізнес</button>
         <button class="phone-tab" data-tab="helpers">Помічники</button>
       </div>
-      <div class="phone-tab-content" id="phone-tab-content"></div>
+
+      <!-- Bottom-sheet overlay (closed by default; opens when a tab is tapped) -->
+      <div class="phone-sheet-backdrop" id="phone-sheet-backdrop"></div>
+      <div class="phone-sheet" id="phone-sheet">
+        <div class="phone-sheet-header">
+          <span class="phone-sheet-handle"></span>
+          <span class="phone-sheet-title" id="phone-sheet-title"></span>
+          <button class="phone-sheet-close" id="phone-sheet-close" aria-label="Закрити">×</button>
+        </div>
+        <div class="phone-sheet-content" id="phone-tab-content"></div>
+      </div>
     </div>
   </div>
 
