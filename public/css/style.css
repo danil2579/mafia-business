@@ -602,11 +602,9 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 #btn-create {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 16px 28px; font-size: 15px; letter-spacing: 2px;
-  animation: createBtnGlow 3s ease-in-out infinite;
-}
-@keyframes createBtnGlow {
-  0%, 100% { box-shadow: 0 4px 24px rgba(201,168,76,0.15), 0 0 60px rgba(201,168,76,0.05); }
-  50% { box-shadow: 0 4px 32px rgba(201,168,76,0.25), 0 0 80px rgba(201,168,76,0.1); }
+  /* No animated halo — the previous keyframe used 60–80px blur which,
+     larger than the button's corner radius, rendered as a rectangular
+     pulsing blob beneath the button. Static drop-shadow is enough. */
 }
 
 .lobby-divider-row {
@@ -2011,6 +2009,62 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .biz-purchase-card .center-buttons { gap: 10px; position: relative; z-index: 2; }
 .biz-purchase-card .center-buttons .btn { width: 100%; }
+
+/* Buttons take the district color so they read as part of the card.
+   Overrides .btn-primary / .btn-secondary inside the purchase card only. */
+.biz-purchase-card .btn-primary {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      color-mix(in srgb, var(--_c, var(--gold)) 30%, white) 0%,
+      transparent 60%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--_c, var(--gold)) 70%, white 22%) 0%,
+      color-mix(in srgb, var(--_c, var(--gold)) 80%, black 8%) 30%,
+      color-mix(in srgb, var(--_c, var(--gold)) 55%, black 28%) 65%,
+      color-mix(in srgb, var(--_c, var(--gold)) 30%, black 55%) 100%);
+  border: 2px solid color-mix(in srgb, var(--_c, var(--gold)) 50%, black 35%);
+  color: #fff;
+  text-shadow:
+    0 1px 0 color-mix(in srgb, var(--_c, var(--gold)) 40%, white),
+    0 -1px 0 rgba(0,0,0,0.45);
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--_c, var(--gold)) 32%, transparent),
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 2px 1px color-mix(in srgb, var(--_c, var(--gold)) 35%, white 45%),
+    inset 0 -2px 4px rgba(0,0,0,0.45),
+    inset 0 0 0 1px color-mix(in srgb, var(--_c, var(--gold)) 45%, white 30%);
+}
+.biz-purchase-card .btn-primary:hover {
+  filter: brightness(1.08);
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--_c, var(--gold)) 50%, transparent),
+    0 6px 14px rgba(0,0,0,0.55),
+    inset 0 2px 1px color-mix(in srgb, var(--_c, var(--gold)) 45%, white 50%),
+    inset 0 -2px 4px rgba(0,0,0,0.45),
+    inset 0 0 0 1px color-mix(in srgb, var(--_c, var(--gold)) 55%, white 35%);
+}
+.biz-purchase-card .btn-secondary {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--_c, var(--gold)) 8%, rgba(10,8,5,0.96)) 0%,
+    rgba(8,6,4,0.97) 100%);
+  border: 1.5px solid color-mix(in srgb, var(--_c, var(--gold)) 45%, transparent);
+  color: color-mix(in srgb, var(--_c, var(--gold)) 25%, white 75%);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--_c, var(--gold)) 14%, transparent),
+    0 3px 8px rgba(0,0,0,0.5),
+    inset 0 1px 0 color-mix(in srgb, var(--_c, var(--gold)) 18%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--_c, var(--gold)) 12%, transparent);
+}
+.biz-purchase-card .btn-secondary:hover {
+  border-color: color-mix(in srgb, var(--_c, var(--gold)) 80%, white 10%);
+  color: #fff;
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--_c, var(--gold)) 38%, transparent),
+    0 4px 12px rgba(0,0,0,0.55),
+    inset 0 1px 0 color-mix(in srgb, var(--_c, var(--gold)) 28%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--_c, var(--gold)) 38%, transparent);
+}
+
 .center-panel:has(.biz-purchase-card) {
   background: none; border: none; box-shadow: none;
   backdrop-filter: none; padding: 0;
@@ -2309,6 +2363,121 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   font-family: var(--font-accent); font-size: 14px;
 }
 .revealed-card .btn { font-size: 10px; padding: 11px 24px; }
+
+/* Type-tinted buttons inside revealed cards — match the card's color
+   so the call-to-action reads as part of the card, not a generic gold
+   chip floating on top. */
+
+/* Mafia (red) — blood-engraved */
+.revealed-card.mafia-type .btn-primary {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(255,180,180,0.22) 0%, rgba(255,180,180,0) 60%),
+    linear-gradient(180deg,
+      #e64545 0%, #b82828 30%, #8a1a1a 65%, #4a0808 100%);
+  color: #ffe0e0; border: 2px solid #6a1010;
+  text-shadow:
+    0 1px 0 rgba(255,180,180,0.5),
+    0 -1px 0 rgba(40,4,4,0.5);
+  box-shadow:
+    0 0 14px rgba(212,38,38,0.32),
+    0 4px 10px rgba(0,0,0,0.55),
+    inset 0 2px 1px rgba(255,180,180,0.45),
+    inset 0 -2px 4px rgba(30,4,4,0.55),
+    inset 0 0 0 1px rgba(255,180,180,0.25);
+}
+.revealed-card.mafia-type .btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 0 22px rgba(212,38,38,0.5),
+    0 6px 14px rgba(0,0,0,0.6),
+    inset 0 2px 1px rgba(255,180,180,0.6),
+    inset 0 -2px 4px rgba(30,4,4,0.55),
+    inset 0 0 0 1px rgba(255,180,180,0.4);
+}
+.revealed-card.mafia-type .btn-secondary {
+  background: linear-gradient(180deg, rgba(40,12,12,0.95), rgba(18,6,6,0.97));
+  border: 1.5px solid rgba(212,38,38,0.5);
+  color: #ffd0d0;
+}
+.revealed-card.mafia-type .btn-secondary:hover {
+  border-color: #d44848; color: #fff;
+  box-shadow: 0 0 18px rgba(212,38,38,0.32), inset 0 0 0 1px rgba(255,180,180,0.3);
+}
+
+/* Event (blue) — cool steel */
+.revealed-card.event-type .btn-primary {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(180,210,255,0.24) 0%, rgba(180,210,255,0) 60%),
+    linear-gradient(180deg,
+      #6699e0 0%, #2e60a8 30%, #1a4080 65%, #08213e 100%);
+  color: #e6efff; border: 2px solid #11365e;
+  text-shadow:
+    0 1px 0 rgba(180,210,255,0.5),
+    0 -1px 0 rgba(8,16,30,0.5);
+  box-shadow:
+    0 0 14px rgba(74,111,165,0.4),
+    0 4px 10px rgba(0,0,0,0.55),
+    inset 0 2px 1px rgba(190,215,255,0.5),
+    inset 0 -2px 4px rgba(8,16,30,0.55),
+    inset 0 0 0 1px rgba(190,215,255,0.28);
+}
+.revealed-card.event-type .btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 0 22px rgba(74,111,165,0.55),
+    0 6px 14px rgba(0,0,0,0.6),
+    inset 0 2px 1px rgba(190,215,255,0.65),
+    inset 0 -2px 4px rgba(8,16,30,0.55),
+    inset 0 0 0 1px rgba(190,215,255,0.42);
+}
+.revealed-card.event-type .btn-secondary {
+  background: linear-gradient(180deg, rgba(12,28,52,0.95), rgba(6,14,28,0.97));
+  border: 1.5px solid rgba(74,111,165,0.5);
+  color: #c8d8f0;
+}
+.revealed-card.event-type .btn-secondary:hover {
+  border-color: var(--blue-light); color: #fff;
+  box-shadow: 0 0 18px rgba(74,111,165,0.4), inset 0 0 0 1px rgba(190,215,255,0.3);
+}
+
+/* Helper (green) — emerald */
+.revealed-card.helper-type .btn-primary {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(190,255,210,0.26) 0%, rgba(190,255,210,0) 60%),
+    linear-gradient(180deg,
+      #45e090 0%, #1ea058 30%, #137a40 65%, #07351a 100%);
+  color: #e8ffee; border: 2px solid #134c25;
+  text-shadow:
+    0 1px 0 rgba(190,255,210,0.5),
+    0 -1px 0 rgba(0,30,10,0.5);
+  box-shadow:
+    0 0 14px rgba(46,204,113,0.36),
+    0 4px 10px rgba(0,0,0,0.55),
+    inset 0 2px 1px rgba(200,255,220,0.5),
+    inset 0 -2px 4px rgba(0,30,10,0.55),
+    inset 0 0 0 1px rgba(190,255,210,0.28);
+}
+.revealed-card.helper-type .btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 0 22px rgba(46,204,113,0.55),
+    0 6px 14px rgba(0,0,0,0.6),
+    inset 0 2px 1px rgba(200,255,220,0.65),
+    inset 0 -2px 4px rgba(0,30,10,0.55),
+    inset 0 0 0 1px rgba(190,255,210,0.42);
+}
+.revealed-card.helper-type .btn-secondary {
+  background: linear-gradient(180deg, rgba(14,40,24,0.95), rgba(6,18,12,0.97));
+  border: 1.5px solid rgba(90,201,140,0.5);
+  color: #c8e8d4;
+}
+.revealed-card.helper-type .btn-secondary:hover {
+  border-color: #5ad88f; color: #fff;
+  box-shadow: 0 0 18px rgba(46,204,113,0.4), inset 0 0 0 1px rgba(190,255,210,0.3);
+}
 
 @keyframes cardRevealIn {
   0% { transform: perspective(1000px) rotateY(90deg) scale(0.6) translateY(20px); opacity: 0; }
