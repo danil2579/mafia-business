@@ -5392,60 +5392,137 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .tv-logo span { font-size: 64px; display: block; }
 .tv-mode-badge {
-  display: inline-block; margin-top: 10px; padding: 4px 16px;
-  background: rgba(201,168,76,0.15); border: 1px solid var(--gold-dim);
-  border-radius: 4px; font-size: 14px; letter-spacing: 3px; color: var(--gold);
+  display: inline-block; margin-top: 12px; padding: 6px 18px;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(232,212,138,0.22) 0%, rgba(232,212,138,0) 70%),
+    linear-gradient(180deg, rgba(28,22,14,0.95), rgba(10,8,5,0.97));
+  border: 1.5px solid rgba(201,168,76,0.55);
+  border-radius: 6px;
+  font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 4px;
+  color: var(--gold-light); font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    0 0 12px rgba(201,168,76,0.18),
+    0 3px 8px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,225,160,0.16);
 }
-.tv-room-code-wrap { margin: 30px 0; }
+.tv-room-code-wrap { margin: 36px 0; }
 .tv-room-label {
-  font-size: 16px; letter-spacing: 4px; color: var(--text-dim);
-  text-transform: uppercase; margin-bottom: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 16px; letter-spacing: 6px; color: var(--text-dim);
+  text-transform: uppercase; margin-bottom: 14px; font-weight: 600;
 }
+/* Room code as an engraved gold marquee — the centrepiece of the waiting screen */
 .tv-room-code {
   font-family: 'Cinzel', serif; font-size: clamp(80px, 12vw, 180px); font-weight: 900;
-  color: var(--gold); letter-spacing: 20px; line-height: 1;
-  text-shadow: 0 0 40px rgba(201,168,76,0.3);
+  letter-spacing: 20px; line-height: 1;
+  /* engraved gold gradient on the glyphs themselves */
+  background: linear-gradient(180deg, #fdecb0 0%, #e9c66a 25%, #c79f3e 55%, #8a6520 80%, #5d4413 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  text-shadow:
+    0 0 30px rgba(232,212,138,0.35),
+    0 0 60px rgba(201,168,76,0.18);
   padding-left: 20px; /* compensate trailing letter-spacing */
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.55));
 }
 .tv-join-hint {
-  margin-top: 15px; font-size: clamp(14px, 1.5vw, 20px); color: var(--text-dim);
+  margin-top: 18px; font-size: clamp(14px, 1.5vw, 20px); color: var(--text-secondary);
   font-family: 'Inter', sans-serif; word-break: break-word;
-  max-width: 700px;
+  max-width: 700px; line-height: 1.5;
 }
-.tv-players-area { margin: 30px 0; width: 100%; max-width: 900px; }
+.tv-players-area { margin: 36px 0; width: 100%; max-width: 900px; }
 .tv-players-label {
-  font-size: 14px; letter-spacing: 3px; color: var(--text-dim);
-  margin-bottom: 15px;
+  font-family: 'Cinzel', serif;
+  font-size: 14px; letter-spacing: 4px; color: var(--text-dim);
+  margin-bottom: 18px; text-transform: uppercase; font-weight: 600;
 }
-.tv-players-list { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.tv-players-list { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; }
 .tv-player-card {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 16px 20px; background: linear-gradient(180deg, rgba(18,20,38,0.92), rgba(8,10,22,0.96)); border: 1px solid rgba(201,168,76,0.12);
-  border-radius: 14px; min-width: 110px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 18px 22px;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(232,212,138,0.16) 0%, rgba(232,212,138,0) 70%),
+    linear-gradient(180deg, rgba(28,22,14,0.94), rgba(10,8,5,0.97));
+  border: 1.5px solid rgba(201,168,76,0.4);
+  border-radius: 14px; min-width: 130px;
+  box-shadow:
+    0 0 16px rgba(201,168,76,0.12),
+    0 10px 28px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,225,160,0.14),
+    inset 0 -2px 6px rgba(0,0,0,0.4),
+    inset 0 0 0 1px rgba(201,168,76,0.12);
 }
-.tv-player-portrait { width: 60px; height: 60px; }
+.tv-player-portrait { width: 64px; height: 64px; }
 .tv-player-portrait svg { width: 100%; height: 100%; }
-.tv-player-name { font-size: 16px; font-weight: 600; color: var(--text); }
-.tv-player-bot { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; }
-.tv-waiting-controls { display: flex; gap: 15px; margin-top: 20px; }
+.tv-player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 16px; font-weight: 700; color: var(--gold-light);
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.tv-player-bot {
+  font-size: 10px; color: var(--text-dim); letter-spacing: 3px;
+  font-family: 'Cinzel', serif; font-weight: 600;
+}
+.tv-waiting-controls { display: flex; gap: 16px; margin-top: 24px; }
 
 /* TV Game Layout */
 .tv-game { display: flex; flex-direction: column; width: 100%; height: 100vh; overflow: hidden; position: relative; }
 .tv-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 20px; background: linear-gradient(180deg, rgba(15,18,34,0.94), rgba(8,10,20,0.98)); border-bottom: 1px solid rgba(201,168,76,0.12);
-  min-height: 56px; flex-shrink: 0;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.2);
+  padding: 12px 24px;
+  background: linear-gradient(180deg, rgba(20,16,10,0.96), rgba(8,6,4,0.98));
+  border-bottom: 1px solid rgba(201,168,76,0.32);
+  min-height: 60px; flex-shrink: 0;
+  position: relative;
+  box-shadow:
+    0 8px 22px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(232,212,138,0.06);
 }
-.tv-topbar-left { display: flex; align-items: center; gap: 12px; }
-.tv-title { font-family: 'Cinzel', serif; font-size: 18px; color: var(--gold); font-weight: 700; }
+/* Bottom gold accent line — same idiom as .center-panel */
+.tv-topbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(232,212,138,0.55) 50%, transparent 95%);
+  pointer-events: none;
+}
+.tv-topbar-left { display: flex; align-items: center; gap: 14px; }
+.tv-title {
+  font-family: 'Cinzel', serif; font-size: 20px; font-weight: 900;
+  color: var(--gold-light); letter-spacing: 4px;
+  text-shadow:
+    0 0 12px rgba(232,212,138,0.4),
+    0 1px 2px rgba(0,0,0,0.7);
+}
 .tv-room-badge {
-  padding: 2px 10px; background: rgba(201,168,76,0.1); border: 1px solid var(--gold-dim);
-  border-radius: 4px; font-size: 12px; color: var(--gold); letter-spacing: 2px;
+  padding: 4px 14px;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(232,212,138,0.18) 0%, rgba(232,212,138,0) 70%),
+    linear-gradient(180deg, rgba(28,22,14,0.95), rgba(10,8,5,0.97));
+  border: 1px solid rgba(201,168,76,0.5);
+  border-radius: 5px;
+  font-family: 'Cinzel', serif;
+  font-size: 13px; color: var(--gold-light); font-weight: 700;
+  letter-spacing: 3px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255,225,160,0.16),
+    inset 0 0 0 1px rgba(201,168,76,0.15);
 }
-.tv-topbar-center { font-size: 18px; color: var(--text); font-weight: 600; }
-.tv-topbar-right { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-dim); }
+.tv-topbar-center {
+  font-family: 'Cinzel', serif;
+  font-size: 18px; color: var(--gold-light); font-weight: 700;
+  letter-spacing: 2px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.tv-topbar-right {
+  display: flex; align-items: center; gap: 16px;
+  font-size: 14px; color: var(--text-secondary);
+  font-family: 'Cinzel', serif; letter-spacing: 1.5px;
+}
 
 .tv-layout { display: flex; flex: 1; overflow: hidden; }
 .tv-board-area {
@@ -5456,115 +5533,276 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   width: 100%; height: 100%; max-width: none; max-height: none;
 }
 .tv-sidebar {
-  width: 280px; flex-shrink: 0; display: flex; flex-direction: column;
-  border-left: 1px solid var(--border); background: var(--card-bg);
+  width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
+  border-left: 1px solid rgba(201,168,76,0.25);
+  background: linear-gradient(180deg, rgba(14,10,6,0.96), rgba(6,4,2,0.99));
   overflow: hidden;
+  box-shadow: inset 6px 0 16px rgba(0,0,0,0.45);
 }
 
-/* TV Player Panels */
-.tv-player-panels { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.tv-pp {
-  padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border); transition: all 0.3s;
+/* TV Player Panels — premium glass cards in the sidebar */
+.tv-player-panels {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
 }
-.tv-pp-active { background: rgba(201,168,76,0.08); border-color: var(--gold-dim); }
-.tv-pp-dead { opacity: 0.4; }
-.tv-pp-prison { border-color: rgba(231,76,60,0.3); }
-.tv-pp-header { display: flex; align-items: center; gap: 10px; border-left: 3px solid; padding-left: 8px; }
-.tv-pp-portrait { width: 36px; height: 36px; flex-shrink: 0; }
+.tv-pp {
+  padding: 12px; border-radius: 10px;
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%,
+      rgba(232,212,138,0.06) 0%, rgba(232,212,138,0) 60%),
+    linear-gradient(180deg, rgba(28,22,14,0.55), rgba(10,8,5,0.75));
+  border: 1px solid rgba(201,168,76,0.18);
+  position: relative;
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  box-shadow:
+    0 3px 10px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,225,160,0.06);
+}
+.tv-pp-active {
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%,
+      rgba(232,212,138,0.18) 0%, rgba(232,212,138,0) 60%),
+    linear-gradient(180deg, rgba(40,32,18,0.7), rgba(20,14,6,0.85));
+  border-color: rgba(232,212,138,0.65);
+  box-shadow:
+    0 0 14px rgba(201,168,76,0.28),
+    0 4px 12px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,225,160,0.18),
+    inset 0 0 0 1px rgba(232,212,138,0.18);
+}
+/* Gold marker on the left edge of the active player */
+.tv-pp-active::before {
+  content: ''; position: absolute; left: -1px; top: 8%; bottom: 8%; width: 3px;
+  background: linear-gradient(180deg, transparent, var(--gold) 30%, var(--gold) 70%, transparent);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(232,212,138,0.6);
+  pointer-events: none;
+}
+.tv-pp-dead {
+  filter: grayscale(0.85) brightness(0.55);
+  border-color: rgba(80,60,40,0.3);
+  background: linear-gradient(180deg, rgba(20,14,10,0.5), rgba(10,8,6,0.7));
+}
+.tv-pp-prison {
+  border-color: rgba(231,76,60,0.55);
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%,
+      rgba(231,76,60,0.10) 0%, rgba(231,76,60,0) 60%),
+    linear-gradient(180deg, rgba(28,14,12,0.65), rgba(14,8,6,0.8));
+  box-shadow:
+    0 0 10px rgba(231,76,60,0.18),
+    0 3px 10px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,180,180,0.08);
+}
+.tv-pp-header {
+  display: flex; align-items: center; gap: 10px;
+  border-left: 3px solid; padding-left: 10px;
+}
+.tv-pp-portrait { width: 40px; height: 40px; flex-shrink: 0; }
 .tv-pp-portrait svg { width: 100%; height: 100%; }
-.tv-pp-info { flex: 1; }
-.tv-pp-name { font-size: 14px; font-weight: 700; }
-.tv-pp-money { font-size: 13px; color: var(--green-light); }
+.tv-pp-info { flex: 1; min-width: 0; }
+.tv-pp-name {
+  font-family: 'Cinzel', serif;
+  font-size: 14px; font-weight: 700;
+  color: var(--gold-light); letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tv-pp-money {
+  font-size: 13px; color: var(--green-light); font-weight: 600;
+  text-shadow: 0 0 8px rgba(46,204,113,0.35);
+}
 .tv-pp-stats {
-  display: flex; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--text-dim);
+  display: flex; gap: 12px; margin-top: 8px;
+  font-size: 12px; color: var(--text-dim);
   flex-wrap: wrap;
 }
-.tv-pp-stats span { display: flex; align-items: center; gap: 3px; }
-.tv-pp-stats .icon { width: 12px; height: 12px; }
-.tv-pp-prison-badge { color: #e74c3c; }
-.tv-pp-dead-badge { color: #e74c3c; font-weight: 700; letter-spacing: 1px; }
+.tv-pp-stats span { display: flex; align-items: center; gap: 4px; }
+.tv-pp-stats .icon { width: 13px; height: 13px; }
+.tv-pp-prison-badge {
+  color: #ff8a78; font-weight: 700; letter-spacing: 0.5px;
+  text-shadow: 0 0 6px rgba(231,76,60,0.5);
+}
+.tv-pp-dead-badge {
+  color: #e74c3c; font-weight: 700; letter-spacing: 2px;
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 0 8px rgba(231,76,60,0.5);
+}
 
-/* TV Log */
+/* TV Log — premium chronicle */
 .tv-log-section {
-  flex-shrink: 0; max-height: 200px; border-top: 1px solid var(--border);
+  flex-shrink: 0; max-height: 220px;
+  border-top: 1px solid rgba(201,168,76,0.25);
   display: flex; flex-direction: column;
+  background: linear-gradient(180deg, rgba(8,6,4,0.6), rgba(4,2,1,0.85));
 }
 .tv-log-title {
-  padding: 8px 12px; font-size: 11px; letter-spacing: 2px; color: var(--text-dim);
-  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 4px;
+  color: var(--gold-light); font-weight: 700;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  border-bottom: 1px solid rgba(201,168,76,0.18);
+  background: linear-gradient(180deg, rgba(28,22,14,0.4), transparent);
 }
-.tv-game-log { flex: 1; overflow-y: auto; padding: 8px 12px; font-size: 12px; }
-.tv-log-entry { padding: 3px 0; color: var(--text-dim); border-bottom: 1px solid rgba(255,255,255,0.03); }
-.tv-log-entry:last-child { color: var(--text); }
+.tv-game-log {
+  flex: 1; overflow-y: auto; padding: 10px 14px;
+  font-size: 12px; line-height: 1.5;
+}
+.tv-log-entry {
+  padding: 4px 0; color: var(--text-dim);
+  border-bottom: 1px solid rgba(232,212,138,0.04);
+}
+.tv-log-entry:last-child {
+  color: var(--gold-light); font-weight: 600;
+  text-shadow: 0 0 8px rgba(232,212,138,0.18);
+}
 
 /* TV Roll Order */
 .tv-roll-order {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   width: 100%; min-height: 100vh; padding: 40px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(201,168,76,0.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(140,24,24,0.04) 0%, transparent 35%);
 }
 .tv-ro-title {
-  font-family: 'Cinzel', serif; font-size: 32px; color: var(--gold);
-  margin-bottom: 20px; letter-spacing: 4px;
+  font-family: 'Cinzel', serif; font-size: 36px; font-weight: 900;
+  color: var(--gold-light); margin-bottom: 20px; letter-spacing: 6px;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 24px rgba(232,212,138,0.4),
+    0 2px 4px rgba(0,0,0,0.6);
 }
 .tv-ro-status {
-  font-size: 20px; color: var(--text-dim); margin-bottom: 30px;
-  animation: phonePulse 2s infinite;
+  font-family: 'Cinzel', serif;
+  font-size: 18px; color: var(--text-secondary); margin-bottom: 36px;
+  letter-spacing: 2px;
 }
-.tv-ro-status strong { color: var(--text); }
-.tv-ro-players { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.tv-ro-status strong { color: var(--gold-light); font-weight: 700; }
+.tv-ro-players { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
 .tv-ro-player {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 20px; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: 12px; min-width: 120px; transition: all 0.3s;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 22px;
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%,
+      rgba(232,212,138,0.10) 0%, rgba(232,212,138,0) 60%),
+    linear-gradient(180deg, rgba(28,22,14,0.85), rgba(10,8,5,0.95));
+  border: 1.5px solid rgba(201,168,76,0.25);
+  border-radius: 14px; min-width: 140px;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, background 0.3s;
+  box-shadow:
+    0 8px 22px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,225,160,0.08);
 }
-.tv-ro-current { border-color: var(--gold); background: rgba(201,168,76,0.08); animation: tvRoPulse 1.5s infinite; }
-@keyframes tvRoPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.3); }
-  50% { box-shadow: 0 0 20px 4px rgba(201,168,76,0.15); }
+/* Active player — static halo (no continuous animation) */
+.tv-ro-current {
+  border-color: var(--gold);
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%,
+      rgba(232,212,138,0.22) 0%, rgba(232,212,138,0) 60%),
+    linear-gradient(180deg, rgba(40,32,18,0.85), rgba(20,14,6,0.95));
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 18px rgba(232,212,138,0.42),
+    0 10px 28px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,225,160,0.22),
+    inset 0 0 0 1px rgba(232,212,138,0.32);
 }
-.tv-ro-portrait { width: 64px; height: 64px; }
+.tv-ro-portrait { width: 72px; height: 72px; }
 .tv-ro-portrait svg { width: 100%; height: 100%; }
-.tv-ro-name { font-size: 16px; font-weight: 600; color: var(--text); }
-.tv-ro-roll { font-size: 24px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 6px; }
-.tv-ro-roll .icon { width: 20px; height: 20px; }
+.tv-ro-name {
+  font-family: 'Cinzel', serif;
+  font-size: 16px; font-weight: 700; color: var(--gold-light);
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.tv-ro-roll {
+  font-family: 'Cinzel', serif;
+  font-size: 26px; font-weight: 900; color: var(--gold);
+  display: flex; align-items: center; gap: 8px;
+  text-shadow: 0 0 12px rgba(232,212,138,0.4);
+}
+.tv-ro-roll .icon { width: 22px; height: 22px; }
 
-/* TV Victory */
+/* TV Victory — proper crown moment */
 .tv-victory {
   position: fixed; inset: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(10,10,15,0.95); animation: fadeIn 0.5s;
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 50%,
+      rgba(201,168,76,0.08) 0%,
+      rgba(10,10,15,0.92) 50%,
+      rgba(5,3,2,0.98) 100%);
+  animation: fadeIn 0.6s;
 }
-.tv-victory-content { text-align: center; }
-.tv-victory-crown { margin-bottom: 20px; }
-.tv-victory-crown .icon { width: 80px; height: 80px; color: var(--gold); }
+.tv-victory-content { text-align: center; padding: 40px; }
+.tv-victory-crown { margin-bottom: 24px; }
+.tv-victory-crown .icon {
+  width: 96px; height: 96px; color: var(--gold);
+  filter: drop-shadow(0 0 24px rgba(232,212,138,0.6))
+          drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+}
 .tv-victory-portrait {
-  width: 120px; height: 120px; margin: 0 auto 20px;
-  border: 3px solid; border-radius: 50%; padding: 10px;
-  background: rgba(201,168,76,0.05);
+  width: 140px; height: 140px; margin: 0 auto 28px;
+  border: 4px solid var(--gold); border-radius: 50%; padding: 10px;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(232,212,138,0.18) 0%, rgba(232,212,138,0) 70%),
+    linear-gradient(180deg, rgba(28,22,14,0.7), rgba(10,8,5,0.85));
+  box-shadow:
+    0 0 28px rgba(232,212,138,0.4),
+    0 12px 32px rgba(0,0,0,0.6),
+    inset 0 0 0 2px rgba(255,225,160,0.15);
 }
 .tv-victory-portrait svg { width: 100%; height: 100%; }
 .tv-victory-title {
-  font-family: 'Cinzel', serif; font-size: 48px; font-weight: 900;
-  letter-spacing: 4px;
+  font-family: 'Cinzel', serif; font-size: 56px; font-weight: 900;
+  letter-spacing: 6px; color: var(--gold-light);
+  text-shadow:
+    0 0 30px rgba(232,212,138,0.5),
+    0 2px 6px rgba(0,0,0,0.7);
 }
 .tv-victory-subtitle {
-  font-size: 24px; color: var(--gold); letter-spacing: 6px; margin-top: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 24px; color: var(--gold); letter-spacing: 8px;
+  margin-top: 14px; font-weight: 700;
+  text-shadow: 0 0 18px rgba(232,212,138,0.4);
 }
 .tv-victory-stats {
-  margin-top: 30px; font-size: 20px; color: var(--text-dim);
-  display: flex; gap: 30px; justify-content: center;
+  margin-top: 36px;
+  font-family: 'Cinzel', serif;
+  font-size: 20px; color: var(--text-secondary);
+  display: flex; gap: 36px; justify-content: center;
+  letter-spacing: 1.5px;
 }
-.tv-victory-stats .icon { width: 20px; height: 20px; }
+.tv-victory-stats span { display: flex; align-items: center; gap: 8px; }
+.tv-victory-stats .icon { width: 22px; height: 22px; color: var(--gold); }
 
-/* TV Overlay Messages */
+/* TV Overlay Messages — premium golden notice */
 .tv-overlay-msg {
-  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
-  padding: 12px 30px; background: rgba(10,10,15,0.9); border: 1px solid var(--gold-dim);
-  border-radius: 8px; font-size: 18px; color: var(--text); z-index: 100;
-  opacity: 0; transition: opacity 0.4s; pointer-events: none;
+  position: absolute; top: 80px; left: 50%; transform: translateX(-50%) translateY(-10px);
+  padding: 14px 32px;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(232,212,138,0.18) 0%, rgba(232,212,138,0) 70%),
+    linear-gradient(180deg, rgba(28,22,14,0.95), rgba(10,8,5,0.97));
+  border: 1.5px solid rgba(201,168,76,0.55);
+  border-radius: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 18px; color: var(--gold-light); letter-spacing: 2px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    0 0 20px rgba(201,168,76,0.22),
+    0 8px 22px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,225,160,0.18);
+  z-index: 100;
+  opacity: 0; transition: opacity 0.4s, transform 0.4s; pointer-events: none;
 }
-.tv-overlay-msg-show { opacity: 1; }
+.tv-overlay-msg-show {
+  opacity: 1; transform: translateX(-50%) translateY(0);
+}
 
 /* ============================================================
    PHONE CONTROLLER STYLES
