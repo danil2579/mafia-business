@@ -283,10 +283,35 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   50% { filter: saturate(1.08) brightness(1.05); }
 }
 
+/* CASINO — engraved emerald, matches the engraved-gold language of primary/danger */
 .btn-casino {
-  background: linear-gradient(180deg, #1a9a4a, #0a5a2a); color: var(--gold-light); border-color: var(--green);
-  box-shadow: 0 4px 20px rgba(26,154,74,0.25);
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(170,255,200,0.28) 0%, rgba(170,255,200,0) 60%),
+    linear-gradient(180deg,
+      #3ed085 0%, #22a058 30%, #157a40 65%, #07351a 100%);
+  color: #f0fff4;
+  border: 2px solid #134c25;
+  text-shadow:
+    0 1px 0 rgba(170,255,200,0.5),
+    0 -1px 0 rgba(0,30,10,0.45);
+  box-shadow:
+    0 0 14px rgba(46,204,113,0.26),
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 2px 1px rgba(190,255,210,0.4),
+    inset 0 -2px 4px rgba(0,30,10,0.5),
+    inset 0 0 0 1px rgba(170,255,200,0.22);
 }
+.btn-casino:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    0 0 20px rgba(46,204,113,0.4),
+    0 6px 14px rgba(0,0,0,0.55),
+    inset 0 2px 1px rgba(190,255,210,0.55),
+    inset 0 -2px 4px rgba(0,30,10,0.5),
+    inset 0 0 0 1px rgba(170,255,200,0.35);
+}
+.btn-casino:active { transform: translateY(1px); filter: brightness(0.95); }
 
 /* ============================================================
    LOBBY SCREEN — Premium Cinematic Entrance
@@ -848,11 +873,19 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 .setting-control { display: flex; align-items: center; gap: 8px; }
 .setting-value { font-family: var(--font-display); font-size: 20px; color: var(--gold); min-width: 30px; text-align: center; font-weight: 700; }
 .btn-setting-minus, .btn-setting-plus {
-  width: 30px; height: 30px; border-radius: var(--radius-sm); background: var(--bg-hover);
-  border: 1px solid var(--border); color: var(--gold); font-size: 18px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  width: 36px; height: 36px; border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(28,22,14,0.95), rgba(10,8,5,0.97));
+  border: 1px solid rgba(201,168,76,0.32);
+  color: var(--gold-light); font-size: 20px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
+  box-shadow: inset 0 1px 0 rgba(255,225,160,0.1), inset 0 -1px 3px rgba(0,0,0,0.35);
 }
-.btn-setting-minus:hover, .btn-setting-plus:hover { background: var(--bg-card); border-color: var(--gold); }
+.btn-setting-minus:hover, .btn-setting-plus:hover {
+  border-color: var(--gold); color: #fff5d8;
+  box-shadow: 0 0 12px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,225,160,0.18);
+}
+.btn-setting-minus:active, .btn-setting-plus:active { transform: translateY(1px); }
 .waiting-actions {
   display: flex;
   justify-content: center;
@@ -5472,32 +5505,66 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
   position: relative;
 }
 
-/* Phone Action Buttons */
+/* Phone Action Buttons — premium controllers (≥48px touch targets, no shimmer) */
 .phone-btn-roll {
-  width: 100%; max-width: 300px; padding: 18px 24px;
-  font-size: 18px; font-weight: 700; letter-spacing: 2px;
-  background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1));
-  border: 2px solid var(--gold); color: var(--gold); border-radius: 12px;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
-  transition: all 0.2s;
+  width: 100%; max-width: 320px; min-height: 60px; padding: 18px 28px;
+  font-family: var(--font-display); font-size: 16px; font-weight: 900;
+  letter-spacing: 4px; text-transform: uppercase; white-space: nowrap;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 25%,
+      rgba(255,250,210,0.32) 0%, rgba(255,250,210,0) 60%),
+    linear-gradient(180deg, #fdecb0 0%, #e9c66a 25%, #c79f3e 55%, #8a6520 80%, #5d4413 100%);
+  border: 2px solid #8a6520; border-radius: 999px;
+  color: #2a1a08;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px;
+  text-shadow:
+    0 1px 0 rgba(255,235,180,0.7),
+    0 -1px 0 rgba(60,30,10,0.4);
+  box-shadow:
+    0 0 16px rgba(232,212,138,0.32),
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 2px 1px rgba(255,250,210,0.6),
+    inset 0 -3px 6px rgba(60,30,10,0.45),
+    inset 0 0 0 1px rgba(255,235,180,0.35);
+  transition: transform 0.15s ease, filter 0.2s ease;
 }
-.phone-btn-roll:active { transform: scale(0.95); }
-.phone-btn-roll:disabled { opacity: 0.4; pointer-events: none; }
+.phone-btn-roll:active { transform: scale(0.97); filter: brightness(0.95); }
+.phone-btn-roll:disabled {
+  filter: grayscale(0.5) brightness(0.55);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
 .phone-btn-roll .icon { width: 24px; height: 24px; }
 
 .phone-btn-action {
-  width: 100%; max-width: 300px; padding: 12px 20px;
-  font-size: 14px; font-weight: 600;
-  background: linear-gradient(180deg, rgba(17,20,36,0.95), rgba(9,11,22,0.98)); border: 1px solid rgba(201,168,76,0.12); color: var(--text);
-  border-radius: 8px; cursor: pointer; transition: all 0.2s;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  width: 100%; max-width: 320px; min-height: 48px; padding: 14px 22px;
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  background: linear-gradient(180deg, rgba(28,22,14,0.95), rgba(10,8,5,0.97));
+  border: 1.5px solid rgba(201,168,76,0.4);
+  color: var(--gold-light); border-radius: 12px; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, transform 0.1s, box-shadow 0.2s;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    0 3px 10px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,225,160,0.12),
+    inset 0 -1px 3px rgba(0,0,0,0.35);
 }
 .phone-btn-action:active { transform: scale(0.97); }
-.phone-btn-action:hover { border-color: rgba(201,168,76,0.32); color: var(--gold-light); }
-.phone-btn-end { border-color: var(--gold-dim); color: var(--gold); }
-.phone-btn-yes { border-color: rgba(46,204,113,0.4); color: #2ecc71; }
-.phone-btn-no { border-color: rgba(231,76,60,0.3); color: #e74c3c; }
-.phone-btn-danger { border-color: #e74c3c; color: #e74c3c; background: rgba(231,76,60,0.08); }
+.phone-btn-action:hover { border-color: var(--gold); color: #fff5d8; }
+.phone-btn-action:disabled { opacity: 0.35; pointer-events: none; }
+
+.phone-btn-end { border-color: var(--gold); color: #fff5d8; }
+.phone-btn-yes {
+  border-color: rgba(46,204,113,0.55); color: #c8ffd8;
+  background: linear-gradient(180deg, rgba(20,40,28,0.95), rgba(8,18,12,0.97));
+}
+.phone-btn-yes:hover { border-color: var(--green-light); color: #f0fff4; }
+.phone-btn-no, .phone-btn-danger {
+  border-color: rgba(231,76,60,0.55); color: #ffd8d8;
+  background: linear-gradient(180deg, rgba(40,16,16,0.95), rgba(18,8,8,0.97));
+}
+.phone-btn-no:hover, .phone-btn-danger:hover { border-color: #e74c3c; color: #fff; }
 
 .phone-action-title {
   font-size: 18px; font-weight: 700; color: var(--text); text-align: center;
@@ -5522,18 +5589,28 @@ h1,h2,h3 { font-family: var(--font-display); letter-spacing: 2px; }
 }
 .phone-casino-amt.selected { border-color: var(--gold); color: var(--gold); }
 
-/* Phone Tabs */
+/* Phone Tabs — 44px touch target, golden underline on active */
 .phone-tabs {
-  display: flex; border-top: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(14,16,30,0.96), rgba(8,10,20,0.99)); flex-shrink: 0;
-  box-shadow: 0 -10px 24px rgba(0,0,0,0.22);
+  display: flex; border-top: 1px solid rgba(201,168,76,0.18);
+  background: linear-gradient(180deg, rgba(20,16,10,0.96), rgba(8,6,4,0.99));
+  flex-shrink: 0;
+  box-shadow: 0 -10px 24px rgba(0,0,0,0.28);
 }
 .phone-tab {
-  flex: 1; padding: 10px 4px; text-align: center; font-size: 12px;
-  font-weight: 600; color: var(--text-dim); background: none; border: none;
-  border-top: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+  flex: 1; padding: 14px 4px; min-height: 48px;
+  text-align: center;
+  font-family: var(--font-display); font-size: 12px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-dim); background: none; border: none;
+  border-top: 2px solid transparent;
+  cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.phone-tab.active { color: var(--gold); border-top-color: var(--gold); }
+.phone-tab:active { color: var(--gold-light); }
+.phone-tab.active {
+  color: var(--gold-light);
+  border-top-color: var(--gold);
+  background: linear-gradient(180deg, rgba(232,212,138,0.10) 0%, transparent 100%);
+}
 
 .phone-tab-content {
   max-height: 200px; overflow-y: auto; padding: 10px 16px;
