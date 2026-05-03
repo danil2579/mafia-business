@@ -5921,7 +5921,10 @@ function renderTVRollOrder(state) {
     const el = document.createElement('div');
     el.className = 'tv-ro-player';
     const portrait = PORTRAITS[p.character?.id] || '';
-    const rollVal = (state.orderRolls && state.orderRolls[p.id]) ? state.orderRolls[p.id] : '...';
+    // orderRolls[id] is { dice1, dice2, total } — we want the total, not the object
+    const rollVal = state.orderRolls && state.orderRolls[p.id]?.total != null
+      ? state.orderRolls[p.id].total
+      : '...';
     const isCurrent = state.orderRollCurrentId === p.id;
     if (isCurrent) el.classList.add('tv-ro-current');
     el.innerHTML = `
@@ -6395,9 +6398,10 @@ function renderPhonePendingAction(state, container) {
 
   switch (action.type) {
     case 'buy_business': {
+      // Server sends action.name (not action.businessName) for the business label
       container.innerHTML = `
         <div class="phone-action-title">Купити бізнес?</div>
-        <div class="phone-action-desc">${action.businessName} — $${action.price}</div>
+        <div class="phone-action-desc">${action.name} — $${action.price}</div>
         <div class="phone-action-btns">
           <button class="phone-btn-action phone-btn-yes" id="pa-buy">Купити</button>
           <button class="phone-btn-action phone-btn-no" id="pa-skip">Пропустити</button>
