@@ -1,11 +1,14 @@
-const CACHE_NAME = 'mafia-business-v4';
+const CACHE_NAME = 'mafia-business-v5';
 const APP_SHELL = [
   '/',
   '/offline.html',
-  '/css/style.css?v=3.0.0-r1',
-  '/js/platform.js?v=3.0.0-r1',
-  '/js/client.js?v=3.0.0-r1',
-  '/assets/desk-bg.png',
+  '/css/style.css?v=4.0.0',
+  '/css/v4.css?v=4.0.0',
+  '/js/platform.js?v=4.0.0',
+  '/js/client.js?v=4.0.0',
+  '/assets/premium-table-v3.jpg',
+  '/assets/mafia-card-back-v3.jpg',
+  '/assets/event-card-back-v3.jpg',
   '/assets/app-icon.svg',
   '/manifest.webmanifest'
 ];

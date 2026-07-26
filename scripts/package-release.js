@@ -4,10 +4,12 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
+const { version } = require(path.join(root, 'package.json'));
 const releaseDirectory = path.join(root, 'release');
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mafia-business-release-'));
-const bundleDirectory = path.join(tempRoot, 'mafia-business-v3.0.0');
-const outputPath = path.join(releaseDirectory, 'mafia-business-v3.0.0.zip');
+const releaseName = `mafia-business-v${version}`;
+const bundleDirectory = path.join(tempRoot, releaseName);
+const outputPath = path.join(releaseDirectory, `${releaseName}.zip`);
 const excludedRoots = new Set(['.git', '.claude', 'release', 'data']);
 
 try {

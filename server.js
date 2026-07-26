@@ -2610,6 +2610,6 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`Mafia Business v3 running on http://localhost:${PORT}`);
+  console.log(`Mafia Business v4 running on http://localhost:${PORT}`);
   if (process.env.ALLOW_LAN === '1') console.log(`LAN mode enabled: open http://<host-ip>:${PORT} on other devices`);
 });

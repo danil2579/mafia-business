@@ -12,7 +12,9 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/css/style.css?v=3.0.0-r1">
+  <link rel="preload" href="/assets/premium-table-v3.jpg" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="/css/style.css?v=4.0.0">
+  <link rel="stylesheet" href="/css/v4.css?v=4.0.0">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -221,7 +223,7 @@
       <!-- Footer -->
       <div class="lobby-footer">
         <span class="footer-sep"></span>
-        <p class="footer-text">MAFIA BUSINESS &mdash; v3.0.0 RELEASE &mdash; 2024-2026</p>
+        <p class="footer-text">MAFIA BUSINESS &mdash; v4.0.0 THE DON'S TABLE &mdash; 2024-2026</p>
         <p class="footer-text footer-dim">Online strategy board game for 2-8 players</p>
       </div>
     </div>
@@ -381,6 +383,10 @@
     <div class="game-layout">
       <!-- Left: Player panels -->
       <div class="side-panel left-panel">
+        <div class="rail-heading">
+          <span class="rail-kicker">CITY FAMILIES</span>
+          <strong>Сім'ї за столом</strong>
+        </div>
         <div id="player-panels"></div>
       </div>
 
@@ -500,8 +506,18 @@
           <div id="game-board" class="game-board">
             <!-- Board cells will be rendered by JS -->
           </div>
+          <div id="token-layer" class="token-layer" aria-label="Фішки гравців"></div>
           <!-- Center of board: info + actions -->
           <div class="board-center">
+            <div class="center-brand" aria-hidden="true">
+              <span class="center-brand-kicker">THE CITY IS YOURS</span>
+              <strong>MAFIA</strong>
+              <span>BUSINESS</span>
+            </div>
+            <div class="board-decks" aria-hidden="true">
+              <div class="board-deck board-deck-mafia"><span>MAFIA</span></div>
+              <div class="board-deck board-deck-event"><span>EVENT</span></div>
+            </div>
             <div id="center-info" class="center-info"></div>
             <div id="center-panel" class="center-panel"></div>
             <div id="event-display" class="event-display"></div>
@@ -518,16 +534,26 @@
 
       <!-- Right: Actions & Cards -->
       <div class="side-panel right-panel">
-        <div id="action-panel" class="action-panel"></div>
-        <div id="mafia-cards-panel" class="cards-panel">
+        <div class="command-heading">
+          <span class="rail-kicker">COMMAND DESK</span>
+          <strong>Кабінет дона</strong>
+        </div>
+        <div class="command-tabs" role="tablist" aria-label="Ігрові панелі">
+          <button class="command-tab active" type="button" role="tab" aria-selected="true" data-command-tab="overview">Сектор</button>
+          <button class="command-tab" type="button" role="tab" aria-selected="false" data-command-tab="cards">Карти <span id="command-cards-count" class="command-count">0</span></button>
+          <button class="command-tab" type="button" role="tab" aria-selected="false" data-command-tab="businesses">Активи <span id="command-businesses-count" class="command-count">0</span></button>
+          <button class="command-tab" type="button" role="tab" aria-selected="false" data-command-tab="log">Хроніка</button>
+        </div>
+        <div id="action-panel" class="action-panel command-panel active" data-command-panel="overview"></div>
+        <div id="mafia-cards-panel" class="cards-panel command-panel" data-command-panel="cards" hidden>
           <h3>Карти MAFIA</h3>
           <div id="mafia-cards-list" class="cards-list"></div>
         </div>
-        <div id="my-businesses-panel" class="cards-panel">
+        <div id="my-businesses-panel" class="cards-panel command-panel" data-command-panel="businesses" hidden>
           <h3>Мої бізнеси</h3>
           <div id="my-businesses-list" class="cards-list"></div>
         </div>
-        <div id="game-log" class="game-log">
+        <div id="game-log" class="game-log command-panel" data-command-panel="log" hidden>
           <h3>Хроніка</h3>
           <div id="log-entries"></div>
         </div>
@@ -1539,7 +1565,7 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/platform.js?v=3.0.0-r1"></script>
-  <script src="/js/client.js?v=3.0.0-r1"></script>
+  <script src="/js/platform.js?v=4.0.0"></script>
+  <script src="/js/client.js?v=4.0.0"></script>
 </body>
 </html>

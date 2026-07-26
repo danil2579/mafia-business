@@ -1,13 +1,13 @@
 {
   "name": "Mafia Business",
   "short_name": "Mafia Business",
-  "description": "Online strategy board game for 2–8 players",
+  "description": "Premium online strategy board game for 2–8 players",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#080806",
-  "theme_color": "#0b0b13",
+  "background_color": "#070b12",
+  "theme_color": "#0c1420",
   "categories": ["games", "entertainment"],
   "icons": [
     { "src": "/assets/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },

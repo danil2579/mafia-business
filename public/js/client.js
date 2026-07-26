@@ -149,6 +149,7 @@ let prevPositions = {}; // track previous positions for smooth animation
 let prevMoney = {}; // track previous money for animation
 let animatingTokens = false;
 let animatingPlayerId = null; // player whose token is being animated
+const tokenAnimations = new Map();
 let pendingActionDelay = 0; // ms to delay showing pending actions (for animation)
 let publicEventRevealActive = false;
 const publicEventRevealQueue = [];
@@ -1125,6 +1126,10 @@ function notifySuccess(message, options = {}) {
   notifyUser(message, { tone: 'success', ...options });
 }
 
+function notifyInfo(message, options = {}) {
+  notifyUser(message, { tone: 'info', ...options });
+}
+
 function showWaiting(roomId) {
   showScreen(waitingScreen);
   $('#room-id-display').textContent = roomId;
@@ -1538,12 +1543,14 @@ function renderGame(state, skipPending = false) {
     boardArea.querySelectorAll('.board-cell').forEach(c => c.style.visibility = '');
   }
   renderBoard(state);
+  syncTokenLayer(state);
   renderPlayerPanels(state);
   renderTopBar(state);
   renderActionPanel(state);
   renderMafiaCards(state);
   renderMyBusinesses(state);
   renderLog(state);
+  updateCommandCounts(state);
   if (!skipPending) handlePendingAction(state);
 }
 
@@ -1595,46 +1602,11 @@ function renderBoard(state) {
         // Build cell content based on type and side
         renderCellInner(cell, sector, state, side);
 
-        // Player tokens (support up to 8) — centered, arranged in circle if multiple
-        const tokens = getPlayersOnSector(sector.index, state);
-        const tokenCount = tokens.length;
         // Prison visual: mark cell as containing prisoners for CSS bars overlay
+        const tokens = getPlayersOnSector(sector.index, state);
         if (sector.type === 'PRISON' && tokens.some(p => p.inPrison > 0)) {
           cell.classList.add('has-prisoners');
         }
-        tokens.forEach((p, i) => {
-          const token = document.createElement('div');
-          token.className = 'player-token';
-          if (state.currentPlayerId === p.id) token.classList.add('token-current');
-          if (p.id === myId) token.classList.add('token-me');
-          if (p.inPrison > 0) token.classList.add('token-prisoner');
-          token.dataset.pid = p.id;
-          const pColor = p.character ? p.character.color : '#888';
-          const pName = p.name || '?';
-          const portrait = (p.character && PORTRAITS[p.character.id]) || '';
-          token.style.color = pColor;
-          token.style.setProperty('--char-color', pColor);
-          token.title = pName;
-          token.innerHTML = portrait || `<span style="font:700 11px serif;color:${pColor}">${pName[0]}</span>`;
-          // Position: 1 token = center; 2+ = circle around center
-          if (tokenCount === 1) {
-            token.style.top = '50%';
-            token.style.left = '50%';
-            token.style.transform = 'translate(-50%, -50%)';
-          } else {
-            const radius = Math.min(tokenCount <= 4 ? 13 : 16, 18);
-            const angle = (2 * Math.PI * i / tokenCount) - Math.PI / 2;
-            const ox = Math.cos(angle) * radius;
-            const oy = Math.sin(angle) * radius;
-            token.style.top = '50%';
-            token.style.left = '50%';
-            token.style.transform = `translate(calc(-50% + ${ox.toFixed(1)}px), calc(-50% + ${oy.toFixed(1)}px))`;
-          }
-          // Hide real token if this player is being animated
-          if (animatingPlayerId === p.id) token.style.display = 'none';
-          cell.appendChild(token);
-        });
-
         // Bombs
         if (state.bombs && state.bombs.some(b => b.sector === sector.index)) {
           cell.classList.add('has-bomb');
@@ -2001,7 +1973,7 @@ function showCenterMessage(title, text, duration = 3000) {
 function getCellCenter(sectorIndex) {
   const cell = document.querySelector(`.board-cell[data-index="${sectorIndex}"]`);
   if (!cell) return null;
-  const board = document.querySelector('.board-area');
+  const board = document.querySelector('#token-layer');
   if (!board) return null;
   const cellRect = cell.getBoundingClientRect();
   const boardRect = board.getBoundingClientRect();
@@ -2011,26 +1983,92 @@ function getCellCenter(sectorIndex) {
   };
 }
 
+function getTokenTarget(player, state, sectorIndex = player.position) {
+  const center = getCellCenter(sectorIndex);
+  if (!center) return null;
+  const peers = (state?.players || []).filter(p => p.alive && p.position === sectorIndex);
+  const peerIndex = Math.max(0, peers.findIndex(p => p.id === player.id));
+  if (peers.length > 1) {
+    const cell = document.querySelector(`.board-cell[data-index="${sectorIndex}"]`);
+    const rect = cell?.getBoundingClientRect();
+    const radius = Math.max(7, Math.min(16, Math.min(rect?.width || 40, rect?.height || 40) * 0.2));
+    const angle = (Math.PI * 2 * peerIndex / peers.length) - Math.PI / 2;
+    center.x += Math.cos(angle) * radius;
+    center.y += Math.sin(angle) * radius;
+  }
+  return center;
+}
+
+function tokenTransform(center) {
+  return `translate3d(${center.x.toFixed(2)}px, ${center.y.toFixed(2)}px, 0) translate(-50%, -50%)`;
+}
+
+function syncTokenLayer(state) {
+  const layer = $('#token-layer');
+  if (!layer) return;
+  const aliveIds = new Set((state.players || []).filter(p => p.alive).map(p => p.id));
+  layer.querySelectorAll('.player-token').forEach(token => {
+    if (!aliveIds.has(token.dataset.pid)) {
+      tokenAnimations.get(token.dataset.pid)?.cancel();
+      tokenAnimations.delete(token.dataset.pid);
+      token.remove();
+    }
+  });
+
+  for (const player of (state.players || []).filter(p => p.alive)) {
+    let token = layer.querySelector(`.player-token[data-pid="${CSS.escape(player.id)}"]`);
+    if (!token) {
+      token = document.createElement('div');
+      token.className = 'player-token';
+      token.dataset.pid = player.id;
+      layer.appendChild(token);
+    }
+    const color = player.character?.color || '#88919f';
+    const portrait = (player.character && PORTRAITS[player.character.id]) || '';
+    token.style.color = color;
+    token.style.setProperty('--char-color', color);
+    token.title = player.name || '';
+    token.innerHTML = portrait || `<span style="font:700 11px serif;color:${color}">${(player.name || '?')[0]}</span>`;
+    token.classList.toggle('token-current', state.currentPlayerId === player.id);
+    token.classList.toggle('token-me', player.id === myId);
+    token.classList.toggle('token-prisoner', player.inPrison > 0);
+
+    if (tokenAnimations.has(player.id)) continue;
+    const hasUnplayedMove = prevPositions[player.id] !== undefined && prevPositions[player.id] !== player.position;
+    const visualPosition = hasUnplayedMove ? prevPositions[player.id] : player.position;
+    const target = getTokenTarget(player, state, visualPosition);
+    if (target) {
+      token.style.transform = tokenTransform(target);
+      token.dataset.position = String(visualPosition);
+    }
+  }
+
+  const boardArea = document.querySelector('.board-area');
+  if (boardArea && window.innerWidth <= 700 && boardArea.dataset.initialFocus !== 'center') {
+    requestAnimationFrame(() => {
+      boardArea.scrollLeft = Math.max(0, (boardArea.scrollWidth - boardArea.clientWidth) / 2);
+      boardArea.dataset.initialFocus = 'center';
+    });
+  }
+}
+
+let tokenLayoutFrame = 0;
+window.addEventListener('resize', () => {
+  if (!gameState || isTVMode || isPhoneMode) return;
+  cancelAnimationFrame(tokenLayoutFrame);
+  tokenLayoutFrame = requestAnimationFrame(() => syncTokenLayer(gameState));
+}, { passive: true });
+
 function animateTokenMovement(playerId, fromPos, toPos) {
   const player = gameState?.players?.find(p => p.id === playerId);
   if (!player) return;
 
-  const board = document.querySelector('.board-area');
-  if (!board) return;
-
-  // Hide real tokens for this player during animation
-  animatingPlayerId = playerId;
-  document.querySelectorAll(`.player-token[data-pid="${playerId}"]`).forEach(t => t.style.display = 'none');
-
-  // Create floating token (character portrait)
-  const floater = document.createElement('div');
-  floater.className = 'floating-token';
-  const pColor = player.character ? player.character.color : '#888';
-  const portrait = (player.character && PORTRAITS[player.character.id]) || '';
-  floater.style.color = pColor;
-  floater.style.setProperty('--char-color', pColor);
-  floater.innerHTML = portrait;
-  board.appendChild(floater);
+  let token = document.querySelector(`#token-layer .player-token[data-pid="${CSS.escape(playerId)}"]`);
+  if (!token) {
+    syncTokenLayer(gameState);
+    token = document.querySelector(`#token-layer .player-token[data-pid="${CSS.escape(playerId)}"]`);
+  }
+  if (!token) return;
 
   // Calculate path (step by step around the board)
   const totalSectors = 36;
@@ -2041,38 +2079,55 @@ function animateTokenMovement(playerId, fromPos, toPos) {
     steps.push(pos);
   }
 
-  // Start position (centered on cell — 32px / 2 = 16)
-  const startCenter = getCellCenter(fromPos);
-  if (startCenter) {
-    floater.style.left = (startCenter.x - 18) + 'px';
-    floater.style.top = (startCenter.y - 18) + 'px';
-  }
+  const centers = [fromPos, ...steps]
+    .map(position => getTokenTarget(player, gameState, position))
+    .filter(Boolean);
+  if (centers.length < 2) return;
 
-  // Animate step by step
   const isOwnToken = playerId === myId;
   animatingTokens = true;
-  let stepIdx = 0;
-  function nextStep() {
-    if (stepIdx >= steps.length) {
-      // Done — remove floater, show real tokens
-      floater.remove();
-      animatingTokens = false;
-      animatingPlayerId = null;
-      document.querySelectorAll(`.player-token[data-pid="${playerId}"]`).forEach(t => t.style.display = '');
-      return;
+  animatingPlayerId = playerId;
+  token.classList.add('token-moving');
+  const reducedMotion = document.body.classList.contains('reduce-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const duration = reducedMotion ? 1 : Math.min(1450, Math.max(420, steps.length * 118));
+  const keyframes = centers.map((center, index) => ({
+    transform: tokenTransform(center),
+    offset: index / (centers.length - 1)
+  }));
+
+  tokenAnimations.get(playerId)?.cancel();
+  const animation = token.animate(keyframes, {
+    duration,
+    easing: 'cubic-bezier(.22,.78,.2,1)',
+    fill: 'forwards'
+  });
+  tokenAnimations.set(playerId, animation);
+
+  if (!reducedMotion) {
+    const tickCount = Math.min(steps.length, 6);
+    for (let i = 0; i < tickCount; i++) {
+      setTimeout(() => {
+        if (tokenAnimations.get(playerId) === animation) {
+          if (isOwnToken) SFX.tokenTick(); else SFX.tokenTickOther();
+        }
+      }, Math.round((duration * (i + 1)) / (tickCount + 1)));
     }
-    const center = getCellCenter(steps[stepIdx]);
-    if (center) {
-      floater.style.left = (center.x - 18) + 'px';
-      floater.style.top = (center.y - 18) + 'px';
-    }
-    // Play tick sound for each step
-    if (isOwnToken) SFX.tokenTick(); else SFX.tokenTickOther();
-    stepIdx++;
-    setTimeout(nextStep, 300);
   }
-  // Start after a small delay
-  setTimeout(nextStep, 100);
+
+  animation.onfinish = () => {
+    const destination = centers[centers.length - 1];
+    token.style.transform = tokenTransform(destination);
+    token.dataset.position = String(toPos);
+    token.classList.remove('token-moving');
+    tokenAnimations.delete(playerId);
+    animatingTokens = tokenAnimations.size > 0;
+    if (animatingPlayerId === playerId) animatingPlayerId = null;
+  };
+  animation.oncancel = () => {
+    token.classList.remove('token-moving');
+    if (tokenAnimations.get(playerId) === animation) tokenAnimations.delete(playerId);
+    animatingTokens = tokenAnimations.size > 0;
+  };
 }
 
 // ===== CENTER PANEL (replaces modal for basic game actions) =====
@@ -3612,7 +3667,9 @@ $('#btn-roll').addEventListener('click', () => {
       // Calculate animation duration
       if (res.oldPos !== undefined && res.newPos !== undefined) {
         const steps = ((res.newPos - res.oldPos + 36) % 36) || 1;
-        animDelay = steps * 350 + 500;
+        // Keep gameplay responsive: token movement is a single GPU animation,
+        // capped at 1.45s even for a long roll.
+        animDelay = Math.min(1450, Math.max(420, steps * 118)) + 180;
         // Set global delay so gameState handler waits before showing pending actions
         pendingActionDelay = Date.now() + animDelay;
         animateTokenMovement(myId, res.oldPos, res.newPos);
@@ -4734,6 +4791,36 @@ $('#btn-toggle-panel').addEventListener('click', () => {
   SFX.click();
   const panel = $('.right-panel');
   panel.classList.toggle('expanded');
+});
+
+// ===== COMMAND DESK TABS =====
+function openCommandPanel(name) {
+  document.querySelectorAll('[data-command-tab]').forEach(tab => {
+    const active = tab.dataset.commandTab === name;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[data-command-panel]').forEach(panel => {
+    const active = panel.dataset.commandPanel === name;
+    panel.hidden = !active;
+    panel.classList.toggle('active', active);
+  });
+}
+
+function updateCommandCounts(state) {
+  const me = state?.players?.find(player => player.id === myId);
+  const cardsCount = document.getElementById('command-cards-count');
+  const businessesCount = document.getElementById('command-businesses-count');
+  if (cardsCount) cardsCount.textContent = String(me?.mafiaCards?.length || 0);
+  if (businessesCount) businessesCount.textContent = String(me?.businesses?.length || 0);
+}
+
+document.querySelectorAll('[data-command-tab]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    SFX.click();
+    openCommandPanel(tab.dataset.commandTab);
+    if (window.innerWidth <= 1180) $('.right-panel')?.classList.add('expanded');
+  });
 });
 
 // ===== RULES =====
@@ -6241,6 +6328,7 @@ if (isPhoneMode) {
 function renderPhoneState(state) {
   const prevState = gameState;
   gameState = state;
+  document.body.classList.toggle('phone-match-active', state.phase !== 'waiting');
 
   const phoneScreen = $('#phone-screen');
   if (!phoneScreen.classList.contains('active')) {
@@ -6983,7 +7071,10 @@ function renderPhoneEvents(state) {
   el.innerHTML = `
     <div class="pev-label">Останні події</div>
     <div class="pev-list">
-      ${last.map((entry, i) => `<div class="pev-item${i === 0 ? ' pev-latest' : ''}">${entry}</div>`).join('')}
+      ${last.map((entry, i) => {
+        const message = typeof entry === 'string' ? entry : (entry?.message || '');
+        return `<div class="pev-item${i === 0 ? ' pev-latest' : ''}">${escapeHtml(message)}</div>`;
+      }).join('')}
     </div>`;
 }
 
