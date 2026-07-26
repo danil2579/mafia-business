@@ -1,12 +1,15 @@
 {
-  "name": "mafia-business-v2",
-  "version": "2.0.0",
-  "description": "Mafia Business - Online Board Game",
+  "name": "mafia-business",
+  "version": "3.0.0",
+  "description": "Mafia Business - production-ready online strategy board game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "check": "node --check server.js && node --check game/GameEngine.js && node --check public/js/client.js && node --check public/js/platform.js",
+    "generate:icons": "node scripts/generate-icons.js",
+    "release:source": "node scripts/package-release.js"
   },
   "dependencies": {
     "express": "^4.18.2",

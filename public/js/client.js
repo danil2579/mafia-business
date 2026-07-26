@@ -293,6 +293,8 @@ function ensureAudio() {
 
 function playTone(freq, duration, type = 'sine', vol = 0.15) {
   try {
+    if (window.MBPlatform && !window.MBPlatform.soundEnabled()) return;
+    if (window.MBPlatform) vol *= window.MBPlatform.volumeScale();
     ensureAudio();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -309,6 +311,8 @@ function playTone(freq, duration, type = 'sine', vol = 0.15) {
 
 function playNoise(duration, vol = 0.08) {
   try {
+    if (window.MBPlatform && !window.MBPlatform.soundEnabled()) return;
+    if (window.MBPlatform) vol *= window.MBPlatform.volumeScale();
     ensureAudio();
     const bufferSize = audioCtx.sampleRate * duration;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -999,6 +1003,7 @@ const SPECIAL_ICONS = {
 function showScreen(screen) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   screen.classList.add('active');
+  document.body.dataset.screen = screen.id;
 }
 
 // ===== MODE SELECTOR =====
@@ -1464,7 +1469,8 @@ function renderWaitingRoom(state) {
         <div class="pname">${p.name}</div>
       `;
     } else {
-      slot.innerHTML = '<div style="color:var(--text-muted);font-size:24px">+</div><div class="pname" style="color:var(--text-muted)">Очікує...</div>';
+      const emptySlotText = window.MBPlatform?.t('emptySlot') || 'Очікує…';
+      slot.innerHTML = `<div style="color:var(--text-muted);font-size:24px">+</div><div class="pname" style="color:var(--text-muted)">${emptySlotText}</div>`;
     }
     list.appendChild(slot);
   }
@@ -1503,7 +1509,9 @@ function renderWaitingRoom(state) {
   $('#btn-start').style.display = (isHost && state.players.length >= 2) ? 'inline-block' : 'none';
   $('#btn-add-bot').style.display = (isHost && state.players.length < 8) ? 'inline-block' : 'none';
   $('#game-settings').style.display = isHost ? 'block' : 'none';
-  $('#waiting-msg').textContent = state.players.length < 2 ? 'Потрібно мінімум 2 гравці...' : 'Готово до початку!';
+  $('#waiting-msg').textContent = state.players.length < 2
+    ? (window.MBPlatform?.t('minimumPlayers') || 'Потрібно мінімум 2 гравці…')
+    : (window.MBPlatform?.t('ready') || 'Готово до початку!');
 }
 
 // ===== GAME RENDER =====
@@ -4955,7 +4963,8 @@ function startAmbientMusic() {
   const t = audioCtx.currentTime;
   const master = audioCtx.createGain();
   master.gain.setValueAtTime(0, t);
-  master.gain.linearRampToValueAtTime(0.05, t + 3);
+  const musicVolume = window.MBPlatform ? window.MBPlatform.volumeScale() : 1;
+  master.gain.linearRampToValueAtTime(0.05 * musicVolume, t + 3);
   master.connect(audioCtx.destination);
 
   // --- Deep bass with slow LFO vibrato ---
@@ -5492,7 +5501,7 @@ async function loadPublicRooms() {
     const container = document.getElementById('room-list');
     if (!container) return;
     if (rooms.length === 0) {
-      container.innerHTML = '<div class="no-rooms">Немає відкритих кімнат</div>';
+      container.innerHTML = `<div class="no-rooms">${window.MBPlatform?.t('noRooms') || 'Немає відкритих кімнат'}</div>`;
       return;
     }
     container.innerHTML = rooms.map(r => `

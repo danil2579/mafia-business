@@ -1,5 +1,5 @@
 // ============================================================
-// MAFIA BUSINESS v2 — Game Engine
+// MAFIA BUSINESS v3 — Game Engine
 // ============================================================
 const {
   RESPECT_LEVELS, DISTRICTS, BOARD, BOARD_GRID, DISTRICT_SECTORS,
@@ -2978,17 +2978,39 @@ class GameEngine {
     const to = this.getPlayer(toId);
     if (!from || !to || !from.alive || !to.alive) return { error: 'Невірні гравці' };
     if (fromId === toId) return { error: 'Не можна торгувати з собою' };
-    // Validate offer: { giveMoney, giveBusiness[], wantMoney, wantBusiness[] }
-    if (offer.giveMoney && from.money < offer.giveMoney) return { error: 'Недостатньо грошей' };
-    if (offer.giveBusiness) {
-      for (const bizId of offer.giveBusiness) {
-        if (!from.businesses.includes(bizId)) return { error: `Ви не володієте бізнесом ${bizId}` };
-      }
+    if (this.phase !== 'playing') return { error: 'Угоди доступні лише під час гри' };
+    if (this.pendingAction) return { error: 'Спочатку завершіть поточну дію' };
+    if (!offer || typeof offer !== 'object' || Array.isArray(offer)) return { error: 'Невірна пропозиція' };
+
+    const normalizeMoney = value => {
+      const amount = value === undefined || value === null || value === '' ? 0 : Number(value);
+      return Number.isSafeInteger(amount) && amount >= 0 && amount <= 1_000_000 ? amount : null;
+    };
+    const normalizeBusinessList = value => {
+      if (value === undefined || value === null) return [];
+      if (!Array.isArray(value) || value.length > 24 || value.some(id => typeof id !== 'string')) return null;
+      const unique = [...new Set(value)];
+      return unique.length === value.length ? unique : null;
+    };
+    const giveMoney = normalizeMoney(offer.giveMoney);
+    const wantMoney = normalizeMoney(offer.wantMoney);
+    const giveBusiness = normalizeBusinessList(offer.giveBusiness);
+    const wantBusiness = normalizeBusinessList(offer.wantBusiness);
+    if (giveMoney === null || wantMoney === null || giveBusiness === null || wantBusiness === null) {
+      return { error: 'Невірні параметри угоди' };
     }
-    if (offer.wantBusiness) {
-      for (const bizId of offer.wantBusiness) {
-        if (!to.businesses.includes(bizId)) return { error: `${to.name} не володіє бізнесом ${bizId}` };
-      }
+    if (giveMoney === 0 && wantMoney === 0 && giveBusiness.length === 0 && wantBusiness.length === 0) {
+      return { error: 'Порожню угоду не можна запропонувати' };
+    }
+    offer = { giveMoney, wantMoney, giveBusiness, wantBusiness };
+    // Validate offer: { giveMoney, giveBusiness[], wantMoney, wantBusiness[] }
+    if (from.money < offer.giveMoney) return { error: 'Недостатньо грошей' };
+    if (to.money < offer.wantMoney) return { error: 'У гравця недостатньо грошей' };
+    for (const bizId of offer.giveBusiness) {
+      if (!from.businesses.includes(bizId)) return { error: `Ви не володієте бізнесом ${bizId}` };
+    }
+    for (const bizId of offer.wantBusiness) {
+      if (!to.businesses.includes(bizId)) return { error: `${to.name} не володіє бізнесом ${bizId}` };
     }
     this.pendingAction = {
       type: 'trade_offer',
@@ -3007,7 +3029,11 @@ class GameEngine {
     const { fromId, toId, offer } = this.pendingAction;
     const from = this.getPlayer(fromId);
     const to = this.getPlayer(toId);
-    if (!accept) {
+    if (!from || !to || !from.alive || !to.alive) {
+      this.pendingAction = null;
+      return { error: 'Один з учасників угоди недоступний' };
+    }
+    if (accept !== true) {
       this.addLog(`${to.name} відхилив угоду з ${from.name}.`);
       this.pendingAction = null;
       return { success: true, declined: true };
@@ -3015,6 +3041,11 @@ class GameEngine {
     // Validate again
     if (offer.giveMoney && from.money < offer.giveMoney) { this.pendingAction = null; return { error: 'Недостатньо грошей у відправника' }; }
     if (offer.wantMoney && to.money < offer.wantMoney) { this.pendingAction = null; return { error: 'Недостатньо грошей у отримувача' }; }
+    if (offer.giveBusiness.some(bizId => !from.businesses.includes(bizId)) ||
+        offer.wantBusiness.some(bizId => !to.businesses.includes(bizId))) {
+      this.pendingAction = null;
+      return { error: 'Власник бізнесу змінився. Угоду скасовано.' };
+    }
     // Execute swap
     if (offer.giveMoney) { from.money -= offer.giveMoney; to.money += offer.giveMoney; }
     if (offer.wantMoney) { to.money -= offer.wantMoney; from.money += offer.wantMoney; }
@@ -3042,7 +3073,11 @@ class GameEngine {
     if (!this.alliances) this.alliances = [];
     const from = this.getPlayer(fromId);
     const to = this.getPlayer(toId);
-    if (!from || !to) return { error: 'Невірні гравці' };
+    if (!from || !to || !from.alive || !to.alive || fromId === toId) return { error: 'Невірні гравці' };
+    if (this.phase !== 'playing') return { error: 'Альянси доступні лише під час гри' };
+    if (this.pendingAction) return { error: 'Спочатку завершіть поточну дію' };
+    rounds = Number.parseInt(rounds, 10);
+    if (!Number.isInteger(rounds) || rounds < 1 || rounds > 10) return { error: 'Тривалість альянсу: від 1 до 10 кіл' };
     // Check no existing alliance between them
     const existing = this.alliances.find(a =>
       a.active && ((a.player1 === fromId && a.player2 === toId) || (a.player1 === toId && a.player2 === fromId))
@@ -3065,7 +3100,11 @@ class GameEngine {
     const { fromId, toId, rounds } = this.pendingAction;
     const from = this.getPlayer(fromId);
     const to = this.getPlayer(toId);
-    if (!accept) {
+    if (!from || !to || !from.alive || !to.alive) {
+      this.pendingAction = null;
+      return { error: 'Один з учасників альянсу недоступний' };
+    }
+    if (accept !== true) {
       this.addLog(`${to.name} відхилив альянс з ${from.name}.`);
       this.pendingAction = null;
       return { success: true, declined: true };

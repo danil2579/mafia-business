@@ -1,5 +1,5 @@
 // ============================================================
-// MAFIA BUSINESS v2 — Server
+// MAFIA BUSINESS v3 — Server
 // ============================================================
 const express = require('express');
 const http = require('http');
@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const { Server } = require('socket.io');
 const path = require('path');
 const GameEngine = require('./game/GameEngine');
+const { AccountStore } = require('./lib/AccountStore');
+const { version: APP_VERSION } = require('./package.json');
 
 // Generates a random 32-char hex token used to authorise a rejoin.
 // Prevents a bystander from typing someone else's nickname and stealing
@@ -30,21 +32,176 @@ function getAllowedOrigins() {
   return configured.length > 0 ? configured : defaultAllowedOrigins;
 }
 
+function isPrivateNetworkOrigin(origin) {
+  if (process.env.ALLOW_LAN !== '1') return false;
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    const host = url.hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local') ||
+      /^10\./.test(host) || /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  } catch (_) {
+    return false;
+  }
+}
+
 const allowedOrigins = getAllowedOrigins();
 const io = new Server(server, {
+  maxHttpBufferSize: 100_000,
+  pingTimeout: 20_000,
+  pingInterval: 25_000,
   cors: {
     origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin || allowedOrigins.includes(origin) || isPrivateNetworkOrigin(origin)) return cb(null, true);
       return cb(new Error('Socket origin not allowed by CORS'));
     },
     credentials: true
   }
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+const accountStore = new AccountStore({
+  filePath: process.env.ACCOUNTS_FILE || path.join(__dirname, 'data', 'accounts.json')
+});
+const SESSION_COOKIE = 'mb_session';
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(express.json({ limit: '16kb', strict: true }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob:",
+    "connect-src 'self' ws: wss:"
+  ].join('; '));
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+function parseCookies(header = '') {
+  return String(header).split(';').reduce((cookies, part) => {
+    const separator = part.indexOf('=');
+    if (separator < 0) return cookies;
+    const key = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    if (!key) return cookies;
+    try { cookies[key] = decodeURIComponent(value); } catch (_) { cookies[key] = value; }
+    return cookies;
+  }, {});
+}
+
+function sessionCookie(token, maxAge = 30 * 24 * 60 * 60) {
+  const parts = [`${SESSION_COOKIE}=${encodeURIComponent(token || '')}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
+  parts.push(`Max-Age=${Math.max(0, maxAge)}`);
+  if (isProduction) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function getRequestAccount(req) {
+  const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
+  return accountStore.getAccountBySession(token);
+}
+
+function createRateLimiter({ windowMs, max }) {
+  const buckets = new Map();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || req.socket.remoteAddress || 'unknown';
+    const bucket = buckets.get(key);
+    if (!bucket || now - bucket.startedAt >= windowMs) {
+      buckets.set(key, { startedAt: now, count: 1 });
+      return next();
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      res.setHeader('Retry-After', String(Math.ceil((windowMs - (now - bucket.startedAt)) / 1000)));
+      return res.status(429).json({ error: 'Слишком много попыток. Попробуйте позже.' });
+    }
+    next();
+  };
+}
+
+const authRateLimit = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 30 });
+
+app.get('/api/health', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, version: APP_VERSION, uptime: Math.floor(process.uptime()) });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ account: getRequestAccount(req) });
+});
+
+app.post('/api/auth/register', authRateLimit, async (req, res) => {
+  try {
+    const result = await accountStore.createAccount(req.body || {});
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.setHeader('Set-Cookie', sessionCookie(result.sessionToken));
+    res.status(201).json({ account: result.account });
+  } catch (error) {
+    console.error('Registration failed:', error.message);
+    res.status(500).json({ error: 'Не удалось создать аккаунт.' });
+  }
+});
+
+app.post('/api/auth/login', authRateLimit, async (req, res) => {
+  try {
+    const result = await accountStore.login(req.body || {});
+    if (result.error) return res.status(401).json({ error: result.error });
+    res.setHeader('Set-Cookie', sessionCookie(result.sessionToken));
+    res.json({ account: result.account });
+  } catch (error) {
+    console.error('Login failed:', error.message);
+    res.status(500).json({ error: 'Не удалось войти в аккаунт.' });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
+  accountStore.destroySession(token);
+  res.setHeader('Set-Cookie', sessionCookie('', 0));
+  res.json({ success: true });
+});
+
+app.put('/api/auth/preferences', (req, res) => {
+  const account = getRequestAccount(req);
+  if (!account) return res.status(401).json({ error: 'Требуется вход в аккаунт.' });
+  if (!req.body || !['uk', 'ru', 'en'].includes(req.body.language)) {
+    return res.status(400).json({ error: 'Неподдерживаемый язык.' });
+  }
+  const updated = accountStore.updatePreferences(account.id, req.body || {});
+  res.json({ account: updated });
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  maxAge: isProduction ? '1h' : 0,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('index.html') || filePath.endsWith('sw.js')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // API: list public rooms
 app.get('/api/rooms', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const publicRooms = [];
   for (const [roomId, game] of rooms) {
     const host = game.players.find(player => player.id === game.hostId);
@@ -58,6 +215,13 @@ app.get('/api/rooms', (req, res) => {
     }
   }
   res.json(publicRooms);
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Некорректный JSON.' });
+  console.error('HTTP request failed:', error?.message || error);
+  res.status(500).json({ error: 'Внутренняя ошибка сервера.' });
 });
 
 // Prevent server crash on unhandled errors
@@ -81,6 +245,7 @@ const tvSockets = new Map(); // roomId -> Set<socketId> (TV mode displays)
 const BOT_NAMES = ['Бот Вінні', 'Бот Тоні', 'Бот Сальваторе', 'Бот Луїджі', 'Бот Марко', 'Бот Ніко', 'Бот Анджело', 'Бот Ренцо'];
 const TURN_TIME_LIMIT = 60; // seconds
 const RECONNECT_GRACE = 120; // seconds
+const MAX_ROOMS = Math.max(10, Math.min(5000, Number.parseInt(process.env.MAX_ROOMS, 10) || 500));
 
 function generateRoomId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1276,15 +1441,36 @@ function resetTurnTimer(roomId) {
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
+  const socketSessionToken = parseCookies(socket.handshake.headers.cookie)[SESSION_COOKIE];
+  socket.data.account = accountStore.getAccountBySession(socketSessionToken);
+  const eventWindow = [];
+  socket.use((packet, next) => {
+    const now = Date.now();
+    while (eventWindow.length && now - eventWindow[0] > 10_000) eventWindow.shift();
+    if (eventWindow.length >= 120) return next(new Error('Socket rate limit exceeded'));
+    eventWindow.push(now);
+
+    // Make malformed/missing payloads harmless and cap application data.
+    if (packet.length < 2 || packet[1] == null || typeof packet[1] !== 'object') packet[1] = {};
+    let payloadSize = 0;
+    try { payloadSize = JSON.stringify(packet[1]).length; } catch (_) { return next(new Error('Invalid payload')); }
+    if (payloadSize > 20_000) return next(new Error('Payload too large'));
+    if (typeof packet[packet.length - 1] !== 'function') packet.push(() => {});
+    next();
+  });
+
   // Tell the client whether cheat handlers are enabled on this server.
   // Client uses this to hide the cheat panel trigger in production.
   socket.emit('serverConfig', {
-    cheatsEnabled: process.env.ENABLE_CHEATS === '1'
+    cheatsEnabled: process.env.ENABLE_CHEATS === '1',
+    account: socket.data.account || null,
+    version: APP_VERSION
   });
 
   // CREATE ROOM
   socket.on('createRoom', ({ playerName, characterId }, cb) => {
-    const cleanName = sanitizeName(playerName);
+    if (rooms.size >= MAX_ROOMS) return cb({ error: 'Сервер заповнений. Спробуйте трохи пізніше.' });
+    const cleanName = sanitizeName(socket.data.account?.username || playerName);
     let roomId;
     try {
       roomId = generateUniqueRoomId();
@@ -1303,6 +1489,7 @@ io.on('connection', (socket) => {
 
   // CREATE ROOM TV (TV mode — display only, not a player)
   socket.on('createRoomTV', (_, cb) => {
+    if (rooms.size >= MAX_ROOMS) return cb({ error: 'Сервер заповнений. Спробуйте трохи пізніше.' });
     let roomId;
     try {
       roomId = generateUniqueRoomId();
@@ -1322,6 +1509,7 @@ io.on('connection', (socket) => {
 
   // JOIN ROOM TV (join existing room as TV display)
   socket.on('joinRoomTV', ({ roomId }, cb) => {
+    roomId = typeof roomId === 'string' ? roomId.trim().toUpperCase() : '';
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Кімнату не знайдено.' });
     playerRooms.set(socket.id, roomId);
@@ -1334,7 +1522,8 @@ io.on('connection', (socket) => {
 
   // JOIN ROOM
   socket.on('joinRoom', ({ roomId, playerName, characterId }, cb) => {
-    const cleanName = sanitizeName(playerName);
+    roomId = typeof roomId === 'string' ? roomId.trim().toUpperCase() : '';
+    const cleanName = sanitizeName(socket.data.account?.username || playerName);
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Кімнату не знайдено.' });
     if (game.phase !== 'waiting') return cb({ error: 'Гра вже розпочалась.' });
@@ -2174,6 +2363,8 @@ io.on('connection', (socket) => {
     if (!game) return;
     const player = game.getPlayer(socket.id);
     if (!player) return;
+    const allowedReactions = new Set(['OK', 'GG', 'NO', 'DEAL']);
+    if (!allowedReactions.has(emoji)) return;
     io.to(roomId).emit('chatReaction', {
       playerId: socket.id,
       playerName: player.name,
@@ -2235,7 +2426,7 @@ io.on('connection', (socket) => {
     const game = rooms.get(roomId);
     if (!game) return;
     const player = game.getPlayer(socket.id);
-    if (player) {
+    if (player && typeof avatarId === 'string' && /^[a-z0-9_-]{1,32}$/i.test(avatarId)) {
       player.avatar = avatarId;
       broadcastState(roomId);
     }
@@ -2249,6 +2440,7 @@ io.on('connection', (socket) => {
     if (!rejoinToken || typeof rejoinToken !== 'string') {
       return cb({ error: 'Немає токена для перепідключення.' });
     }
+    roomId = typeof roomId === 'string' ? roomId.trim().toUpperCase() : '';
     const game = rooms.get(roomId);
     if (!game) return cb({ error: 'Гра не знайдена.' });
 
@@ -2322,6 +2514,8 @@ io.on('connection', (socket) => {
         tvSet.delete(socket.id);
         if (tvSet.size === 0) tvSockets.delete(roomId);
         playerRooms.delete(socket.id);
+        const tvGame = rooms.get(roomId);
+        if (tvGame && tvGame.players.length === 0) cleanupRoom(roomId);
         console.log(`TV Disconnected: ${socket.id}`);
         return;
       }
@@ -2377,6 +2571,16 @@ io.on('connection', (socket) => {
           }
         } else if (player && game.phase === 'waiting') {
           game.removePlayer(socket.id);
+          if (game.hostId === socket.id) {
+            game.hostId = game.players.find(candidate => !candidate.isBot)?.id || null;
+          }
+          const remainingTv = tvSockets.get(roomId);
+          if (game.players.length === 0 && (!remainingTv || remainingTv.size === 0)) {
+            cleanupRoom(roomId);
+            playerRooms.delete(socket.id);
+            console.log(`Disconnected: ${socket.id}`);
+            return;
+          }
         } else if (player) {
           player.alive = false;
           // Free businesses so rent logic doesn't target a dead owner
@@ -2406,5 +2610,6 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`Mafia Business v2 running on http://localhost:${PORT}`);
+  console.log(`Mafia Business v3 running on http://localhost:${PORT}`);
+  if (process.env.ALLOW_LAN === '1') console.log(`LAN mode enabled: open http://<host-ip>:${PORT} on other devices`);
 });

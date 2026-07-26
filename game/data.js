@@ -1,5 +1,5 @@
 // ============================================================
-// MAFIA BUSINESS v2 — Game Data (from real board game photos)
+// MAFIA BUSINESS v3 — Game Data
 // ============================================================
 
 // --- RESPECT LEVELS ---

@@ -1,1 +1,5 @@
 node_modules/
+data/accounts.json
+data/*.tmp
+release/
+.env

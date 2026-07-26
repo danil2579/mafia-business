@@ -393,3 +393,49 @@ test('sabotage is not consumed when target only has the base business star', () 
   assert.equal(player.mafiaCards.length, 1);
   assert.equal(game.mafiaDiscard.length, 0);
 });
+
+test('trade rejects negative money instead of creating currency', () => {
+  const game = createPlayingGame();
+  const result = game.createTradeOffer('p1', 'p2', {
+    giveMoney: -5000,
+    wantMoney: 0,
+    giveBusiness: [],
+    wantBusiness: []
+  });
+
+  assert.equal(result.error, 'Невірні параметри угоди');
+  assert.equal(game.getPlayer('p1').money, 20000);
+  assert.equal(game.getPlayer('p2').money, 20000);
+  assert.equal(game.pendingAction, null);
+});
+
+test('trade revalidates business ownership before acceptance', () => {
+  const game = createPlayingGame();
+  const from = game.getPlayer('p1');
+  const to = game.getPlayer('p2');
+  from.businesses.push('kiosk');
+  game.businesses.kiosk.owner = 'p1';
+
+  const offered = game.createTradeOffer('p1', 'p2', {
+    giveMoney: 0,
+    wantMoney: 0,
+    giveBusiness: ['kiosk'],
+    wantBusiness: []
+  });
+  from.businesses = [];
+  to.businesses.push('kiosk');
+  game.businesses.kiosk.owner = 'p2';
+  const accepted = game.executeTradeOffer('p2', true);
+
+  assert.equal(offered.success, true);
+  assert.equal(accepted.error, 'Власник бізнесу змінився. Угоду скасовано.');
+  assert.deepEqual(to.businesses, ['kiosk']);
+  assert.equal(game.businesses.kiosk.owner, 'p2');
+});
+
+test('alliance rejects invalid duration and self-alliance', () => {
+  const game = createPlayingGame();
+  assert.equal(game.createAlliance('p1', 'p2', -4).error, 'Тривалість альянсу: від 1 до 10 кіл');
+  assert.equal(game.createAlliance('p1', 'p1', 3).error, 'Невірні гравці');
+  assert.equal(game.pendingAction, null);
+});

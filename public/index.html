@@ -3,11 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0b13">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mafia Business">
   <title>MAFIA BUSINESS</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/app-icon-192.png">
+  <link rel="stylesheet" href="/css/style.css?v=3.0.0-r1">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <div class="product-toolbar" id="product-toolbar" aria-label="Product controls">
+    <button class="product-toolbar-btn" id="btn-account" type="button">
+      <span class="product-toolbar-icon" aria-hidden="true">♟</span>
+      <span id="account-button-text" data-i18n="account">Акаунт</span>
+    </button>
+    <button class="product-toolbar-btn" id="btn-product-settings" type="button">
+      <span class="product-toolbar-icon" aria-hidden="true">⚙</span>
+      <span data-i18n="settings">Налаштування</span>
+    </button>
+  </div>
   <!-- Global SVG defs for gold gradients used in business icons -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -69,8 +87,8 @@
         <svg class="frame-corner frame-br" viewBox="0 0 60 60"><path d="M58 2 V48 Q58 58 48 58 H2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="58" cy="2" r="2" fill="currentColor"/></svg>
       </div>
 
-      <!-- Beta badge -->
-      <div class="lobby-beta-badge">BETA</div>
+      <!-- Release badge -->
+      <div class="lobby-beta-badge">RELEASE</div>
 
       <!-- Logo section -->
       <div class="logo">
@@ -83,7 +101,7 @@
         </div>
         <h1>MAFIA<br><span>BUSINESS</span></h1>
         <p class="lobby-subtitle">ONLINE MULTIPLAYER BOARD GAME</p>
-        <p class="tagline">Нічного особистого. Тільки бiзнес.</p>
+        <p class="tagline" data-i18n="tagline">Нічого особистого. Тільки бізнес.</p>
       </div>
 
       <!-- Decorative separator -->
@@ -97,35 +115,35 @@
       <div class="lobby-features">
         <div class="feature-badge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          <span>2-8 ГРАВЦIВ</span>
+          <span data-i18n="players">2–8 ГРАВЦІВ</span>
         </div>
         <div class="feature-badge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span>СТРАТЕГIЯ</span>
+          <span data-i18n="strategy">СТРАТЕГІЯ</span>
         </div>
         <div class="feature-badge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span>ОНЛАЙН</span>
+          <span data-i18n="online">ОНЛАЙН</span>
         </div>
       </div>
 
       <!-- Mode Selector -->
       <div id="mode-selector" class="mode-selector">
-        <div class="mode-selector-title">ОБЕРIТЬ РЕЖИМ</div>
+        <div class="mode-selector-title" data-i18n="chooseMode">ОБЕРІТЬ РЕЖИМ</div>
         <div class="mode-selector-cards">
           <button class="mode-card" id="mode-classic">
             <div class="mode-card-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
             </div>
-            <div class="mode-card-title">Класична гра</div>
-            <div class="mode-card-desc">Кожен грає зi свого пристрою</div>
+            <div class="mode-card-title" data-i18n="classic">Класична гра</div>
+            <div class="mode-card-desc" data-i18n="classicDesc">Кожен грає зі свого пристрою</div>
           </button>
           <button class="mode-card mode-card-tv" id="mode-tv-select">
             <div class="mode-card-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
             </div>
-            <div class="mode-card-title">TV Режим</div>
-            <div class="mode-card-desc">Великий екран + телефони як контролери</div>
+            <div class="mode-card-title" data-i18n="tvMode">TV Режим</div>
+            <div class="mode-card-desc" data-i18n="tvDesc">Великий екран + телефони як контролери</div>
             <div class="mode-card-badge">PARTY</div>
           </button>
         </div>
@@ -157,24 +175,24 @@
       <div id="classic-lobby" style="display:none;">
         <div class="lobby-form">
           <div class="input-group">
-            <label class="input-label" for="player-name">IМ'Я ГРАВЦЯ</label>
-            <input type="text" id="player-name" placeholder="Введiть ваше iм'я" maxlength="16" />
+            <label class="input-label" for="player-name" data-i18n="playerName">ІМ’Я ГРАВЦЯ</label>
+            <input type="text" id="player-name" placeholder="Введіть ваше ім’я" data-i18n-placeholder="playerPlaceholder" maxlength="16" autocomplete="nickname" />
           </div>
           <div class="lobby-buttons">
             <button id="btn-create" class="btn btn-primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-              Створити кiмнату
+              <span data-i18n="createRoom">Створити кімнату</span>
             </button>
             <div class="lobby-divider-row">
               <span class="divider-line"></span>
-              <span class="divider-text">АБО</span>
+              <span class="divider-text" data-i18n="or">АБО</span>
               <span class="divider-line"></span>
             </div>
             <div class="join-row">
-              <input type="text" id="room-code" placeholder="Код кiмнати" maxlength="5" />
+              <input type="text" id="room-code" placeholder="Код кімнати" data-i18n-placeholder="roomCode" maxlength="5" autocapitalize="characters" />
               <button id="btn-join" class="btn btn-secondary">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                Увiйти
+                <span data-i18n="enter">Увійти</span>
               </button>
             </div>
           </div>
@@ -185,25 +203,25 @@
         <div class="lobby-rooms">
           <button id="btn-browse-rooms" class="btn btn-secondary" style="width:100%;margin-bottom:12px;" onclick="loadPublicRooms()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            Знайти кімнату
+            <span data-i18n="findRoom">Знайти кімнату</span>
           </button>
           <div id="room-list" class="room-list"></div>
         </div>
-        <button class="mode-back-btn" id="classic-back">← Назад</button>
+        <button class="mode-back-btn" id="classic-back" data-i18n="back">← Назад</button>
       </div>
 
       <!-- Rules button -->
       <div class="lobby-rules-btn-wrap">
         <button id="btn-rules-lobby" class="btn btn-secondary btn-rules-lobby">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h5"/></svg>
-          ПРАВИЛА
+          <span data-i18n="rules">ПРАВИЛА</span>
         </button>
       </div>
 
       <!-- Footer -->
       <div class="lobby-footer">
         <span class="footer-sep"></span>
-        <p class="footer-text">MAFIA BUSINESS &mdash; v0.9 BETA &mdash; 2024-2026</p>
+        <p class="footer-text">MAFIA BUSINESS &mdash; v3.0.0 RELEASE &mdash; 2024-2026</p>
         <p class="footer-text footer-dim">Online strategy board game for 2-8 players</p>
       </div>
     </div>
@@ -213,25 +231,25 @@
   <div id="waiting-screen" class="screen">
     <div class="waiting-container">
       <div class="waiting-shell">
-        <div class="waiting-stage">STAGING ROOM</div>
-        <h2>Кімната: <span id="room-id-display"></span></h2>
-        <p class="hint">Поділіться кодом з друзями та зберіть свою сім'ю перед початком гри</p>
+        <div class="waiting-stage" data-i18n="staging">КІМНАТА ОЧІКУВАННЯ</div>
+        <h2><span data-i18n="room">Кімната:</span> <span id="room-id-display"></span></h2>
+        <p class="hint" data-i18n="shareCode">Поділіться кодом із друзями та зберіть свою сім’ю перед початком гри</p>
         <div class="waiting-grid">
           <div class="waiting-card waiting-card-roster">
-            <div class="waiting-card-title">Гравці у кімнаті</div>
+            <div class="waiting-card-title" data-i18n="roomPlayers">Гравці у кімнаті</div>
             <div id="players-list" class="players-list"></div>
           </div>
           <div class="waiting-card waiting-card-character">
             <div class="character-select-section">
-              <label class="input-label">ОБЕРИ ПЕРСОНАЖА</label>
+              <label class="input-label" data-i18n="chooseCharacter">ОБЕРІТЬ ПЕРСОНАЖА</label>
               <div class="character-select" id="character-select"></div>
             </div>
           </div>
         </div>
         <div id="game-settings" class="game-settings" style="display:none">
-          <h3>Налаштування гри</h3>
+          <h3 data-i18n="gameSettings">Налаштування гри</h3>
           <div class="setting-row">
-            <label for="setting-min-round">Карти атаки доступні з кола:</label>
+            <label for="setting-min-round" data-i18n="attackRound">Карти атаки доступні з кола:</label>
             <div class="setting-control">
               <button class="btn-setting-minus" data-target="setting-min-round">−</button>
               <span id="setting-min-round" class="setting-value">3</span>
@@ -240,10 +258,10 @@
           </div>
         </div>
         <div class="waiting-actions">
-          <button id="btn-add-bot" class="btn btn-secondary" style="display:none">Додати бота</button>
-          <button id="btn-start" class="btn btn-primary" style="display:none">Почати гру</button>
+          <button id="btn-add-bot" class="btn btn-secondary" style="display:none" data-i18n="addBot">Додати бота</button>
+          <button id="btn-start" class="btn btn-primary" style="display:none" data-i18n="startGame">Почати гру</button>
         </div>
-        <p id="waiting-msg" class="hint waiting-msg">Очікуємо гравців...</p>
+        <p id="waiting-msg" class="hint waiting-msg" data-i18n="waitingPlayers">Очікуємо гравців…</p>
       </div>
     </div>
   </div>
@@ -259,7 +277,7 @@
       <div id="turn-info" class="turn-info"></div>
       <div class="topbar-right">
         <div class="money-panel">
-          <span class="money-label">КАПІТАЛ</span>
+          <span class="money-label" data-i18n="capital">КАПІТАЛ</span>
           <div id="my-money" class="money-display">$0</div>
         </div>
         <button id="btn-rules" class="btn-topbar" title="Правила">
@@ -322,7 +340,7 @@
     <!-- Chat Panel -->
     <div id="chat-panel" class="chat-panel">
       <div class="chat-header">
-        <span>ЧАТ</span>
+        <span data-i18n="chat">ЧАТ</span>
       </div>
       <div id="chat-messages" class="chat-messages"></div>
       <div class="chat-emojis">
@@ -1457,7 +1475,71 @@
     </div>
   </div>
 
+  <!-- ===== ACCOUNT & PRODUCT SETTINGS ===== -->
+  <div id="account-modal" class="product-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+    <div class="product-modal-card">
+      <div class="product-modal-header">
+        <div>
+          <div class="product-modal-kicker">MAFIA BUSINESS ID</div>
+          <h2 id="account-modal-title" data-i18n="welcome">Профіль гравця</h2>
+        </div>
+        <button class="product-modal-close" type="button" data-close-product-modal="account-modal" data-i18n-aria-label="close" aria-label="Закрити">×</button>
+      </div>
+
+      <div id="auth-guest-panel">
+        <p class="product-modal-copy" data-i18n="accountHint">Акаунт захищає ім’я та зберігає налаштування.</p>
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab active" data-auth-tab="login" data-i18n="signIn">Увійти</button>
+          <button type="button" class="auth-tab" data-auth-tab="register" data-i18n="register">Реєстрація</button>
+        </div>
+        <form id="login-form" class="product-form">
+          <label><span data-i18n="identity">Ім’я або email</span><input name="identity" required maxlength="254" autocomplete="username"></label>
+          <label><span data-i18n="password">Пароль</span><input name="password" type="password" required minlength="10" maxlength="128" autocomplete="current-password"></label>
+          <button class="btn btn-primary" type="submit" data-i18n="signIn">Увійти</button>
+        </form>
+        <form id="register-form" class="product-form" hidden>
+          <label><span data-i18n="username">Ім’я гравця</span><input name="username" required minlength="3" maxlength="20" autocomplete="nickname"></label>
+          <label><span data-i18n="email">Email</span><input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+          <label><span data-i18n="password">Пароль</span><input name="password" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>
+          <button class="btn btn-primary" type="submit" data-i18n="createAccount">Створити акаунт</button>
+        </form>
+      </div>
+
+      <div id="auth-signed-panel" class="account-profile" hidden>
+        <div class="account-profile-seal">MB</div>
+        <div class="account-profile-name" id="account-profile-name"></div>
+        <div class="account-profile-email" id="account-profile-email"></div>
+        <button class="btn btn-secondary" type="button" id="btn-logout" data-i18n="logout">Вийти</button>
+      </div>
+      <div id="auth-message" class="auth-message" role="status"></div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="product-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+    <div class="product-modal-card">
+      <div class="product-modal-header">
+        <div>
+          <div class="product-modal-kicker">SYSTEM</div>
+          <h2 id="settings-modal-title" data-i18n="settings">Налаштування</h2>
+        </div>
+        <button class="product-modal-close" type="button" data-close-product-modal="settings-modal" data-i18n-aria-label="close" aria-label="Закрити">×</button>
+      </div>
+      <div class="product-settings-list">
+        <label class="product-setting-row"><span data-i18n="language">Мова</span><select id="product-language"><option value="uk">Українська</option><option value="ru">Русский</option><option value="en">English</option></select></label>
+        <label class="product-setting-row"><span data-i18n="music">Фонова музика</span><input id="product-music" type="checkbox" role="switch"></label>
+        <label class="product-setting-row"><span data-i18n="sfx">Звукові ефекти</span><input id="product-sfx" type="checkbox" role="switch"></label>
+        <label class="product-setting-row product-setting-volume"><span data-i18n="volume">Гучність</span><input id="product-volume" type="range" min="0" max="100" step="5"><output id="product-volume-value">70%</output></label>
+        <label class="product-setting-row"><span data-i18n="reduceMotion">Менше анімацій</span><input id="product-motion" type="checkbox" role="switch"></label>
+      </div>
+      <div class="install-product-card">
+        <div><strong data-i18n="install">Встановити гру</strong><p id="install-status" data-i18n="installHint">Встановіть як застосунок на ноутбук або телефон.</p></div>
+        <button class="btn btn-secondary" id="btn-install-product" type="button" data-i18n="install">Встановити гру</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/client.js"></script>
+  <script src="/js/platform.js?v=3.0.0-r1"></script>
+  <script src="/js/client.js?v=3.0.0-r1"></script>
 </body>
 </html>
