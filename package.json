@@ -1,6 +1,6 @@
 {
   "name": "mafia-business",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Mafia Business - production-ready online strategy board game",
   "main": "server.js",
   "scripts": {

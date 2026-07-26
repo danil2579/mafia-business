@@ -150,6 +150,7 @@ let prevMoney = {}; // track previous money for animation
 let animatingTokens = false;
 let animatingPlayerId = null; // player whose token is being animated
 const tokenAnimations = new Map();
+const tokenEffectTimers = new Map();
 let pendingActionDelay = 0; // ms to delay showing pending actions (for animation)
 let publicEventRevealActive = false;
 const publicEventRevealQueue = [];
@@ -2003,6 +2004,66 @@ function tokenTransform(center) {
   return `translate3d(${center.x.toFixed(2)}px, ${center.y.toFixed(2)}px, 0) translate(-50%, -50%)`;
 }
 
+function tokenHopTransform(center, lift = 0, scale = 1, rotation = 0) {
+  return `translate3d(${center.x.toFixed(2)}px, ${(center.y - lift).toFixed(2)}px, 0) translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`;
+}
+
+function getTokenAnimationDuration(stepCount) {
+  if (document.body.classList.contains('reduce-motion')) return 1;
+  return Math.min(2800, Math.max(760, stepCount * 205));
+}
+
+function clearTokenEffectTimers(playerId) {
+  const timers = tokenEffectTimers.get(playerId) || [];
+  timers.forEach(timer => clearTimeout(timer));
+  tokenEffectTimers.delete(playerId);
+}
+
+function setBoardMovementState() {
+  const isMoving = tokenAnimations.size > 0;
+  document.querySelector('.board-frame')?.classList.toggle('board-in-motion', isMoving);
+  document.querySelector('#token-layer')?.classList.toggle('has-moving-token', isMoving);
+}
+
+function spawnTokenMovementFx(center, color, impact = false) {
+  const layer = $('#token-layer');
+  if (!layer || !center) return;
+  const effect = document.createElement('span');
+  effect.className = impact ? 'token-impact-ring' : 'token-step-spark';
+  effect.style.left = `${center.x.toFixed(2)}px`;
+  effect.style.top = `${center.y.toFixed(2)}px`;
+  effect.style.setProperty('--token-fx-color', color || '#d9c27b');
+  layer.appendChild(effect);
+  effect.addEventListener('animationend', () => effect.remove(), { once: true });
+  setTimeout(() => effect.remove(), impact ? 1300 : 900);
+}
+
+function createTokenHopKeyframes(centers) {
+  const segmentCount = centers.length - 1;
+  const keyframes = [{ transform: tokenHopTransform(centers[0]), offset: 0 }];
+  for (let index = 1; index < centers.length; index++) {
+    const from = centers[index - 1];
+    const to = centers[index];
+    const segmentStart = (index - 1) / segmentCount;
+    const segmentEnd = index / segmentCount;
+    const middle = {
+      x: from.x + (to.x - from.x) * .58,
+      y: from.y + (to.y - from.y) * .58
+    };
+    keyframes.push({
+      transform: tokenHopTransform(middle, 11, 1.13, index % 2 ? 3 : -3),
+      offset: segmentStart + (segmentEnd - segmentStart) * .58,
+      easing: 'cubic-bezier(.2,.72,.25,1)'
+    });
+    keyframes.push({
+      transform: tokenHopTransform(to, 0, 1, 0),
+      offset: segmentEnd,
+      easing: 'cubic-bezier(.22,.78,.2,1)'
+    });
+  }
+  return keyframes;
+}
+
 function syncTokenLayer(state) {
   const layer = $('#token-layer');
   if (!layer) return;
@@ -2010,6 +2071,7 @@ function syncTokenLayer(state) {
   layer.querySelectorAll('.player-token').forEach(token => {
     if (!aliveIds.has(token.dataset.pid)) {
       tokenAnimations.get(token.dataset.pid)?.cancel();
+      clearTokenEffectTimers(token.dataset.pid);
       tokenAnimations.delete(token.dataset.pid);
       token.remove();
     }
@@ -2088,30 +2150,48 @@ function animateTokenMovement(playerId, fromPos, toPos) {
   animatingTokens = true;
   animatingPlayerId = playerId;
   token.classList.add('token-moving');
-  const reducedMotion = document.body.classList.contains('reduce-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const duration = reducedMotion ? 1 : Math.min(1450, Math.max(420, steps.length * 118));
-  const keyframes = centers.map((center, index) => ({
-    transform: tokenTransform(center),
-    offset: index / (centers.length - 1)
-  }));
+  const reducedMotion = document.body.classList.contains('reduce-motion');
+  const duration = getTokenAnimationDuration(steps.length);
+  const keyframes = reducedMotion
+    ? [
+        { transform: tokenTransform(centers[0]), offset: 0 },
+        { transform: tokenTransform(centers[centers.length - 1]), offset: 1 }
+      ]
+    : createTokenHopKeyframes(centers);
 
+  clearTokenEffectTimers(playerId);
   tokenAnimations.get(playerId)?.cancel();
   const animation = token.animate(keyframes, {
     duration,
-    easing: 'cubic-bezier(.22,.78,.2,1)',
+    easing: 'linear',
     fill: 'forwards'
   });
   tokenAnimations.set(playerId, animation);
+  setBoardMovementState();
 
   if (!reducedMotion) {
-    const tickCount = Math.min(steps.length, 6);
-    for (let i = 0; i < tickCount; i++) {
-      setTimeout(() => {
+    const timers = [];
+    for (let index = 0; index < steps.length; index++) {
+      const timer = setTimeout(() => {
         if (tokenAnimations.get(playerId) === animation) {
-          if (isOwnToken) SFX.tokenTick(); else SFX.tokenTickOther();
+          const destination = centers[index + 1];
+          spawnTokenMovementFx(destination, player.character?.color, index === steps.length - 1);
+          const cell = document.querySelector(`.board-cell[data-index="${steps[index]}"]`);
+          if (cell) {
+            cell.style.setProperty('--token-fx-color', player.character?.color || '#d9c27b');
+            cell.classList.remove('token-route-hit');
+            void cell.offsetWidth;
+            cell.classList.add('token-route-hit');
+            setTimeout(() => cell.classList.remove('token-route-hit'), 520);
+          }
+          if (index < 6 || index === steps.length - 1) {
+            if (isOwnToken) SFX.tokenTick(); else SFX.tokenTickOther();
+          }
         }
-      }, Math.round((duration * (i + 1)) / (tickCount + 1)));
+      }, Math.max(0, Math.round((duration * (index + .88)) / steps.length)));
+      timers.push(timer);
     }
+    tokenEffectTimers.set(playerId, timers);
   }
 
   animation.onfinish = () => {
@@ -2120,13 +2200,19 @@ function animateTokenMovement(playerId, fromPos, toPos) {
     token.dataset.position = String(toPos);
     token.classList.remove('token-moving');
     tokenAnimations.delete(playerId);
+    clearTokenEffectTimers(playerId);
     animatingTokens = tokenAnimations.size > 0;
     if (animatingPlayerId === playerId) animatingPlayerId = null;
+    setBoardMovementState();
   };
   animation.oncancel = () => {
     token.classList.remove('token-moving');
-    if (tokenAnimations.get(playerId) === animation) tokenAnimations.delete(playerId);
+    if (tokenAnimations.get(playerId) === animation) {
+      tokenAnimations.delete(playerId);
+      clearTokenEffectTimers(playerId);
+    }
     animatingTokens = tokenAnimations.size > 0;
+    setBoardMovementState();
   };
 }
 
@@ -3507,6 +3593,7 @@ function renderActionPanel(state) {
         action: () => { hideCenterPanel(); showTradeUI(p); }
       })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
     }, 'btn-secondary');
+    tradeBtn.classList.add('btn-action-utility', 'btn-action-trade');
     actionBtns.appendChild(tradeBtn);
 
     // Alliance button
@@ -3518,12 +3605,14 @@ function renderActionPanel(state) {
         action: () => { hideCenterPanel(); showAllianceUI(p); }
       })).concat([{ text: 'Скасувати', action: hideCenterPanel, cls: 'btn-secondary' }]));
     }, 'btn-secondary');
+    allyBtn.classList.add('btn-action-utility', 'btn-action-alliance');
     actionBtns.appendChild(allyBtn);
 
     const endBtn = createActionBtn(`${ICON.check} Завершити хід`, () => {
       SFX.click();
       socket.emit('endTurn', {}, handleResult);
     }, 'btn-secondary');
+    endBtn.classList.add('btn-end-turn');
     actionBtns.appendChild(endBtn);
 
     // Surrender button moved to topbar
@@ -3667,9 +3756,8 @@ $('#btn-roll').addEventListener('click', () => {
       // Calculate animation duration
       if (res.oldPos !== undefined && res.newPos !== undefined) {
         const steps = ((res.newPos - res.oldPos + 36) % 36) || 1;
-        // Keep gameplay responsive: token movement is a single GPU animation,
-        // capped at 1.45s even for a long roll.
-        animDelay = Math.min(1450, Math.max(420, steps * 118)) + 180;
+        // Wait for the visible cell-by-cell movement before opening a decision card.
+        animDelay = getTokenAnimationDuration(steps) + 220;
         // Set global delay so gameState handler waits before showing pending actions
         pendingActionDelay = Date.now() + animDelay;
         animateTokenMovement(myId, res.oldPos, res.newPos);
